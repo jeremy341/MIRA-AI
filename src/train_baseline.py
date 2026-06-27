@@ -101,5 +101,5 @@ plt.show()
 
 # 6. MODELL SPEICHERN (Optional aber wichtig)
 # Damit kannst du deine KI später in anderen Skripten laden
-model.save('mira_waste_model')
-print("Modell wurde als mira_waste_model.h5 gespeichert!")
+model.save('mira_waste_model.keras')
+print("Modell wurde als mira_waste_model.keras gespeichert!")
