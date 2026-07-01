@@ -7,15 +7,22 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
-# 1. DATEN VORBEREITEN
-data_dir = pathlib.Path("../data")
+# 1. PFADE UND KONSTANTEN UNIFIZIEREN
+SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
+ROOT_DIR = SCRIPT_DIR.parent
+DATA_DIR = ROOT_DIR / "data"
+MODELS_DIR = ROOT_DIR / "models"
+
+# Verzeichnis für Modelle erstellen, falls es nicht existiert
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
 batch_size = 32
 img_height = 180
 img_width = 180
 
 # Trainings-Daten laden
 train_ds = tf.keras.utils.image_dataset_from_directory(
-  data_dir,
+  DATA_DIR,
   validation_split=0.2,
   subset="training",
   seed=123,
@@ -25,7 +32,7 @@ train_ds = tf.keras.utils.image_dataset_from_directory(
 
 # Validierungs-Daten laden
 val_ds = tf.keras.utils.image_dataset_from_directory(
-  data_dir,
+  DATA_DIR,
   validation_split=0.2,
   subset="validation",
   seed=123,
@@ -99,7 +106,8 @@ plt.title('Fehlerrate (Loss)')
 plt.legend()
 plt.show()
 
-# 6. MODELL SPEICHERN (Optional aber wichtig)
-# Damit kannst du deine KI später in anderen Skripten laden
-model.save('mira_waste_model.keras')
-print("Modell wurde als mira_waste_model.keras gespeichert!")
+# 6. MODELL SPEICHERN
+# Speichert das Modell direkt im zentralen /models Ordner
+MODEL_SAVE_PATH = MODELS_DIR / 'mira_waste_model.keras'
+model.save(MODEL_SAVE_PATH)
+print(f"Modell wurde als {MODEL_SAVE_PATH} gespeichert!")
