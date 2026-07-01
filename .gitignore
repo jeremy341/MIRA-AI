@@ -3,6 +3,6 @@ data/
 __pycache__/
 *.pyc
 
-JuFo_Hypothesis_and_Timeline.md
-JuFo_Report_Template.md
-MIRA_Learning_Resources.md
+doc/JuFo_Hypothesis_and_Timeline.md
+doc/JuFo_Report_Template.md
+doc/MIRA_Learning_Resources.md
