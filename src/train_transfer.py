@@ -10,13 +10,14 @@ from tensorflow.keras.models import Sequential
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data"
-RESULTS_DIR = ROOT_DIR / "results" / "EXP-002_MobileNetV2"
+MODELS_DIR = ROOT_DIR / "models"  # Or root path
 
-# Verzeichnisse automatisch erstellen falls sie fehlen
-RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+SAVE_DIR = ROOT_DIR / 'results' / 'EXP-002_MobileNetV2'
+SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-BATCH_SIZE = 32
-IMG_SIZE = (224, 224) # Standard-Größe für MobileNetV2
+batch_size = 32
+img_height = 224 # Standard-Größe für MobileNetV2
+img_width = 224
 
 # 2. DATENSÄTZE LADEN
 print("Lade Trainingsdaten...")
@@ -25,7 +26,7 @@ train_dataset = tf.keras.utils.image_dataset_from_directory(
     validation_split=0.2,
     subset="training",
     seed=123,
-    image_size=IMG_SIZE,
+    image_size=(img_height, img_width),
     batch_size=BATCH_SIZE,
     crop_to_aspect_ratio=True
 )
@@ -36,7 +37,7 @@ validation_dataset = tf.keras.utils.image_dataset_from_directory(
     validation_split=0.2,
     subset="validation",
     seed=123,
-    image_size=IMG_SIZE,
+    image_size=(img_height, img_width),
     batch_size=BATCH_SIZE,
     crop_to_aspect_ratio=True
 )
@@ -58,7 +59,7 @@ data_augmentation = keras.Sequential([
 
 # 4. BASE MODEL (MobileNetV2) LADEN
 # include_top=False wirft Googles eigene Klassifizierungsschicht weg.
-IMG_SHAPE = IMG_SIZE + (3,)
+IMG_SHAPE = (img_height, img_width, 3)
 base_model = tf.keras.applications.MobileNetV2(
     input_shape=IMG_SHAPE,
     include_top=False,
@@ -118,12 +119,14 @@ plt.title('EXP-002 Fehlerrate (Loss)')
 plt.legend()
 
 # Speichere die Kurven automatisch
-plot_save_path = RESULTS_DIR / 'training_curves.png'
+plot_save_path = SAVE_DIR / 'training_curves.png'
 plt.savefig(plot_save_path, dpi=300)
 print(f"Trainingskurven erfolgreich gespeichert unter: {plot_save_path}")
 plt.show()
 
-# Modell als .keras-Datei im Projekt-Root speichern
-MODEL_SAVE_PATH = ROOT_DIR / "mira_transfer_model.keras"
+# Modell als .keras-Datei im zentralen /models Ordner speichern
+MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR.mkdir(exist_ok=True)
+MODEL_SAVE_PATH = MODELS_DIR / "mira_transfer_model.keras"
 model.save(MODEL_SAVE_PATH)
 print(f"Modell erfolgreich unter {MODEL_SAVE_PATH} gespeichert!")

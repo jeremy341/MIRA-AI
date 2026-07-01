@@ -8,3 +8,5 @@
     accuracy                           0.55       159
    macro avg       0.56      0.57      0.50       159
 weighted avg       0.57      0.55      0.49       159
+
+Average CPU Inference Latency: 5.81 ms per image
