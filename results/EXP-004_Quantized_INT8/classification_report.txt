@@ -1,0 +1,12 @@
+              precision    recall  f1-score   support
+
+       glass       0.93      0.93      0.93        43
+       metal       0.75      1.00      0.85        41
+       paper       1.00      0.64      0.78        42
+     plastic       0.91      0.94      0.93        33
+
+    accuracy                           0.87       159
+   macro avg       0.90      0.88      0.87       159
+weighted avg       0.90      0.87      0.87       159
+
+Average CPU Inference Latency: 10.32 ms per image
