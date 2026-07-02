@@ -69,3 +69,28 @@
 | metal | 0.77 | 0.98 | 0.86 | 41 |
 | paper | 0.96 | 0.64 | 0.77 | 42 |
 | plastic | 0.89 | 0.94 | 0.91 | 33 |
+
+---
+
+---
+
+## EXP-004: Quantized TFLite Model (Full INT8)
+* **Date:** July 2, 2026
+* **Commit Hash:** `[your_commit_hash]`
+* **Architecture:** MobileNetV2 (Quantized to 8-bit Integer Calibration)
+* **Dataset Size:** 796 images (fully scaled)
+* **Calibration Set:** 100 representative calibration samples
+
+### Quantitative Metrics
+* **Model Size on Disk:** 2.61 MB (Compressed from 23.48 MB Keras Binary)
+* **Compression Ratio:** 9.0x smaller (70% smaller than standard FP32 TFLite)
+* **Average CPU Latency:** 10.32 ms per image (Theoretical throughput: ~97 FPS)
+* **Validation Accuracy:** 87.42% (0.8735)
+
+### Classification Report (Val Set)
+| Class | Precision | Recall | F1-Score | Support |
+|---|---|---|---|---|
+| glass | 0.93 | 0.93 | 0.93 | 43 |
+| metal | 0.75 | 1.00 | 0.85 | 41 |
+| paper | 1.00 | 0.64 | 0.78 | 42 |
+| plastic | 0.91 | 0.94 | 0.93 | 33 |

@@ -6,19 +6,26 @@ import argparse
 import time  # For calculating CPU latency
 from sklearn.metrics import classification_report, ConfusionMatrixDisplay
 
+
+# NumPy implementation of Softmax to avoid importing tf.nn inside loops
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)
+
+
 # 0. ARGUMENT PARSING
 parser = argparse.ArgumentParser(description="Evaluate a MIRA Waste Classification Model.")
 parser.add_argument(
     "--model",
     type=str,
     default="mira_waste_model.keras",
-    help="Name of the model file to evaluate (e.g., mira_transfer_model.keras)"
+    help="Name of the model file to evaluate (e.g., mira_model_int8.tflite)"
 )
 parser.add_argument(
     "--exp",
     type=str,
     default="EXP-001_Baseline",
-    help="Name of the experiment folder for saving results (e.g., EXP-002_MobileNetV2)"
+    help="Name of the experiment folder for saving results (e.g., EXP-004_Quantized_INT8)"
 )
 args = parser.parse_args()
 
@@ -40,6 +47,7 @@ if not MODEL_PATH.exists():
 
 # Match image size dynamically based on which model is selected
 img_size = (180, 180) if "waste" in args.model else (224, 224)
+is_tflite = MODEL_PATH.suffix == ".tflite"
 
 # 2. LOAD VALIDATION DATASET
 val_ds = tf.keras.utils.image_dataset_from_directory(
@@ -55,9 +63,16 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
 
 class_names = val_ds.class_names
 
-# 3. LOAD THE TRAINED AI MODEL
-print(f"Loading model from {MODEL_PATH}...")
-model = tf.keras.models.load_model(MODEL_PATH)
+# 3. LOAD THE TRAINED MODEL (Keras or TFLite)
+if is_tflite:
+    print(f"Loading TFLite model from {MODEL_PATH}...")
+    interpreter = tf.lite.Interpreter(model_path=str(MODEL_PATH))
+    interpreter.allocate_tensors()
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+else:
+    print(f"Loading Keras model from {MODEL_PATH}...")
+    model = tf.keras.models.load_model(MODEL_PATH)
 
 # 4. BATCH-BY-BATCH EVALUATION & LATENCY TRACKING
 print(f"Evaluating model batch-by-batch using {args.model}...")
@@ -66,20 +81,41 @@ y_pred = []
 inference_times = []
 
 for images, labels in val_ds:
-    # Measure exact CPU execution start
     start_time = time.perf_counter()
-    preds = model.predict(images, verbose=0)
-    end_time = time.perf_counter()
 
-    # Calculate inference latency per single image in milliseconds
-    batch_time_ms = (end_time - start_time) * 1000
-    time_per_image = batch_time_ms / len(images)
-    inference_times.append(time_per_image)
+    if is_tflite:
+        # Run inference individually for each image in the batch to avoid tensor resize overhead
+        batch_preds = []
+        for img in images:
+            single_img = np.expand_dims(img, axis=0).astype(np.float32)
+            interpreter.set_tensor(input_details[0]['index'], single_img)
+            interpreter.invoke()
+            preds = interpreter.get_tensor(output_details[0]['index'])
 
-    batch_preds = np.argmax(preds, axis=1)
+            # Apply softmax and find the predicted class
+            probs = softmax(preds[0])
+            batch_preds.append(np.argmax(probs))
 
-    y_pred.extend(batch_preds)
-    y_true.extend(labels.numpy())
+        end_time = time.perf_counter()
+        # Calculate mean latency per image in this batch
+        batch_time_ms = (end_time - start_time) * 1000
+        time_per_image = batch_time_ms / len(images)
+        inference_times.append(time_per_image)
+
+        y_pred.extend(batch_preds)
+        y_true.extend(labels.numpy())
+    else:
+        # Standard Keras Batch Inference
+        preds = model.predict(images, verbose=0)
+        end_time = time.perf_counter()
+
+        batch_time_ms = (end_time - start_time) * 1000
+        time_per_image = batch_time_ms / len(images)
+        inference_times.append(time_per_image)
+
+        batch_preds = np.argmax(preds, axis=1)
+        y_pred.extend(batch_preds)
+        y_true.extend(labels.numpy())
 
 y_true = np.array(y_true)
 y_pred = np.array(y_pred)

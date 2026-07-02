@@ -80,9 +80,9 @@ MODEL_PATH = ROOT_DIR / "mira_waste_model.keras"
 if not MODEL_PATH.exists():
     MODEL_PATH = SCRIPT_DIR / "mira_waste_model.keras"
 
-print(f"📂 Daten-Verzeichnis: {DATA_DIR}")
-print(f"📂 Ergebnis-Verzeichnis: {RESULTS_DIR}")
-print(f"🧠 Modell-Pfad: {MODEL_PATH}")
+print(f"Daten-Verzeichnis: {DATA_DIR}")
+print(f"Ergebnis-Verzeichnis: {RESULTS_DIR}")
+print(f"Modell-Pfad: {MODEL_PATH}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -112,15 +112,15 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
 # z.B. ["glass", "metal", "paper", "plastic"]
 class_names = val_ds.class_names
 num_classes = len(class_names)
-print(f"\n🏷️  Klassen: {class_names}")
-print(f"📊 Anzahl Klassen: {num_classes}")
+print(f"\nKlassen: {class_names}")
+print(f"Anzahl Klassen: {num_classes}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEIL 4: MODELL LADEN
 # ═══════════════════════════════════════════════════════════════════════════════
 
-print(f"\n🔄 Lade Modell von {MODEL_PATH}...")
+print(f"\nLade Modell von {MODEL_PATH}...")
 model = tf.keras.models.load_model(MODEL_PATH)
 
 # model.summary() zeigt die Architektur — gut, um sicherzustellen, dass das
@@ -141,7 +141,7 @@ model.summary()
 # tf.data.Dataset ein Iterator ist, keine feste Liste.
 # Wir müssen durch die Batches iterieren und die Ergebnisse sammeln.
 
-print("\n🔮 Mache Vorhersagen...")
+print("\nMache Vorhersagen...")
 
 y_true = []   # Liste für echte Labels (aus dem Dataset)
 y_pred = []   # Liste für vorhergesagte Klassen (vom Modell)
@@ -185,7 +185,7 @@ y_true = np.array(y_true)
 y_pred = np.array(y_pred)
 y_probs = np.array(y_probs)
 
-print(f"\n✅ Vorhersagen abgeschlossen: {len(y_true)} Bilder evaluiert")
+print(f"\nVorhersagen abgeschlossen: {len(y_true)} Bilder evaluiert")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -199,7 +199,7 @@ print("="*60)
 # 1. ACCURACY = (richtige Vorhersagen) / (alle Vorhersagen)
 #    Beispiel: 120 von 159 richtig → 120/159 = 0.7547 = 75.47%
 accuracy = accuracy_score(y_true, y_pred)
-print(f"\n📈 Gesamt-Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
+print(f"\nGesamt-Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
 
 # 2. PRECISION, RECALL, F1 pro Klasse
 #    average=None gibt ein Array zurück: [precision_klasse_0, precision_klasse_1, ...]
@@ -207,7 +207,7 @@ precision = precision_score(y_true, y_pred, average=None)
 recall = recall_score(y_true, y_pred, average=None)
 f1 = f1_score(y_true, y_pred, average=None)
 
-print(f"\n📊 Per-Class Metriken:")
+print(f"\nPer-Class Metriken:")
 print(f"{'Klasse':<12} {'Precision':>10} {'Recall':>10} {'F1-Score':>10}")
 print("-" * 50)
 for i, name in enumerate(class_names):
@@ -229,14 +229,14 @@ with open(report_path, "w", encoding="utf-8") as f:
     f.write(f"Datum: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     f.write(f"Gesamt-Accuracy: {accuracy:.4f}\n\n")
     f.write(report)
-print(f"\n💾 Report gespeichert unter: {report_path}")
+print(f"\nReport gespeichert unter: {report_path}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TEIL 7: CONFUSION MATRIX ALS GRAFIK
 # ═══════════════════════════════════════════════════════════════════════════════
 
-print("\n📊 Erstelle Confusion Matrix...")
+print("\nErstelle Confusion Matrix...")
 
 cm = confusion_matrix(y_true, y_pred)
 
@@ -283,7 +283,7 @@ plt.tight_layout()
 # Speichern (dpi=300 = Druckqualität, gut für JuFo-Mappe!)
 cm_path = RESULTS_DIR / "confusion_matrix.png"
 fig.savefig(cm_path, dpi=300, bbox_inches='tight')
-print(f"💾 Confusion Matrix gespeichert unter: {cm_path}")
+print(f"Confusion Matrix gespeichert unter: {cm_path}")
 
 # Anzeigen (optional — kann auskommentiert werden, wenn du nur speichern willst)
 plt.show()
@@ -293,7 +293,7 @@ plt.show()
 # TEIL 8: PER-CLASS PRECISION/RECALL/F1 BAR CHART
 # ═══════════════════════════════════════════════════════════════════════════════
 
-print("\n📊 Erstelle Precision/Recall/F1 Bar Chart...")
+print("\nErstelle Precision/Recall/F1 Bar Chart...")
 
 x = np.arange(num_classes)  # x-Positionen: [0, 1, 2, 3]
 width = 0.25                 # Breite der Balken
@@ -328,7 +328,7 @@ for rects in [rects1, rects2, rects3]:
 plt.tight_layout()
 bar_path = RESULTS_DIR / "per_class_metrics.png"
 fig.savefig(bar_path, dpi=300, bbox_inches='tight')
-print(f"💾 Bar Chart gespeichert unter: {bar_path}")
+print(f"Bar Chart gespeichert unter: {bar_path}")
 plt.show()
 
 
@@ -336,7 +336,7 @@ plt.show()
 # TEIL 9: ERGEBNISSE ALS JSON SPEICHERN (JuFo-Experimentlog!)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-print("\n📝 Speichere Ergebnisse als JSON...")
+print("\nSpeichere Ergebnisse als JSON...")
 
 # Modellgröße in KB berechnen
 model_size_kb = os.path.getsize(MODEL_PATH) / 1024 if MODEL_PATH.exists() else 0
@@ -380,7 +380,7 @@ json_path = RESULTS_DIR / "metrics.json"
 with open(json_path, "w", encoding="utf-8") as f:
     json.dump(results, f, indent=2, ensure_ascii=False)
 
-print(f"💾 JSON-Metriken gespeichert unter: {json_path}")
+print(f"JSON-Metriken gespeichert unter: {json_path}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -399,7 +399,7 @@ print(f"  - {report_path}")
 print(f"  - {cm_path}")
 print(f"  - {bar_path}")
 print(f"  - {json_path}")
-print(f"\n📁 Alle Ergebnisse in: {RESULTS_DIR}")
+print(f"\nAlle Ergebnisse in: {RESULTS_DIR}")
 print("="*60)
 
 
