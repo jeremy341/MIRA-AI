@@ -128,8 +128,8 @@ model = YOLO(MODEL_PATH, task=task_type)
 if MODEL_PATH.suffix == ".tflite":
     from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
     _tmp = LiteRTInterpreter(model_path=str(MODEL_PATH))
-    _shape = _tmp.get_input_details()[0]["shape"]  # e.g. [1, 640, 640, 3]
-    img_size = int(_shape[1])  # height dimension (always square for YOLO)
+    _shape = _tmp.get_input_details()[0]["shape"]  # e.g. [1, 640, 640, 3] or [1, 3, 640, 640]
+    img_size = int(max(_shape))  # spatial dim is always the largest value — works for NHWC and NCHW
     del _tmp
     print(f"TFLite model requires input size: {img_size}x{img_size}")
 else:

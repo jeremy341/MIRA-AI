@@ -142,7 +142,7 @@ def main():
         if model_path.suffix == ".tflite":
             from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
             _tmp = LiteRTInterpreter(model_path=str(model_path))
-            val_imgsz = int(_tmp.get_input_details()[0]["shape"][1])
+            val_imgsz = int(max(_tmp.get_input_details()[0]["shape"]))
             del _tmp
         else:
             val_imgsz = 640
