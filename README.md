@@ -88,7 +88,8 @@ MIRA-AI/
 │   ├── mira_classifier_fp32.tflite
 │   ├── mira_classifier_int8.tflite      ← Best Stage A deployment model
 │   ├── mira_detector_wild.pt
-│   ├── mira_detector_tabletop_int8_320.tflite  ← Best Stage B deployment model
+│   ├── mira_detector_wild_int8.tflite   ← Best Stage B wild deployment model
+│   ├── mira_detector_tabletop_int8_320.tflite  ← Best Stage B tabletop deployment model
 │   └── mira_yolo_int8_320.tflite
 │
 ├── reference/                # All training, evaluation, and quantization scripts
@@ -152,7 +153,8 @@ MIRA-AI/
 | Model | mAP50 | Size | Notes |
 |---|---|---|---|
 | `mira_detector_wild.pt` | 39.4% | 5.94 MB | Trained on cluttered wild-world data, most robust |
-| `mira_detector_tabletop_int8_320.tflite` | **72.8%** | **3.18 MB** | **Best for deployment** — INT8, tabletop-optimized |
+| `mira_detector_wild_int8.tflite` | **39.4%** | **3.16 MB** | **Best for wild edge deployment** — INT8, wild-optimized |
+| `mira_detector_tabletop_int8_320.tflite` | **72.8%** | **3.18 MB** | **Best for tabletop deployment** — INT8, tabletop-optimized |
 | `mira_yolo_int8_320.tflite` | 72.8% | 3.16 MB | Legacy comparison export |
 
 ---
@@ -286,9 +288,10 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 
 | Command | Description |
 |---|---|
-| `.\mira live` | Live detection with default model (`mira_detector_wild.pt`) at 640x360 |
+| `.\mira live` | Live detection with default model (`mira_detector_wild_int8.tflite`) at 640x360 |
 | `.\mira live --model mira_detector_tabletop_int8_320.tflite` | Use the quantized tabletop model |
-| `.\mira live --model mira_detector_wild.pt --resolution 1280x720` | Wild model at 720p display |
+| `.\mira live --model mira_detector_wild.pt` | Use the full-precision wild model |
+| `.\mira live --model mira_detector_wild_int8.tflite --resolution 1280x720` | Quantized wild model at 720p display |
 | `.\mira live --camera 1` | Use a specific camera by index |
 | `.\mira dashboard` | Launch the Streamlit web control center (model switchable via sidebar) |
 
@@ -299,7 +302,8 @@ Available models in models/:
   mira_classifier_baseline.keras
   mira_classifier_int8.tflite
   mira_detector_tabletop_int8_320.tflite
-  mira_detector_wild.pt          <-- selected
+  mira_detector_wild.pt
+  mira_detector_wild_int8.tflite  <-- selected
   mira_yolo_int8_320.tflite
 ```
 
