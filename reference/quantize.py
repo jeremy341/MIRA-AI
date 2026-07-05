@@ -6,7 +6,7 @@ import os
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = ROOT_DIR / "data" / "classes"
 MODELS_DIR = ROOT_DIR / "models"
 
 
@@ -36,7 +36,7 @@ def representative_data_gen():
         yield [tf.cast(img, tf.float32)]
 
 
-MODEL_PATH = MODELS_DIR / "mira_fine_tuned_model.keras"
+MODEL_PATH = MODELS_DIR / "mira_classifier_tuned.keras"
 print(f"Loading model from {MODEL_PATH}")
 model = keras.models.load_model(MODEL_PATH)
 
@@ -44,7 +44,7 @@ print("Converting to Standard TFLite (Float32)...")
 converter = tf.lite.TFLiteConverter.from_keras_model(model)
 tflite_fp32_model = converter.convert()
 
-FP32_SAVE_PATH = MODELS_DIR / "mira_model_fp32.tflite"
+FP32_SAVE_PATH = MODELS_DIR / "mira_classifier_fp32.tflite"
 with open(FP32_SAVE_PATH, "wb") as f:
     f.write(tflite_fp32_model)
 print(f"Float32 TFLite saved under: {FP32_SAVE_PATH}")
@@ -60,7 +60,7 @@ converter_int8.inference_output_type = tf.float32
 
 tflite_int8_model = converter_int8.convert()
 
-INT8_SAVE_PATH = MODELS_DIR / "mira_model_int8.tflite"
+INT8_SAVE_PATH = MODELS_DIR / "mira_classifier_int8.tflite"
 with open(INT8_SAVE_PATH, "wb") as f:
     f.write(tflite_int8_model)
 print(f"INT8 TFLite saved under: {INT8_SAVE_PATH}")

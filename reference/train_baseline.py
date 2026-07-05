@@ -10,7 +10,7 @@ from tensorflow.keras.models import Sequential
 # 1. PFADE UND KONSTANTEN UNIFIZIEREN
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = ROOT_DIR / "data" / "classes"
 MODELS_DIR = ROOT_DIR / "models"
 
 # Verzeichnis für Modelle erstellen, falls es nicht existiert
@@ -108,6 +108,6 @@ plt.show()
 
 # 6. MODELL SPEICHERN
 # Speichert das Modell direkt im zentralen /models Ordner
-MODEL_SAVE_PATH = MODELS_DIR / 'mira_waste_model.keras'
+MODEL_SAVE_PATH = MODELS_DIR / 'mira_classifier_baseline.keras'
 model.save(MODEL_SAVE_PATH)
 print(f"Modell wurde als {MODEL_SAVE_PATH} gespeichert!")

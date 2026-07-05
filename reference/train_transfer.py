@@ -9,13 +9,13 @@ from tensorflow.keras.models import Sequential
 # 1. PFADE UND KONSTANTEN (Fehlerfrei gelöst über pathlib)
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = ROOT_DIR / "data" / "classes"
 MODELS_DIR = ROOT_DIR / "models"  # Or root path
 
 SAVE_DIR = ROOT_DIR / 'results' / 'EXP-002_MobileNetV2'
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-batch_size = 32
+BATCH_SIZE = 32
 img_height = 224 # Standard-Größe für MobileNetV2
 img_width = 224
 
@@ -127,6 +127,6 @@ plt.show()
 # Modell als .keras-Datei im zentralen /models Ordner speichern
 MODELS_DIR = ROOT_DIR / "models"
 MODELS_DIR.mkdir(exist_ok=True)
-MODEL_SAVE_PATH = MODELS_DIR / "mira_transfer_model.keras"
+MODEL_SAVE_PATH = MODELS_DIR / "mira_classifier_transfer.keras"
 model.save(MODEL_SAVE_PATH)
 print(f"Modell erfolgreich unter {MODEL_SAVE_PATH} gespeichert!")

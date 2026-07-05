@@ -67,7 +67,7 @@ import os
 # .parent gibt das VERZEICHNIS, in dem diese Datei liegt
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent      # z.B. .../MIRA-AI/src
 ROOT_DIR = SCRIPT_DIR.parent                                 # z.B. .../MIRA-AI
-DATA_DIR = ROOT_DIR / "data"                                 # .../MIRA-AI/data
+DATA_DIR = ROOT_DIR / "data" / "classes"                      # .../MIRA-AI/data/classes
 RESULTS_DIR = ROOT_DIR / "results" / "EXP-001_Baseline"      # .../MIRA-AI/results/EXP-001_Baseline
 
 # mkdir(parents=True, exist_ok=True) erstellt Verzeichnisse, falls sie nicht existieren
@@ -76,9 +76,9 @@ RESULTS_DIR = ROOT_DIR / "results" / "EXP-001_Baseline"      # .../MIRA-AI/resul
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 # MODELL-PFAD: Zuerst im Root suchen, dann im src-Ordner als Fallback
-MODEL_PATH = ROOT_DIR / "mira_waste_model.keras"
+MODEL_PATH = ROOT_DIR / "mira_classifier_baseline.keras"
 if not MODEL_PATH.exists():
-    MODEL_PATH = SCRIPT_DIR / "mira_waste_model.keras"
+    MODEL_PATH = SCRIPT_DIR / "mira_classifier_baseline.keras"
 
 print(f"Daten-Verzeichnis: {DATA_DIR}")
 print(f"Ergebnis-Verzeichnis: {RESULTS_DIR}")

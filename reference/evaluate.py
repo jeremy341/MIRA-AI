@@ -14,12 +14,12 @@ def softmax(x):
 
 
 # 0. ARGUMENT PARSING
-parser = argparse.ArgumentParser(description="Evaluate a MIRA Waste Classification Model.")
+parser = argparse.ArgumentParser(description="Evaluate a MIRA Classification Model.")
 parser.add_argument(
     "--model",
     type=str,
-    default="mira_waste_model.keras",
-    help="Name of the model file to evaluate (e.g., mira_model_int8.tflite)"
+    default="mira_classifier_baseline.keras",
+    help="Name of the model file to evaluate (e.g., mira_classifier_int8.tflite)"
 )
 parser.add_argument(
     "--exp",
@@ -32,7 +32,7 @@ args = parser.parse_args()
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = ROOT_DIR / "data" / "classes"
 
 SAVE_DIR = ROOT_DIR / 'results' / args.exp
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -46,7 +46,7 @@ if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Could not locate model file: {args.model} under /models or /src")
 
 # Match image size dynamically based on which model is selected
-img_size = (180, 180) if "waste" in args.model else (224, 224)
+img_size = (180, 180) if ("baseline" in args.model or "waste" in args.model) else (224, 224)
 is_tflite = MODEL_PATH.suffix == ".tflite"
 
 # 2. LOAD VALIDATION DATASET

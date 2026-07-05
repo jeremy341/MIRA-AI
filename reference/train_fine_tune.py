@@ -6,7 +6,7 @@ from tensorflow.keras import layers
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = ROOT_DIR / "data" / "classes"
 MODELS_DIR = ROOT_DIR / "models"
 
 SAVE_DIR = ROOT_DIR / 'results' / 'EXP-003_FineTuning'
@@ -43,7 +43,7 @@ train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
 val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
 # 2. LOAD COMPLETED EXP-002 MODEL (from /models folder)
-MODEL_PATH = MODELS_DIR / "mira_transfer_model.keras"
+MODEL_PATH = MODELS_DIR / "mira_classifier_transfer.keras"
 print(f"Loading previous model from {MODEL_PATH}...")
 model = tf.keras.models.load_model(MODEL_PATH)
 
@@ -81,7 +81,7 @@ history = model.fit(
 
 # 6. SAVE EXP-003 MODEL (to /models folder)
 MODELS_DIR.mkdir(exist_ok=True)
-model.save(MODELS_DIR / 'mira_fine_tuned_model.keras')
+model.save(MODELS_DIR / 'mira_classifier_tuned.keras')
 print("Fine-tuned model saved successfully!")
 
 # Plot and save curves
