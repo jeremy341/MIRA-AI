@@ -10,8 +10,8 @@ from ultralytics import YOLO
 # ---------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="MIRA Live Detection")
 parser.add_argument(
-    "--model", type=str, default="mira_detector_wild.pt",
-    help="Model filename inside the models/ folder (default: mira_detector_wild.pt). "
+    "--model", type=str, default="mira_detector_wild_int8.tflite",
+    help="Model filename inside the models/ folder (default: mira_detector_wild_int8.tflite). "
          "Run without arguments to see all available models printed on startup."
 )
 parser.add_argument(
@@ -119,7 +119,8 @@ if not MODEL_PATH.exists():
     )
 
 print(f"Loading {args.model}...")
-model = YOLO(MODEL_PATH)
+task_type = "detect" if MODEL_PATH.suffix == ".tflite" else None
+model = YOLO(MODEL_PATH, task=task_type)
 
 # ---------------------------------------------------------------------------
 # 4. OPEN CAMERA STREAM

@@ -84,8 +84,8 @@ def main():
     # --- DEPLOYMENT COMMANDS ---
     live_parser = subparsers.add_parser("live", help="Start real-time YOLOv8 webcam tracking stream")
     live_parser.add_argument(
-        "--model", type=str, default="mira_detector_wild.pt",
-        help="Model filename inside models/ (default: mira_detector_wild.pt)."
+        "--model", type=str, default="mira_detector_wild_int8.tflite",
+        help="Model filename inside models/ (default: mira_detector_wild_int8.tflite)."
     )
     live_parser.add_argument(
         "--camera", type=int, default=0,
@@ -137,7 +137,8 @@ def main():
         from ultralytics import YOLO
 
         data_path = resolve_detection_data_yaml(args.data)
-        model = YOLO(str(model_path))
+        task_type = "detect" if model_path.suffix == ".tflite" else None
+        model = YOLO(str(model_path), task=task_type)
         model.val(data=str(data_path), imgsz=640)
     else:
         parser.print_help()
