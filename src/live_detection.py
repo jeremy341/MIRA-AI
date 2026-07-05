@@ -122,6 +122,11 @@ print(f"Loading {args.model}...")
 task_type = "detect" if MODEL_PATH.suffix == ".tflite" else None
 model = YOLO(MODEL_PATH, task=task_type)
 
+# Detect expected input shape dynamically:
+# TFLite/LiteRT edge models are exported at 320 for CPU speed, PyTorch models use 640.
+img_size = 320 if MODEL_PATH.suffix == ".tflite" else 640
+
+
 # ---------------------------------------------------------------------------
 # 4. OPEN CAMERA STREAM
 # ---------------------------------------------------------------------------
@@ -141,12 +146,12 @@ try:
             print("Warning: dropped frame.")
             continue
 
-        # Run inference — imgsz=640 matches training resolution
-        # conf=0.35 suppresses low-confidence background noise
+        # Run inference — dynamically matched to model (320 for TFLite, 640 for PyTorch)
+        # conf=0.35 ignores low-confidence background noise
         # persist=True enables ByteTrack object tracking
         results = model.track(
             frame,
-            imgsz=640,
+            imgsz=img_size,
             conf=0.35,
             persist=True,
             verbose=False

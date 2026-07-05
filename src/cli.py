@@ -139,7 +139,8 @@ def main():
         data_path = resolve_detection_data_yaml(args.data)
         task_type = "detect" if model_path.suffix == ".tflite" else None
         model = YOLO(str(model_path), task=task_type)
-        model.val(data=str(data_path), imgsz=640)
+        val_imgsz = 320 if model_path.suffix == ".tflite" else 640
+        model.val(data=str(data_path), imgsz=val_imgsz)
     else:
         parser.print_help()
 
