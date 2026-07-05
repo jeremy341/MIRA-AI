@@ -84,8 +84,8 @@ def main():
     # --- DEPLOYMENT COMMANDS ---
     live_parser = subparsers.add_parser("live", help="Start real-time YOLOv8 webcam tracking stream")
     live_parser.add_argument(
-        "--model", type=str, default="mira_detector_wild_int8.tflite",
-        help="Model filename inside models/ (default: mira_detector_wild_int8.tflite)."
+        "--model", type=str, default="mira_detector_wild.pt",
+        help="Model filename inside models/ (default: mira_detector_wild.pt)."
     )
     live_parser.add_argument(
         "--camera", type=int, default=0,
