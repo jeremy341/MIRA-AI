@@ -1,0 +1,10 @@
+path: C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\yolo_data
+train: images/train
+val: images/val
+
+names:
+  0: glass
+  1: metal
+  2: paper
+  3: plastic
+  4: trash

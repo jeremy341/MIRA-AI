@@ -94,3 +94,121 @@
 | metal | 0.75 | 1.00 | 0.85 | 41 |
 | paper | 1.00 | 0.64 | 0.78 | 42 |
 | plastic | 0.91 | 0.94 | 0.93 | 33 |
+
+
+## EXP-005: YOLOv8-Nano Object Detection
+* **Date:** July 3, 2026
+* **Architecture:** YOLOv8-Nano (PyTorch .pt)
+* **Dataset Size:** ~3,300 images (Custom + TrashNet)
+* **Target Classes:** glass, metal, paper, plastic, trash
+
+### Quantitative Metrics
+* **mAP50 (Overall):** 82.3%
+* **mAP50-95:** 69.8%
+* **Strongest Class:** Metal (0.941)
+* **Weakest Class:** Trash (0.764)
+* **Inference Latency (Cloud GPU):** 1.9 ms
+
+### Observation
+Transitioning to an object detector successfully enabled simultaneous detection of multiple items. Synthetic auto-labeling via Canny-Edge provided sufficient bounding box accuracy for model convergence.
+
+# EXP-006: Stage B Object Detection Fusion
+**Date:** July 4, 2026
+**Architecture:** YOLOv8-Nano (PyTorch)
+**Cloud Platform:** Google Colab (T4 GPU)
+**Training Time:** 3.3 hours (100 Epochs)
+
+### Methodology
+Transitioned from image classification (one label per image) to spatial object detection (bounding boxes). 
+Fused TrashNet (clean background) with 64-class Roboflow "Wild Data" remapped to 5 MIRA classes: 
+[Glass, Metal, Paper, Plastic, Trash].
+
+### Quantitative Results
+- **mAP50 (Global):** 39.4% (on highly complex wild data)
+- **Real-time Performance (Tabletop):** Stable >90% confidence for Plastic and Metal.
+- **System Latency:** ~40.4 ms per frame on local CPU.
+- **Effective FPS:** ~15.6 FPS (sufficient for mechatronic sorting).
+
+### Qualitative Observations
+Model is highly robust against background textures (keyboard, laptop, white desk). 
+Edge Case identified: "End-on" metal cans (opening facing camera) lead to detection drop-out.
+
+
+---
+
+## EXP-007: YOLOv8-Nano INT8 Quantization (LiteRT)
+* **Date:** July 4, 2026
+* **Architecture:** YOLOv8-Nano (TFLite INT8)
+* **Base Model:** EXP-006 (`mira_detector_wild.pt`)
+
+### Quantitative Metrics
+* **Original Intermediate Graph Size:** 11.69 MB
+* **Quantized INT8 Model Size:** 3.18 MB
+* **Compression Ratio:** 3.7x smaller
+* **Calibration Data:** `yolo_data/dataset.yaml`
+
+### Observation
+Static quantization (INT8 weights and activations) successfully applied using the Ultralytics LiteRT export pipeline via Google Colab (Linux environment). The model footprint of 3.18 MB is well within the memory constraints of the target edge hardware (Raspberry Pi).
+
+
+## EXP-008: Specialized Tabletop YOLOv8-Nano (Data-Centric Optimization)
+* **Date:** July 5, 2026
+* **Commit Hash:** `[your_commit_hash]`
+* **Architecture:** YOLOv8-Nano (PyTorch)
+* **Dataset Size:** ~3,000 images (Custom Tabletop + Labeled TrashNet)
+* **Training Platform:** Google Colab (NVIDIA Tesla T4 GPU)
+* **Training Time:** 1.661 hours (50 epochs)
+
+### Hyperparameters
+* **Learning Rate (lr0):** 0.01 (Adam)
+* **Image Size (imgsz):** 640 (Training) / 320 (Inference Target)
+* **Batch Size:** 16
+* **Loss Functions:** Complete IoU (box_loss), BCE (cls_loss), DFL (dfl_loss)
+
+### Final Epoch Metrics (Epoch 50/50)
+* **Box Loss:** 0.6241
+* **Class Loss (cls_loss):** 0.7603
+* **Distribution Focal Loss (dfl_loss):** 0.9023
+* **Validation Accuracy (mAP50):** 39.6% (0.3960)
+* **mAP50-95:** 32.9% (0.3290)
+
+### Class-Specific Validation Performance (mAP50)
+* **Glass:** 38.8% (0.3880)
+* **Metal:** 51.0% (0.5100)
+* **Paper:** 36.6% (0.3660)
+* **Plastic:** 64.4% (0.6440)
+* **Trash:** 7.1% (0.0711)
+
+### Speed & Performance (GPU)
+* **Preprocess:** 0.2 ms
+* **Inference Latenz:** 2.1 ms
+* **Postprocess:** 3.1 ms
+
+### Observation & Scientific Value
+EXP-008 represents a Data-Centric AI optimization. By purging the corrupted auto-labeled custom images and training strictly on human-annotated, high-quality bounding boxes, the model converged to the exact same accuracy profile as the 100-epoch noisy model (EXP-006) in half the training time. The sharp contrast in classification confidence confirms that removing spatial label noise is more effective than brute-force longer training cycles.
+
+
+---
+
+## EXP-009: Pristine Tabletop YOLOv8-Nano (Verified Baseline)
+* **Date:** July 5, 2026
+* **Architecture:** YOLOv8-Nano (PyTorch .pt)
+* **Dataset Size:** ~2,527 images (Pristine TrashNet, Auto-labeled via Canny Edge)
+* **Training Platform:** Kaggle Notebooks (NVIDIA Tesla T4 GPU)
+* **Training Time:** 0.309 hours (50 epochs)
+
+### Quantitative Metrics
+* **Total Parameters:** 3,006,623 (6.2 MB)
+* **Overall mAP50:** 72.8%
+* **mAP50-95:** 58.3%
+* **Inference Latency (GPU):** 1.4 ms
+
+### Class-Specific Validation Performance (mAP50)
+* **Glass:** 72.9%
+* **Metal:** 84.8%
+* **Paper:** 77.7%
+* **Plastic:** 64.5%
+* **Trash:** 63.9%
+
+### Observation
+This run represents the final, verified baseline of MIRA's Stage B software. By purging all noisy custom desktop images that caused contour border leakage, overall mAP50 was raised from 39.6% to 72.8%. The massive improvements across the board (specifically paper and trash) validate our data-centric approach to model engineering.

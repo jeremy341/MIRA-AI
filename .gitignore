@@ -1,8 +1,28 @@
-data/
+# --- IDE / OS ---
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Python ---
 .venv/
 __pycache__/
 *.pyc
 
-doc/JuFo_Hypothesis_and_Timeline.md
-doc/JuFo_Report_Template.md
-doc/MIRA_Learning_Resources.md
+# --- Archives ---
+archive/
+yolo_data.zip
+
+# --- Docs & notes (not for public repo) ---
+doc/
+fixes.md
+roadmap.md
+
+# --- Dataset images in data/classes (training pictures) ---
+# Ignore all images inside data/classes subfolders
+data/classes/**/*.jpg
+data/classes/**/*.jpeg
+data/classes/**/*.png
+
+# --- YOLO raw data ---
+yolo_data/images/
+yolo_data/labels/

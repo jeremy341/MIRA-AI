@@ -18,8 +18,8 @@ def softmax(x):
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 
-# Waehle das Modell: "mira_model_int8.tflite" (Quantisiert) oder "mira_model_fp32.tflite"
-MODEL_PATH = ROOT_DIR / "models" / "mira_model_int8.tflite"
+# Waehle das Modell: "mira_classifier_int8.tflite" (Quantisiert) oder "mira_classifier_fp32.tflite"
+MODEL_PATH = ROOT_DIR / "models" / "mira_classifier_int8.tflite"
 
 print(f"Loading TFLite Model from {MODEL_PATH}...")
 interpreter = tflite.Interpreter(model_path=str(MODEL_PATH))
@@ -29,7 +29,7 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-class_names = ['glass', 'metal', 'paper', 'plastic']
+class_names = ['glass', 'metal', 'paper', 'plastic', 'trash']
 
 # 2. TEMPORAL SMOOTHING KONFIGURATION
 alpha = 0.15  # Glaettungsfaktor (0.01 = extrem traege/stabil, 0.9 = flackernd/schnell)
@@ -57,9 +57,6 @@ while True:
     # FIX: Convert from OpenCV BGR to TensorFlow/Keras RGB [2]
     cropped_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(cropped_rgb, (224, 224))
-
-    # Batch-Dimension hinzufuegen und Typ in NumPy konvertieren
-    input_data = np.expand_dims(resized, axis=0).astype(np.float32)
 
     # Batch-Dimension hinzufuegen und Typ in NumPy konvertieren (kein tf nötig!)
     input_data = np.expand_dims(resized, axis=0).astype(np.float32)
