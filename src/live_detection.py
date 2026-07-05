@@ -122,9 +122,18 @@ print(f"Loading {args.model}...")
 task_type = "detect" if MODEL_PATH.suffix == ".tflite" else None
 model = YOLO(MODEL_PATH, task=task_type)
 
-# Detect expected input shape dynamically:
-# TFLite/LiteRT edge models are exported at 320 for CPU speed, PyTorch models use 640.
-img_size = 320 if MODEL_PATH.suffix == ".tflite" else 640
+# Read the model's actual required input size directly from the tensor shape.
+# This is the only reliable method — filenames like '_320' can be misleading
+# since the model may have been exported at a different resolution than the name implies.
+if MODEL_PATH.suffix == ".tflite":
+    from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
+    _tmp = LiteRTInterpreter(model_path=str(MODEL_PATH))
+    _shape = _tmp.get_input_details()[0]["shape"]  # e.g. [1, 640, 640, 3]
+    img_size = int(_shape[1])  # height dimension (always square for YOLO)
+    del _tmp
+    print(f"TFLite model requires input size: {img_size}x{img_size}")
+else:
+    img_size = 640  # PyTorch .pt models always use 640
 
 
 # ---------------------------------------------------------------------------

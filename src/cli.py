@@ -139,7 +139,13 @@ def main():
         data_path = resolve_detection_data_yaml(args.data)
         task_type = "detect" if model_path.suffix == ".tflite" else None
         model = YOLO(str(model_path), task=task_type)
-        val_imgsz = 320 if model_path.suffix == ".tflite" else 640
+        if model_path.suffix == ".tflite":
+            from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
+            _tmp = LiteRTInterpreter(model_path=str(model_path))
+            val_imgsz = int(_tmp.get_input_details()[0]["shape"][1])
+            del _tmp
+        else:
+            val_imgsz = 640
         model.val(data=str(data_path), imgsz=val_imgsz)
     else:
         parser.print_help()
