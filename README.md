@@ -18,6 +18,12 @@
 9. [Known Limitations](#9-known-limitations)
 10. [Repository Notes](#10-repository-notes)
 
+**Additional Resources:**
+- **[Quick Start Guide](QUICK_START.md)** — Get running in 3 minutes
+- **[Troubleshooting Guide](TROUBLESHOOTING.md)** — Common issues & solutions
+- **[Deployment Guide](DEPLOYMENT.md)** — Edge device setup (Raspberry Pi, Jetson)
+- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute
+
 ---
 
 ## 1. Project Overview
@@ -59,11 +65,13 @@ Webcam Input
 ┌─────────────────────────────────────────────────────┐
 │  Stage B: Detection (multiple objects per frame)    │
 │                                                     │
-│  Input (320×320) → YOLOv8-Nano → NMS →              │
+│  Input (640×640) → YOLOv8-Nano → NMS →              │
 │  Bounding Boxes + Class Labels                      │
 │                                                     │
-│  Best model: mira_detector_tabletop_int8_320.tflite │
-│  mAP50: 72.8% | Size: 3.18 MB | ~15 FPS CPU        │
+│  Best model (accuracy): mira_detector_wild_v2.pt    │
+│  Best model (edge): mira_detector_tabletop_int8_320 │
+│  Trade-off: PyTorch is more accurate but needs more │
+│  resources; quantized models are smaller/faster     │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -88,7 +96,9 @@ MIRA-AI/
 │   ├── mira_classifier_fp32.tflite
 │   ├── mira_classifier_int8.tflite      ← Best Stage A deployment model
 │   ├── mira_detector_wild.pt
+│   ├── mira_detector_wild_v2.pt         ← Improved wild-world detection model
 │   ├── mira_detector_tabletop_int8_320.tflite  ← Best Stage B deployment model
+│   ├── mira_detector_wild_v2_int8_320.tflite   ← Quantized improved wild-world model
 │   └── mira_yolo_int8_320.tflite
 │
 ├── reference/                # All training, evaluation, and quantization scripts
@@ -151,8 +161,10 @@ MIRA-AI/
 
 | Model | mAP50 | Size | Notes |
 |---|---|---|---|
-| `mira_detector_wild.pt` | 39.4% | 5.94 MB | Trained on cluttered wild-world data, most robust |
-| `mira_detector_tabletop_int8_320.tflite` | **72.8%** | **3.18 MB** | **Best for deployment** — INT8, tabletop-optimized |
+| `mira_detector_wild.pt` | 39.4% | 5.94 MB | Trained on cluttered wild-world data |
+| `mira_detector_wild_v2.pt` | TBD | 6.23 MB | **RECOMMENDED** — Improved wild-world detection, best accuracy (non-quantized) |
+| `mira_detector_tabletop_int8_320.tflite` | 72.8% | 3.18 MB | Best for edge deployment (tabletop-optimized INT8, lower accuracy) |
+| `mira_detector_wild_v2_int8_320.tflite` | TBD | 3.31 MB | Quantized improved wild-world model (lower accuracy than .pt version) |
 | `mira_yolo_int8_320.tflite` | 72.8% | 3.16 MB | Legacy comparison export |
 
 ---
@@ -280,14 +292,19 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 # Evaluate a YOLO detection model
 .\mira eval-yolo --model mira_detector_wild.pt
 .\mira eval-yolo --model mira_detector_wild.pt --data path/to/dataset.yaml
+
+# For TFLite models, imgsz is auto-detected from the model's input tensor shape
+.\mira eval-yolo --model mira_detector_tabletop_int8_320.tflite  # automatically uses imgsz=320
+.\mira eval-yolo --model mira_detector_wild_v2_int8_320.tflite   # automatically uses imgsz=320
 ```
 
 ### Deployment Commands
 
 | Command | Description |
 |---|---|
+| `.\mira live --model mira_detector_wild_v2.pt` | **RECOMMENDED** — Best accuracy, non-quantized detection |
 | `.\mira live` | Live detection with default model (`mira_detector_wild.pt`) at 640x360 |
-| `.\mira live --model mira_detector_tabletop_int8_320.tflite` | Use the quantized tabletop model |
+| `.\mira live --model mira_detector_tabletop_int8_320.tflite` | Edge deployment (smaller, faster but lower accuracy) |
 | `.\mira live --model mira_detector_wild.pt --resolution 1280x720` | Wild model at 720p display |
 | `.\mira live --camera 1` | Use a specific camera by index |
 | `.\mira dashboard` | Launch the Streamlit web control center (model switchable via sidebar) |
@@ -300,6 +317,8 @@ Available models in models/:
   mira_classifier_int8.tflite
   mira_detector_tabletop_int8_320.tflite
   mira_detector_wild.pt          <-- selected
+  mira_detector_wild_v2.pt
+  mira_detector_wild_v2_int8_320.tflite
   mira_yolo_int8_320.tflite
 ```
 

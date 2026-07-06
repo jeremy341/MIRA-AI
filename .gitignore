@@ -1,16 +1,24 @@
 # --- IDE / OS ---
 .idea/
 .DS_Store
+.vscode/
 Thumbs.db
+*.swp
+*.swo
+*~
 
 # --- Python ---
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.hypothesis/
+*.cache
 
 # --- Archives ---
 archive/
-yolo_data.zip
+*.zip
+*.tar.gz
 
 # --- Docs & notes (not for public repo) ---
 doc/
@@ -26,3 +34,12 @@ data/classes/**/*.png
 # --- YOLO raw data ---
 yolo_data/images/
 yolo_data/labels/
+
+# --- Additional raw datasets ---
+wild_data/
+mira_wild_data/
+
+# --- YOLOv8 training runs and detection outputs ---
+runs/
+# --- EXP results with large images ---
+results/EXP-010_YOLOv8_Wild_v2/
