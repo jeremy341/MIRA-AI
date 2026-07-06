@@ -181,7 +181,7 @@ Static quantization (INT8 weights and activations) successfully applied using th
 
 ### Speed & Performance (GPU)
 * **Preprocess:** 0.2 ms
-* **Inference Latenz:** 2.1 ms
+* **Inference Latency:** 2.1 ms
 * **Postprocess:** 3.1 ms
 
 ### Observation & Scientific Value
@@ -212,3 +212,69 @@ EXP-008 represents a Data-Centric AI optimization. By purging the corrupted auto
 
 ### Observation
 This run represents the final, verified baseline of MIRA's Stage B software. By purging all noisy custom desktop images that caused contour border leakage, overall mAP50 was raised from 39.6% to 72.8%. The massive improvements across the board (specifically paper and trash) validate our data-centric approach to model engineering.
+
+
+## EXP-010: Quantized Wild YOLOv8-Nano (INT8 Calibration)
+* **Date:** July 6, 2026
+* **Architecture:** YOLOv8-Nano (TFLite INT8 / LiteRT)
+* **Base Model:** EXP-006 (`mira_detector_wild.pt`)
+* **Dataset Size:** ~3,300 images (Custom + TrashNet + Remapped Roboflow)
+* **Calibration Set:** 100 representative samples from `mira_wild_data`
+
+### Quantitative Metrics
+* **Original Intermediate Graph Size:** 11.62 MB
+* **Quantized INT8 Model Size:** 3.16 MB
+* **Compression Ratio:** 3.7x smaller
+* **Inference Speed (Cloud GPU):** 2.1 ms
+* **Calibration Dataset Config:** `yolo_data/dataset.yaml` (5 classes)
+
+### Observation
+Static quantization (8-bit integer weights and activations) successfully applied using the Ultralytics LiteRT export pipeline in a Linux environment. The model footprint of 3.16 MB is fully optimized for CPU-only edge environments (Raspberry Pi), resolving the platform compiler conflicts encountered on Windows host systems.
+
+---
+
+## EXP-011: Tabletop-Excluded YOLOv8-Nano (Wild-Data Only)
+* **Date:** July 6, 2026
+* **Commit Hash:** `[your_commit_hash]`
+* **Architecture:** YOLOv8-Nano (PyTorch .pt)
+* **Dataset Size:** 3,365 images (Pristine TACO-remaped Wild Dataset)
+* **Training Platform:** Kaggle Notebooks (NVIDIA Tesla T4 GPU)
+* **Training Time:** 0.309 hours (100 epochs)
+
+### Hyperparameters
+* **Learning Rate (lr0):** 0.01 (Adam)
+* **Image Size (imgsz):** 640 (Training) / 320 (Inference Target)
+* **Batch Size:** 16
+
+### Final Epoch Validation Metrics (mAP50)
+* **Overall mAP50:** 35.0% (0.3500)
+* **mAP50-95:** 29.0% (0.2900)
+* **Inference Latency (GPU):** 1.8 ms
+
+### Class-Specific Validation Performance (mAP50)
+* **Glass:** 27.3%
+* **Metal:** 46.4%
+* **Paper:** 31.4%
+* **Plastic:** 62.3%
+* **Trash:** 7.5%
+
+### Observation
+EXP-010 represents an investigation into pure out-of-distribution generalization. By excluding local tabletop images and training exclusively on complex outdoor packaging waste (litter), the global mAP50 dropped to 35.0% on the diverse test set. While overall precision remains lower due to extreme background occlusions, the model successfully generalized basic material geometries.
+
+---
+
+## EXP-012: Quantized Wild-Only YOLOv8-Nano (INT8 Calibration)
+* **Date:** July 6, 2026
+* **Commit Hash:** `[your_commit_hash]`
+* **Architecture:** YOLOv8-Nano (TFLite INT8 / LiteRT)
+* **Base Model:** EXP-011 (`mira_detector_wild_v2.pt`)
+* **Calibration Dataset:** `wild_data/data.yaml`
+
+### Quantitative Metrics
+* **Original Model Size:** 11.62 MB (11.62 MiB)
+* **Quantized INT8 Model Size:** 3.16 MB (3.16 MiB)
+* **Compression Ratio:** 3.7x smaller (72.8% smaller footprint)
+* **Inference Speed (Cloud GPU):** 2.1 ms
+
+### Observation
+The EXP-010 model was successfully quantized using its original high-variance training distribution as the representative calibration set. Unlike previous runs calibrated on clean white-background data, this run used the proper activation dynamic range. The successful compile of 3.16 MB establishes the performance limits of complex background processing on low-power CPU architectures.
