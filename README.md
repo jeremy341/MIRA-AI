@@ -41,7 +41,7 @@ MIRA is a five-class recycling classifier and detector trained to identify:
 The system was built and benchmarked in two stages:
 
 - **Stage A** — Image classification using a custom CNN, then MobileNetV2 transfer learning and fine-tuning. The final INT8-quantized model achieves **87.42% accuracy at 2.61 MB**, running at ~97 FPS on CPU.
-- **Stage B** — Real-time object detection using YOLOv8-Nano and YOLO11n with bounding box tracking. The current best model (EXP-013) achieves **55.1% mAP50 at 2.9 MB** (INT8 TFLite) using YOLO11n on a fused multi-dataset. An active 4-model comparison is underway to find the optimal training data mix.
+- **Stage B** — Real-time object detection using YOLOv8-Nano and YOLO11n with bounding box tracking. The current best model (EXP-014) achieves **60.7% mAP50 at 2.9 MB** (INT8 TFLite) using YOLO11n on a fused multi-dataset. An active 4-model comparison is underway to find the optimal training data mix.
 
 ---
 
@@ -68,8 +68,8 @@ Webcam Input
 │  Input (640×640) → YOLO11n → NMS →              │
 │  Bounding Boxes + Class Labels                      │
 │                                                     │
-│  Best model (EXP-013): YOLO11n 55.1% mAP50         │
-│  Dataset: TACO + TrashNet (fused multi-source)      │
+│  Best model (EXP-014): YOLO11n 60.7% mAP50         │
+│  Dataset: TACO + TrashNet + Roboflow (multi-source)│
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -174,12 +174,12 @@ MIRA-AI/
 
 | Model | mAP50 | Params | Size | Notes |
 |---|---|---|---|---|
-| `YOLO11n` (EXP-013) | **55.1%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on TACO+TrashNet, best edge trade-off |
-| `mira_detector_wild_v2.pt` (EXP-011) | 35.0% | 3.01M | 6.23 MB | Wild-only (TACO), generalizes well to real scenes |
+| `YOLO11n` (EXP-014) | **60.7%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on TACO+TrashNet+Roboflow |
+| `YOLO11n` (EXP-013) | 55.1% | 2.58M | 2.9 MB | YOLO11n on TACO+TrashNet (no Roboflow) |
 | `mira_detector_wild.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
 | `mira_detector_tabletop_int8_320.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
 
-> **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. The YOLO11n model (EXP-013) at 55.1% mAP50 is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8). The wild models (.pt) generalize better to complex backgrounds but are larger.
+> **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. EXP-014 (60.7% mAP50) is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8).
 
 ---
 
@@ -205,9 +205,10 @@ MIRA-AI/
 | EXP-010 | YOLOv8n INT8 | Wild + TrashNet (quantized) | 35.0% | — |
 | EXP-011 | YOLOv8n | TACO only (3,365 img) | 35.0% | Kaggle T4 |
 | EXP-012 | YOLOv8n INT8 | TACO only (quantized) | 35.0% | — |
-| **EXP-013** | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
+| EXP-013 | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
+| **EXP-014** | **YOLO11n** | **TACO + TrashNet + Roboflow (6,802 img)** | **60.7%** | **Kaggle T4 (4.7 h)** |
 
-> **Key finding:** Removing noisy auto-labeled custom images (EXP-008 → EXP-009) raised mAP50 from 39.6% to **72.8%** — a clear demonstration of the data-centric AI approach. However, EXP-009's high score is inflated by clean backgrounds. EXP-013 (YOLO11n) achieves 55.1% on diverse real-world data and is the new deployment target.
+> **Key finding:** Adding Roboflow Trash Detection (EXP-013 → EXP-014) raised mAP50 from 55.1% to **60.7%** (+5.6 pp), with Trash improving by +11.3 pp (15.6% → 26.9%). The 4-Model Comparison is underway to find the optimal dataset mix.
 
 ### 4-Model Comparison (In Progress)
 
@@ -215,7 +216,7 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 
 | Model | Datasets | ~Images | Script | Status |
 |---|---|---|---|---|
-| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_model1.py` | Dataset ready |
+| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_model1.py` | **Done — 60.7% mAP50** |
 | Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_model2.py` | Pending |
 | Model 3 | WaRP only | ~3,000 | `scripts/merge_model3.py` | Pending |
 | Model 4 | All four datasets | ~17,000 | `scripts/merge_model4.py` | Pending |
