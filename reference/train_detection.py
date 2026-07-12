@@ -4,12 +4,12 @@ from ultralytics import YOLO
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-YOLO_DATA_DIR = ROOT_DIR / "clean_data"
+YOLO_DATA_DIR = ROOT_DIR / "datasets" / "mira_v2"
 DATA_YAML = YOLO_DATA_DIR / "dataset.yaml"
 
 # 2. VERIFY DATASET CONFIGURATION
 if not DATA_YAML.exists():
-    raise FileNotFoundError(f"dataset.yaml not found at {DATA_YAML}. Run build_detection_dataset.py first.")
+    raise FileNotFoundError(f"dataset.yaml not found at {DATA_YAML}. Run merge scripts first.")
 
 # 3. INITIALIZE MODEL
 # We start with the 'nano' version (yolov8n) which is optimized for edge devices like Raspberry Pi

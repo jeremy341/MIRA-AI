@@ -4,7 +4,7 @@ import pathlib
 # PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-YAML_PATH = ROOT_DIR / "wild_data" / "data.yaml"
+YAML_PATH = ROOT_DIR / "datasets" / "Trash Detection.yolov8 (1)" / "data.yaml"
 
 if not YAML_PATH.exists():
     raise FileNotFoundError(f"Could not locate data.yaml at {YAML_PATH}")

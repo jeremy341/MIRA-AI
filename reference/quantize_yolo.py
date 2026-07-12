@@ -12,6 +12,7 @@ model = YOLO(MODEL_PATH)
 # int8=True aktiviert die Quantisierung
 # data='dataset.yaml' wird zur Kalibrierung genutzt (sehr wichtig!)
 print("Starte YOLOv8 Quantisierung zu INT8...")
-model.export(format="tflite", int8=True, data="yolo_data/dataset.yaml")
+data_yaml = ROOT_DIR / "datasets" / "mira_v2" / "dataset.yaml"
+model.export(format="tflite", int8=True, data=str(data_yaml))
 
 print(f"Fertig! Das Modell liegt nun im Ordner: {ROOT_DIR}/models/")
