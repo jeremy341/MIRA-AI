@@ -41,7 +41,7 @@ MIRA is a five-class recycling classifier and detector trained to identify:
 The system was built and benchmarked in two stages:
 
 - **Stage A** — Image classification using a custom CNN, then MobileNetV2 transfer learning and fine-tuning. The final INT8-quantized model achieves **87.42% accuracy at 2.61 MB**, running at ~97 FPS on CPU.
-- **Stage B** — Real-time object detection using YOLOv8-Nano with bounding box tracking. The final deployment model achieves **72.8% mAP50 at 3.18 MB** with ~15 FPS on local CPU.
+- **Stage B** — Real-time object detection using YOLOv8-Nano and YOLO11n with bounding box tracking. The current best model (EXP-013) achieves **55.1% mAP50 at 2.9 MB** (INT8 TFLite) using YOLO11n on a fused multi-dataset. An active 4-model comparison is underway to find the optimal training data mix.
 
 ---
 
@@ -65,13 +65,11 @@ Webcam Input
 ┌─────────────────────────────────────────────────────┐
 │  Stage B: Detection (multiple objects per frame)    │
 │                                                     │
-│  Input (640×640) → YOLOv8-Nano → NMS →              │
+│  Input (640×640) → YOLO11n → NMS →              │
 │  Bounding Boxes + Class Labels                      │
 │                                                     │
-│  Best model (accuracy): mira_detector_wild_v2.pt    │
-│  Best model (edge): mira_detector_tabletop_int8_320 │
-│  Trade-off: PyTorch is more accurate but needs more │
-│  resources; quantized models are smaller/faster     │
+│  Best model (EXP-013): YOLO11n 55.1% mAP50         │
+│  Dataset: TACO + TrashNet (fused multi-source)      │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -88,6 +86,13 @@ MIRA-AI/
 │       ├── paper/            # ~500 paper/cardboard samples
 │       ├── plastic/          # ~500 plastic samples
 │       └── trash/            # ~500 residual waste samples
+│
+├── datasets/                 # YOLO-format detection datasets (gitignored)
+│   ├── mira_v2/              # TACO + TrashNet (current best, 4,024 images)
+│   ├── TACO+TrashNet+Roboflow/  # Model 1: + Roboflow Trash Detection
+│   ├── TACO+TrashNet+WaRP/      # Model 2: + WaRP waste detection
+│   ├── WaRP_only/                # Model 3: WaRP only
+│   └── All_TACO+TrashNet+Roboflow+WaRP/  # Model 4: all combined
 │
 ├── models/                   # All trained model exports (ready to use)
 │   ├── mira_classifier_baseline.keras
@@ -123,7 +128,18 @@ MIRA-AI/
 │   ├── EXP-006_YOLOv8_Super/
 │   ├── EXP-008_Tabletop_Clean/
 │   ├── EXP-009_Tabletop_INT8/
+│   ├── EXP-010_Quantized_Wild/
+│   ├── EXP-011_Wild_Only/
+│   ├── EXP-012_Quantized_Wild_v2/
+│   ├── EXP-013_YOLO11n_TACO+TrashNet/
 │   └── experiments_log.md    # Full quantitative metrics for all experiments
+│
+├── scripts/                  # Dataset merge, training, and evaluation scripts
+│   ├── kaggle_train.py       # Configurable Kaggle training (change DATASET_NAME per model)
+│   ├── merge_model1.py       # TACO + TrashNet + Roboflow → 6,802 images
+│   ├── merge_model2.py       # TACO + TrashNet + WaRP → ~14,000 images
+│   ├── merge_model3.py       # WaRP only → ~3,000 images
+│   └── merge_model4.py       # All datasets → ~17,000 images
 │
 ├── src/                      # Runtime tools for demos and development
 │   ├── cli.py                # Unified MIRA command-line interface
@@ -132,9 +148,6 @@ MIRA-AI/
 │   ├── debug_detection.py    # Camera diagnostics for detection models
 │   ├── live_detection.py     # Real-time YOLOv8 detection and tracking
 │   └── visualize_dataset.py  # Dataset distribution and sample grid viewer
-│
-├── yolo_data/
-│   └── dataset.yaml          # YOLO class names and dataset split paths
 │
 ├── .gitignore
 ├── LICENSE
@@ -159,15 +172,14 @@ MIRA-AI/
 
 ### Stage B — Detection
 
-| Model | mAP50 | Size | Notes |
-|---|---|---|---|
-| `mira_detector_wild_v2.pt` | 35.0% | 6.23 MB | **BEST** — Most robust real-world detector |
-| `mira_detector_wild.pt` | 39.4% | 5.94 MB | **STRONG** — Wild-world baseline, proven in live demos |
-| `mira_detector_wild_v2_int8_320.tflite` | 35.0% | 3.31 MB | Quantized wild, lower accuracy than .pt, low confidence issues |
-| `mira_detector_tabletop_int8_320.tflite` | 72.8% | 3.18 MB | **WEAK** — Inflated mAP from clean backgrounds, fails on real scenes |
-| `mira_yolo_int8_320.tflite` | 72.8% | 3.16 MB | **WEAK** — Legacy quantized, same problems as tabletop |
+| Model | mAP50 | Params | Size | Notes |
+|---|---|---|---|---|
+| `YOLO11n` (EXP-013) | **55.1%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on TACO+TrashNet, best edge trade-off |
+| `mira_detector_wild_v2.pt` (EXP-011) | 35.0% | 3.01M | 6.23 MB | Wild-only (TACO), generalizes well to real scenes |
+| `mira_detector_wild.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
+| `mira_detector_tabletop_int8_320.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
 
-> **Note:** The `.pt` PyTorch wild models are the strongest detectors despite lower mAP50 scores. The tabletop INT8 models have high mAP50 (72.8%) because they were validated on clean white-background data — but they perform poorly in real-world scenes with complex backgrounds. The wild models were trained on diverse environments and generalize much better. For live detection, always use the `.pt` models.
+> **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. The YOLO11n model (EXP-013) at 55.1% mAP50 is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8). The wild models (.pt) generalize better to complex backgrounds but are larger.
 
 ---
 
@@ -184,14 +196,31 @@ MIRA-AI/
 
 ### Stage B — Detection Summary
 
-| Experiment | Dataset | mAP50 | Platform |
-|---|---|---|---|
-| EXP-005 | Custom + TrashNet (~3 300 img) | 82.3% | Colab T4 |
-| EXP-006 | Fused Wild + TrashNet | 39.4% | Colab T4 (3.3 h) |
-| EXP-008 | Pruned Tabletop (~3 000 img) | 39.6% | Colab T4 (1.7 h) |
-| EXP-009 | Pristine TrashNet (~2 527 img) | **72.8%** | Kaggle T4 (0.3 h) |
+| Experiment | Model | Dataset | mAP50 | Platform |
+|---|---|---|---|---|
+| EXP-005 | YOLOv8n | Custom + TrashNet (~3,300 img) | 82.3% | Colab T4 |
+| EXP-006 | YOLOv8n | Fused Wild + TrashNet | 39.4% | Colab T4 (3.3 h) |
+| EXP-008 | YOLOv8n | Pruned Tabletop (~3,000 img) | 39.6% | Colab T4 (1.7 h) |
+| EXP-009 | YOLOv8n | Pristine TrashNet (~2,527 img) | **72.8%** | Kaggle T4 (0.3 h) |
+| EXP-010 | YOLOv8n INT8 | Wild + TrashNet (quantized) | 35.0% | — |
+| EXP-011 | YOLOv8n | TACO only (3,365 img) | 35.0% | Kaggle T4 |
+| EXP-012 | YOLOv8n INT8 | TACO only (quantized) | 35.0% | — |
+| **EXP-013** | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
 
-> **Key finding:** Removing noisy auto-labeled custom images (EXP-008 → EXP-009) raised mAP50 from 39.6% to **72.8%** in one-fifth of the training time — a clear demonstration of the data-centric AI approach.
+> **Key finding:** Removing noisy auto-labeled custom images (EXP-008 → EXP-009) raised mAP50 from 39.6% to **72.8%** — a clear demonstration of the data-centric AI approach. However, EXP-009's high score is inflated by clean backgrounds. EXP-013 (YOLO11n) achieves 55.1% on diverse real-world data and is the new deployment target.
+
+### 4-Model Comparison (In Progress)
+
+To find the optimal training data mix, we are training YOLO11n on 4 dataset combinations:
+
+| Model | Datasets | ~Images | Script | Status |
+|---|---|---|---|---|
+| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_model1.py` | Dataset ready |
+| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_model2.py` | Pending |
+| Model 3 | WaRP only | ~3,000 | `scripts/merge_model3.py` | Pending |
+| Model 4 | All four datasets | ~17,000 | `scripts/merge_model4.py` | Pending |
+
+All models train with YOLO11n using `scripts/kaggle_train.py` on Kaggle.
 
 Full per-class metrics, confusion matrices, and training curves are in [`results/experiments_log.md`](results/experiments_log.md).
 
@@ -218,6 +247,16 @@ python -m venv .venv
 # Install all dependencies
 pip install -r requirements.txt
 ```
+
+### Kaggle Training
+
+For training on Kaggle (free GPU), see `scripts/kaggle_train.py`:
+
+1. Set `DATASET_NAME` in `kaggle_train.py` to your desired dataset (e.g., `"TACO+TrashNet+Roboflow"`)
+2. Upload the dataset ZIP to Kaggle
+3. Run the notebook on a GPU runtime
+
+The 4-model comparison uses this workflow — see [4-Model Comparison](#4-model-comparison-in-progress) above.
 
 ### Verify Installation
 
@@ -369,19 +408,18 @@ All three camera scripts (`live_detection.py`, `capture_frame.py`, `dashboard.py
 
 - **End-on metal cans** — cans facing the camera opening-first cause frequent detection drop-outs due to a lack of representative training samples for this orientation.
 - **Overlapping objects** — heavily stacked or occluded items reduce bounding box accuracy, particularly for paper and trash classes.
-- **Tabletop-optimized models** — the best deployment models (`EXP-009`) were trained on clean tabletop images. Performance degrades on cluttered, real-world backgrounds.
-- **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 63.9% mAP50) due to its inherent visual diversity.
+- **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 7.1% mAP50 in EXP-008, 15.6% in EXP-013) due to its inherent visual diversity and limited training data.
 - **Windows-only launcher** — `mira.bat` is Windows-specific. Linux/macOS users must call `python src/cli.py <command>` directly.
 
 ---
 
 ## 10. Repository Notes
 
-- **Training data** (`data/classes/`) is excluded from the repository. The models are fully trained and ready to use without the raw images.
-- **YOLO training data** (`yolo_data/images/`, `yolo_data/labels/`) is also excluded — only the dataset manifest (`yolo_data/dataset.yaml`) is tracked.
+- **Training data** (`data/classes/`) and **detection datasets** (`datasets/`) are excluded from the repository. The models are fully trained and ready to use without the raw images.
 - **Documentation** (`doc/`) is excluded from the public repository.
 - All model exports in `models/` are committed and ready for use.
 - Confusion matrices and training curves are committed under `results/`.
+- Dataset merge and training scripts are in `scripts/`.
 
 ---
 

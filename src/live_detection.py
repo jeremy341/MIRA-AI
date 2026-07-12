@@ -121,7 +121,7 @@ print(f"Loading {args.model}...")
 if "classifier" in args.model.lower():
     print(f"\nERROR: '{args.model}' is a CLASSIFIER model, not a detector.")
     print("Live detection requires a detection model (.pt or detection .tflite).")
-    print("Use 'mira eval-class --model {args.model} --exp <folder>' instead.")
+    print(f"Use 'mira eval-class --model {args.model} --exp <folder>' instead.")
     sys.exit(1)
 
 task_type = "detect" if MODEL_PATH.suffix == ".tflite" else None

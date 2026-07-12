@@ -30,7 +30,7 @@
 
 ## EXP-002: Transfer Learning (MobileNetV2 Frozen Base)
 * **Date:** June 27, 2026
-* **Commit Hash:** `[your_commit_hash]`
+* **Commit Hash:** `366cd6c`
 * **Architecture:** MobileNetV2 (weights: ImageNet, frozen) + Custom head [Dense(128) + Dropout(0.2)]
 * **Dataset Size:** 796 images (fully scaled)
 * **Dataset Source:** Hand-collected custom images (`data/classes/`), 4 classes only (no trash)
@@ -77,7 +77,7 @@
 
 ## EXP-004: Quantized TFLite Model (Full INT8)
 * **Date:** July 2, 2026
-* **Commit Hash:** `[your_commit_hash]`
+* **Commit Hash:** `93f32eb`
 * **Architecture:** MobileNetV2 (Quantized to 8-bit Integer Calibration)
 * **Dataset Size:** 796 images (fully scaled)
 * **Dataset Source:** Hand-collected custom images (`data/classes/`), 4 classes only (no trash)
@@ -159,7 +159,7 @@ Static quantization (INT8 weights and activations) successfully applied using th
 
 ## EXP-008: Specialized Tabletop YOLOv8-Nano (Data-Centric Optimization)
 * **Date:** July 5, 2026
-* **Commit Hash:** `[your_commit_hash]`
+* **Commit Hash:** `2793a70`
 * **Architecture:** YOLOv8-Nano (PyTorch)
 * **Dataset Size:** ~3,000 images (Custom Tabletop + Labeled TrashNet)
 * **Dataset Source:** Hand-collected custom tabletop images + Stanford TrashNet (human-annotated bounding boxes, corrupted auto-labeled images removed)
@@ -245,7 +245,7 @@ Static quantization (8-bit integer weights and activations) successfully applied
 
 ## EXP-011: Tabletop-Excluded YOLOv8-Nano (Wild-Data Only)
 * **Date:** July 6, 2026
-* **Commit Hash:** `[your_commit_hash]`
+* **Commit Hash:** `decb9d1`
 * **Architecture:** YOLOv8-Nano (PyTorch .pt)
 * **Dataset Size:** 3,365 images (Pristine TACO-remaped Wild Dataset)
 * **Dataset Source:** TACO (Trash Annotations in Context) — outdoor/wild litter images, 60 COCO categories remapped to 5 MIRA classes
@@ -276,7 +276,7 @@ EXP-011 represents an investigation into pure out-of-distribution generalization
 
 ## EXP-012: Quantized Wild-Only YOLOv8-Nano (INT8 Calibration)
 * **Date:** July 6, 2026
-* **Commit Hash:** `[your_commit_hash]`
+* **Commit Hash:** `decb9d1`
 * **Architecture:** YOLOv8-Nano (TFLite INT8 / LiteRT)
 * **Base Model:** EXP-011 (`mira_detector_wild_v2.pt`)
 * **Dataset Source:** Same as EXP-011 (TACO only)
