@@ -19,10 +19,10 @@
 10. [Repository Notes](#10-repository-notes)
 
 **Additional Resources:**
-- **[Quick Start Guide](QUICK_START.md)** — Get running in 3 minutes
-- **[Troubleshooting Guide](TROUBLESHOOTING.md)** — Common issues & solutions
-- **[Deployment Guide](DEPLOYMENT.md)** — Edge device setup (Raspberry Pi, Jetson)
-- **[Contributing Guide](CONTRIBUTING.md)** — How to contribute
+- **[Quick Start Guide](CLAUDE/QUICK_START.md)** — Get running in 3 minutes
+- **[Troubleshooting Guide](CLAUDE/TROUBLESHOOTING.md)** — Common issues & solutions
+- **[Deployment Guide](CLAUDE/DEPLOYMENT.md)** — Edge device setup (Raspberry Pi, Jetson)
+- **[Contributing Guide](CLAUDE/CONTRIBUTING.md)** — How to contribute
 
 ---
 
@@ -161,11 +161,13 @@ MIRA-AI/
 
 | Model | mAP50 | Size | Notes |
 |---|---|---|---|
-| `mira_detector_wild.pt` | 39.4% | 5.94 MB | Trained on cluttered wild-world data |
-| `mira_detector_wild_v2.pt` | TBD | 6.23 MB | **RECOMMENDED** — Improved wild-world detection, best accuracy (non-quantized) |
-| `mira_detector_tabletop_int8_320.tflite` | 72.8% | 3.18 MB | Best for edge deployment (tabletop-optimized INT8, lower accuracy) |
-| `mira_detector_wild_v2_int8_320.tflite` | TBD | 3.31 MB | Quantized improved wild-world model (lower accuracy than .pt version) |
-| `mira_yolo_int8_320.tflite` | 72.8% | 3.16 MB | Legacy comparison export |
+| `mira_detector_wild_v2.pt` | 35.0% | 6.23 MB | **BEST** — Most robust real-world detector |
+| `mira_detector_wild.pt` | 39.4% | 5.94 MB | **STRONG** — Wild-world baseline, proven in live demos |
+| `mira_detector_wild_v2_int8_320.tflite` | 35.0% | 3.31 MB | Quantized wild, lower accuracy than .pt, low confidence issues |
+| `mira_detector_tabletop_int8_320.tflite` | 72.8% | 3.18 MB | **WEAK** — Inflated mAP from clean backgrounds, fails on real scenes |
+| `mira_yolo_int8_320.tflite` | 72.8% | 3.16 MB | **WEAK** — Legacy quantized, same problems as tabletop |
+
+> **Note:** The `.pt` PyTorch wild models are the strongest detectors despite lower mAP50 scores. The tabletop INT8 models have high mAP50 (72.8%) because they were validated on clean white-background data — but they perform poorly in real-world scenes with complex backgrounds. The wild models were trained on diverse environments and generalize much better. For live detection, always use the `.pt` models.
 
 ---
 

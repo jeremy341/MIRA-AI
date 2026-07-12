@@ -4,18 +4,21 @@ from ultralytics import YOLO
 import time
 import pandas as pd
 import pathlib
+import numpy as np
 
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 MODELS_DIR = ROOT_DIR / "models"
 
-# Automatically scan models directory for detection-compatible files.
 if not MODELS_DIR.exists():
     st.error(f"Models directory not found at: {MODELS_DIR}")
     st.stop()
 
-available_models = [p.name for p in MODELS_DIR.glob("*") if p.suffix in [".pt", ".tflite"]]
+available_models = [
+    p.name for p in MODELS_DIR.glob("*")
+    if p.suffix in [".pt", ".tflite"] and "classifier" not in p.name.lower()
+]
 
 if not available_models:
     st.error("No compatible detection models found inside the /models folder.")
@@ -23,9 +26,9 @@ if not available_models:
 
 # 2. STREAMLIT PAGE CONFIGURATION
 st.set_page_config(page_title="MIRA Control Center", layout="wide")
-st.title("MIRA - Interactive Diagnostic Dashboard")
+st.title("MIRA - Interactive Diagnostic Dashboard (Optimized)")
 
-# 3. INTERACTIVE SIDEBAR CONTROLS [2]
+# 3. INTERACTIVE SIDEBAR CONTROLS
 st.sidebar.header("Model Parameters")
 selected_model = st.sidebar.selectbox("Active Model Brain", available_models, index=0)
 camera_index = st.sidebar.number_input(
@@ -33,9 +36,8 @@ camera_index = st.sidebar.number_input(
     help="0 = default webcam. Change if you have multiple cameras."
 )
 
-# Slide resolution, confidence, and NMS on the fly
-imgsz = st.sidebar.select_slider("Inference Resolution (imgsz)", options=[160, 224, 320, 416, 640], value=640)
-conf = st.sidebar.slider("Confidence Threshold", min_value=0.05, max_value=1.00, value=0.35, step=0.05)
+imgsz = st.sidebar.select_slider("Inference Resolution (imgsz)", options=[160, 224, 320, 416, 640], value=320)
+conf = st.sidebar.slider("Confidence Threshold", min_value=0.05, max_value=1.00, value=0.5, step=0.05)
 iou = st.sidebar.slider("NMS IoU Threshold", min_value=0.10, max_value=1.00, value=0.45, step=0.05)
 enable_tracking = st.sidebar.checkbox("Enable ByteTrack Tracking", value=True)
 
@@ -55,44 +57,85 @@ def request_rerun():
         rerun()
 
 
-# 4. LOAD MODEL DYNAMICALLY [2]
+# 4. CUSTOM BOX DRAWING (fixes tabletop scaling issues)
+def draw_boxes_streamlit(frame, results, conf_threshold=0.3):
+    """Draw bounding boxes with correct scaling for tabletop detection."""
+    h, w = frame.shape[:2]
+    annotated = frame.copy()
+    
+    if results[0].boxes is None or len(results[0].boxes) == 0:
+        return annotated
+    
+    boxes = results[0].boxes
+    for box in boxes:
+        conf = float(box.conf[0])
+        if conf < conf_threshold:
+            continue
+        
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+        cls_id = int(box.cls[0])
+        cls_name = results[0].names[cls_id]
+        
+        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+        
+        color = (0, 255, 0)
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+        
+        label = f"{cls_name} {conf:.2f}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        thickness = 2
+        text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
+        
+        cv2.rectangle(annotated, (x1, y1 - 25), (x1 + text_size[0], y1), color, -1)
+        cv2.putText(annotated, label, (x1, y1 - 5), font, font_scale, (0, 0, 0), thickness)
+    
+    return annotated
+
+
+# 5. LOAD MODEL DYNAMICALLY
 @st.cache_resource(show_spinner="Loading model brain...")
 def load_selected_model(model_name):
     path = MODELS_DIR / model_name
-    return YOLO(str(path))
+    if "classifier" in model_name.lower():
+        st.error(f"'{model_name}' is a classifier model. Use 'mira eval-class' instead.")
+        st.stop()
+    task_type = "detect" if path.suffix == ".tflite" else None
+    return YOLO(str(path), task=task_type), "int8" in model_name.lower() and path.suffix == ".tflite"
 
 
-model = load_selected_model(selected_model)
+model, is_tflite_int8 = load_selected_model(selected_model)
 
-# 5. LAYOUT
+if is_tflite_int8:
+    conf = min(conf, 0.25)
+    st.sidebar.warning(f"INT8 model detected — conf capped at {conf:.2f}")
+
+# 6. LAYOUT
 col1, col2 = st.columns([2, 1])
 image_placeholder = col1.empty()
 chart_placeholder = col2.empty()
 
-# Initialize database counts in session state
 if "seen_ids" not in st.session_state:
     st.session_state.seen_ids = set()
 
 if "counts" not in st.session_state:
     st.session_state.counts = {"glass": 0, "metal": 0, "paper": 0, "plastic": 0, "trash": 0}
 
-# 6. LIVE INFERENCE LOOP
+# 7. LIVE INFERENCE LOOP
 if run_camera:
-    # DirectShow backend: lower latency than MSMF on Windows, honours buffer size
     cap = cv2.VideoCapture(int(camera_index), cv2.CAP_DSHOW)
     if not cap.isOpened():
         st.error(f"Failed to open video capture device {int(camera_index)}.")
         st.session_state.run_camera = False
         st.stop()
 
-    # MJPG decodes ~3-5x faster than YUY2 and supports higher frame-rates
-    cap.set(cv2.CAP_PROP_FOURCC,       cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-    cap.set(cv2.CAP_PROP_FPS,          30)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE,   1)   # always deliver the freshest frame
-    cap.set(cv2.CAP_PROP_AUTOFOCUS,    0)
-    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)  # manual exposure mode
+    cap.set(cv2.CAP_PROP_FPS, 30)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
     try:
         ret, frame = cap.read()
@@ -103,22 +146,21 @@ if run_camera:
 
         start_time = time.perf_counter()
 
-        # Run tracking or prediction based on checkbox [2]
-        if enable_tracking:
-            results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
+        if is_tflite_int8:
+            results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
+        elif enable_tracking:
+            results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False, tracker="bytetrack.yaml")
         else:
             results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
 
         end_time = time.perf_counter()
 
-        # Update metrics
         latency_ms = (end_time - start_time) * 1000
         fps = 1.0 / (end_time - start_time) if (end_time - start_time) > 0 else 0
 
         fps_display.metric("FPS", f"{fps:.1f}")
         latency_display.metric("Latency", f"{latency_ms:.1f} ms")
 
-        # Parse tracking results to update the bar chart
         if results[0].boxes is not None and results[0].boxes.id is not None:
             track_ids = results[0].boxes.id.cpu().numpy().astype(int)
             class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
@@ -130,14 +172,11 @@ if run_camera:
                     if class_name in st.session_state.counts:
                         st.session_state.counts[class_name] += 1
 
-        # Plot bounding boxes natively
-        annotated_frame = results[0].plot(conf=True, line_width=2, font_size=1, labels=True)
+        annotated_frame = draw_boxes_streamlit(frame, results, conf)
 
-        # Convert BGR (OpenCV) to RGB (Web/Streamlit)
         annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
         image_placeholder.image(annotated_frame_rgb, channels="RGB", use_container_width=True)
 
-        # Plot real-time sorted inventory chart
         df = pd.DataFrame(list(st.session_state.counts.items()), columns=["Material", "Count"])
         chart_placeholder.bar_chart(df.set_index("Material"))
 

@@ -31,8 +31,8 @@ def resolve_detection_data_yaml(explicit_path=None):
         candidates.append(candidate)
 
     candidates.extend([
-        ROOT_DIR / "yolo_data" / "dataset.yaml",
-        ROOT_DIR / "archive" / "clean_data" / "dataset.yaml",
+        ROOT_DIR / "datasets" / "mira_v2" / "dataset.yaml",
+        ROOT_DIR / "datasets" / "mira_v1" / "dataset.yaml",
     ])
 
     for candidate in candidates:
@@ -40,8 +40,8 @@ def resolve_detection_data_yaml(explicit_path=None):
             return candidate
 
     raise FileNotFoundError(
-        "Could not find a YOLO dataset YAML. Looked for yolo_data/dataset.yaml "
-        "and archive/clean_data/dataset.yaml."
+        "Could not find a YOLO dataset YAML. Looked for datasets/mira_v2/dataset.yaml "
+        "and datasets/mira_v1/dataset.yaml."
     )
 
 
@@ -97,6 +97,14 @@ def main():
         help="Camera capture resolution (default: 640x360). Model inference resolution "
              "is fixed at imgsz=640 regardless of this setting."
     )
+    live_parser.add_argument(
+        "--target-latency", type=int, default=50,
+        help="Target latency in ms (default: 50). Frames are skipped to meet target."
+    )
+    live_parser.add_argument(
+        "--conf", type=float, default=0.5,
+        help="Confidence threshold (default: 0.5). Higher = fewer false positives."
+    )
     subparsers.add_parser("dashboard", help="Launch Streamlit web control center")
 
     args = parser.parse_args()
@@ -119,10 +127,17 @@ def main():
     elif args.command == "quant-yolo":
         run_script(REF_DIR / "quantize_yolo.py")
     elif args.command == "live":
+        if "classifier" in args.model.lower():
+            print(f"ERROR: '{args.model}' is a classifier model, not a detector.")
+            print("Live detection requires a detection model (.pt or detection .tflite).")
+            print(f"Use: mira eval-class --model {args.model} --exp <folder>")
+            sys.exit(1)
         run_script(SCRIPT_DIR / "live_detection.py", [
-            "--model",      args.model,
-            "--camera",     str(args.camera),
-            "--resolution", args.resolution,
+            "--model",          args.model,
+            "--camera",         str(args.camera),
+            "--resolution",     args.resolution,
+            "--target-latency", str(args.target_latency),
+            "--conf",           str(args.conf),
         ])
     elif args.command == "dashboard":
         print("Launching Streamlit web server...")

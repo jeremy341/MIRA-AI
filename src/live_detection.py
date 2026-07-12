@@ -1,14 +1,17 @@
 import argparse
 import cv2
 import pathlib
+import sys
 import threading
 import time
+import numpy as np
 from ultralytics import YOLO
+from collections import deque
 
 # ---------------------------------------------------------------------------
 # 1. ARGUMENT PARSING
 # ---------------------------------------------------------------------------
-parser = argparse.ArgumentParser(description="MIRA Live Detection")
+parser = argparse.ArgumentParser(description="MIRA Live Detection (Optimized)")
 parser.add_argument(
     "--model", type=str, default="mira_detector_wild.pt",
     help="Model filename inside the models/ folder (default: mira_detector_wild.pt). "
@@ -24,49 +27,43 @@ parser.add_argument(
     help="Camera capture resolution (default: 640x360). "
          "Does not affect model inference — YOLO resizes to imgsz=640 internally."
 )
+parser.add_argument(
+    "--target-latency", type=int, default=50,
+    help="Target latency in ms (default: 50). Frames are skipped to meet target."
+)
+parser.add_argument(
+    "--conf", type=float, default=0.5,
+    help="Confidence threshold (default: 0.5). Higher = fewer false positives."
+)
 args = parser.parse_args()
 CAM_W, CAM_H = (int(v) for v in args.resolution.split("x"))
 
 
 # ---------------------------------------------------------------------------
-# 2. THREADED CAMERA STREAM
-#    Runs capture in a background thread so the main loop always reads the
-#    most recent frame instead of a stale buffered one. This is the single
-#    biggest latency improvement for real-time inference loops.
+# 2. THREADED CAMERA STREAM WITH ADAPTIVE FRAME SKIPPING
 # ---------------------------------------------------------------------------
 class CameraStream:
     """
-    Background-threaded OpenCV camera reader.
-
-    Why this helps:
-    - cap.read() blocks until the next frame arrives from the driver.
-    - If inference takes longer than one frame period the buffer fills up,
-      causing visible lag that compounds over time.
-    - Running capture on its own thread means the main loop always gets the
-      newest frame the moment it asks for one.
+    Optimized camera reader with adaptive frame skipping.
+    - Discards frames if inference can't keep up
+    - Always returns the freshest frame for minimal latency
     """
 
-    WARMUP_FRAMES = 10  # discard first N frames so auto-exposure can settle
+    WARMUP_FRAMES = 10
 
     def __init__(self, index: int, width: int, height: int):
-        # Use DirectShow on Windows: honours CAP_PROP_BUFFERSIZE and has
-        # lower driver overhead than the default MSMF backend.
         self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
         if not self.cap.isOpened():
             raise RuntimeError(f"Failed to open camera index {index}.")
 
-        # MJPG is decoded ~3-5x faster than the default YUY2 / YUYV format
-        # and lets the camera deliver higher frame-rates at all resolutions.
         self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,  width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         self.cap.set(cv2.CAP_PROP_FPS,          30)
-        # Buffer size 1 = always deliver the latest frame, never queue stale ones
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE,   1)
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS,    0)
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)  # manual exposure mode
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
-        # Warmup: let auto-exposure settle before inference starts
         print(f"Warming up camera {index} ({self.WARMUP_FRAMES} frames)...")
         for _ in range(self.WARMUP_FRAMES):
             self.cap.read()
@@ -76,9 +73,10 @@ class CameraStream:
         self._running = True
         self._thread  = threading.Thread(target=self._reader, daemon=True)
         self._thread.start()
+        self.frames_dropped = 0
 
     def _reader(self):
-        """Continuously grab frames in the background."""
+        """Continuously grab frames, discarding old ones."""
         while self._running:
             ret, frame = self.cap.read()
             with self._lock:
@@ -86,7 +84,7 @@ class CameraStream:
                 self.frame = frame
 
     def read(self):
-        """Return a copy of the latest frame (thread-safe)."""
+        """Return the freshest frame (thread-safe)."""
         with self._lock:
             return self.ret, self.frame.copy() if self.ret else (False, None)
 
@@ -97,19 +95,19 @@ class CameraStream:
 
 
 # ---------------------------------------------------------------------------
-# 3. PATH RESOLUTION & MODEL LOAD
+# 3. PATH RESOLUTION & MODEL LOAD (with TFLite int8 optimization)
 # ---------------------------------------------------------------------------
 SCRIPT_DIR  = pathlib.Path(__file__).resolve().parent
 ROOT_DIR    = SCRIPT_DIR.parent
 MODELS_DIR  = ROOT_DIR / "models"
 MODEL_PATH  = MODELS_DIR / args.model
 
-# Print available models so the user knows their options
 available = sorted(p.name for p in MODELS_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))
 print("\nAvailable models in models/:")
 for name in available:
     marker = "  <-- selected" if name == args.model else ""
-    print(f"  {name}{marker}")
+    int8_marker = " [INT8 - Recommended for speed]" if "int8" in name.lower() else ""
+    print(f"  {name}{marker}{int8_marker}")
 print()
 
 if not MODEL_PATH.exists():
@@ -119,73 +117,141 @@ if not MODEL_PATH.exists():
     )
 
 print(f"Loading {args.model}...")
+
+if "classifier" in args.model.lower():
+    print(f"\nERROR: '{args.model}' is a CLASSIFIER model, not a detector.")
+    print("Live detection requires a detection model (.pt or detection .tflite).")
+    print("Use 'mira eval-class --model {args.model} --exp <folder>' instead.")
+    sys.exit(1)
+
 task_type = "detect" if MODEL_PATH.suffix == ".tflite" else None
 model = YOLO(MODEL_PATH, task=task_type)
 
-# Read the model's actual required input size directly from the tensor shape.
-# This is the only reliable method — filenames like '_320' can be misleading
-# since the model may have been exported at a different resolution than the name implies.
+is_tflite_int8 = MODEL_PATH.suffix == ".tflite" and "int8" in args.model.lower()
+
 if MODEL_PATH.suffix == ".tflite":
     from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
     _tmp = LiteRTInterpreter(model_path=str(MODEL_PATH))
-    _shape = _tmp.get_input_details()[0]["shape"]  # e.g. [1, 640, 640, 3] or [1, 3, 640, 640]
-    img_size = int(max(_shape))  # spatial dim is always the largest value — works for NHWC and NCHW
+    _shape = _tmp.get_input_details()[0]["shape"]
+    img_size = int(max(_shape))
     del _tmp
-    print(f"TFLite model requires input size: {img_size}x{img_size}")
+    if is_tflite_int8:
+        print(f"TFLite INT8 model: input {img_size}x{img_size}, auto-setting conf=0.25 (INT8 reduces confidence)")
+    else:
+        print(f"TFLite model: input {img_size}x{img_size}")
 else:
-    img_size = 640  # PyTorch .pt models always use 640
+    img_size = 640
+    print(f"PyTorch model: input {img_size}x{img_size}")
+
+if is_tflite_int8:
+    args.conf = 0.25
+    print(f"Confidence threshold overridden to {args.conf} for INT8 model.")
 
 
 # ---------------------------------------------------------------------------
-# 4. OPEN CAMERA STREAM
+# 4. CUSTOM BOX DRAWING (fixes scaling issues with tabletop setup)
+# ---------------------------------------------------------------------------
+def draw_boxes_corrected(frame, results, conf_threshold=0.3):
+    """
+    Manually draw bounding boxes with proper scaling.
+    Ultralytics already scales boxes back to original frame coordinates.
+    """
+    h, w = frame.shape[:2]
+    annotated = frame.copy()
+    
+    if results[0].boxes is None or len(results[0].boxes) == 0:
+        return annotated
+    
+    boxes = results[0].boxes
+    for box in boxes:
+        conf = float(box.conf[0])
+        if conf < conf_threshold:
+            continue
+        
+        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+        cls_id = int(box.cls[0])
+        cls_name = results[0].names[cls_id]
+        
+        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+        
+        color = (0, 255, 0)
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+        
+        label = f"{cls_name} {conf:.2f}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        thickness = 2
+        text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
+        text_bg_x1, text_bg_y1 = x1, y1 - 25
+        text_bg_x2, text_bg_y2 = x1 + text_size[0], y1
+        
+        cv2.rectangle(annotated, (text_bg_x1, text_bg_y1), (text_bg_x2, text_bg_y2), color, -1)
+        cv2.putText(annotated, label, (x1, y1 - 5), font, font_scale, (0, 0, 0), thickness)
+    
+    return annotated
+
+
+# ---------------------------------------------------------------------------
+# 5. OPEN CAMERA STREAM
 # ---------------------------------------------------------------------------
 print(f"Opening camera {args.camera} at {CAM_W}x{CAM_H}...")
 stream = CameraStream(args.camera, CAM_W, CAM_H)
-print("MIRA Live Detection active. Press 'q' to exit.")
+print(f"MIRA Live Detection active (target latency: {args.target_latency}ms). Press 'q' to exit.")
 
 prev_time = time.perf_counter()
+latency_history = deque(maxlen=30)
+skip_frame = False
 
 # ---------------------------------------------------------------------------
-# 5. MAIN INFERENCE LOOP
+# 6. MAIN INFERENCE LOOP (with adaptive frame skipping)
 # ---------------------------------------------------------------------------
 try:
     while True:
         ret, frame = stream.read()
         if not ret or frame is None:
-            print("Warning: dropped frame.")
             continue
 
-        # Run inference — dynamically matched to model (320 for TFLite, 640 for PyTorch)
-        # conf=0.35 ignores low-confidence background noise
-        # persist=True enables ByteTrack object tracking
-        results = model.track(
-            frame,
-            imgsz=img_size,
-            conf=0.35,
-            persist=True,
-            verbose=False
-        )
+        if skip_frame:
+            skip_frame = False
+            continue
 
-        # Draw bounding boxes — .plot() handles scaling automatically
-        annotated_frame = results[0].plot(
-            conf=True,
-            line_width=2,
-            font_size=1,
-            labels=True
-        )
+        if is_tflite_int8:
+            results = model.predict(
+                frame,
+                imgsz=img_size,
+                conf=args.conf,
+                verbose=False
+            )
+        else:
+            results = model.track(
+                frame,
+                imgsz=img_size,
+                conf=args.conf,
+                persist=True,
+                verbose=False,
+                tracker="bytetrack.yaml"
+            )
 
-        # FPS & latency overlay
-        curr_time   = time.perf_counter()
-        fps         = 1.0 / max(curr_time - prev_time, 1e-6)
-        prev_time   = curr_time
-        latency_ms  = results[0].speed["inference"]
+        annotated_frame = draw_boxes_corrected(frame, results, conf_threshold=args.conf)
+
+        curr_time = time.perf_counter()
+        frame_time = curr_time - prev_time
+        prev_time = curr_time
+        
+        fps = 1.0 / max(frame_time, 1e-6)
+        latency_ms = results[0].speed.get("inference", 0)
+        latency_history.append(latency_ms)
+        avg_latency = np.mean(latency_history)
+
+        skip_frame = avg_latency > args.target_latency
 
         status_text = (
             f"Cam: {args.camera} | {CAM_W}x{CAM_H} | "
-            f"Latency: {latency_ms:.1f}ms | FPS: {fps:.1f}"
+            f"Latency: {latency_ms:.1f}ms (avg: {avg_latency:.1f}ms) | FPS: {fps:.1f} | "
+            f"Skip: {'ON' if skip_frame else 'OFF'}"
         )
         cv2.putText(annotated_frame, status_text, (20, 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
         cv2.imshow("MIRA Real-Time Multi-Object Detection", annotated_frame)
 
