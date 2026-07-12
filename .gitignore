@@ -7,6 +7,8 @@ Thumbs.db
 *.swo
 *~
 
+
+
 # --- Python ---
 .venv/
 __pycache__/
@@ -17,19 +19,37 @@ __pycache__/
 
 # --- Archives ---
 archive/
+archive (1)/
 *.zip
 *.tar.gz
 
+# --- Datasets (too large for git) ---
+datasets/
+
+# --- YOLO raw detection samples (regenerable) ---
+results/**/train_batch*.jpg
+results/**/val_batch*.jpg
+results/**/labels.jpg
+
+# --- YOLO weights and large model files in results ---
+results/**/weights/
+results/**/*.pt
+results/**/*.onnx
+results/**/*.tflite
+
 # --- Docs & notes (not for public repo) ---
 doc/
-fixes.md
-roadmap.md
+CLAUDE/fixes.md
+CLAUDE/roadmap.md
+claude/
 
 # --- Dataset images in data/classes (training pictures) ---
 # Ignore all images inside data/classes subfolders
 data/classes/**/*.jpg
 data/classes/**/*.jpeg
 data/classes/**/*.png
+
+
 
 # --- YOLO raw data ---
 yolo_data/images/
