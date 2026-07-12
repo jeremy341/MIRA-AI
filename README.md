@@ -250,13 +250,67 @@ pip install -r requirements.txt
 
 ### Kaggle Training
 
-For training on Kaggle (free GPU), see `scripts/kaggle_train.py`:
+For training on Kaggle (free GPU), use `scripts/kaggle_train.py`:
 
-1. Set `DATASET_NAME` in `kaggle_train.py` to your desired dataset (e.g., `"TACO+TrashNet+Roboflow"`)
-2. Upload the dataset ZIP to Kaggle
-3. Run the notebook on a GPU runtime
+1. Upload the dataset ZIP to Kaggle
+2. Run the notebook with argparse flags:
 
-The 4-model comparison uses this workflow — see [4-Model Comparison](#4-model-comparison-in-progress) above.
+```bash
+# Default (Model 1, YOLO11n, 120 epochs)
+py scripts/kaggle_train.py
+
+# Model 2
+py scripts/kaggle_train.py --dataset TACO+TrashNet+WaRP
+
+# Model 3 (WaRP only, fewer epochs)
+py scripts/kaggle_train.py --dataset WaRP_only --epochs 80 --batch-size 16
+
+# Model 4 (all data, longer training)
+py scripts/kaggle_train.py --dataset All_TACO+TrashNet+Roboflow+WaRP --epochs 200
+
+# Different architecture
+py scripts/kaggle_train.py --model yolo8n.pt --dataset TACO+TrashNet+Roboflow
+
+# Custom learning rate
+py scripts/kaggle_train.py --lr0 0.005 --epochs 150
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--dataset` | `TACO+TrashNet+Roboflow` | Kaggle dataset name |
+| `--model` | `yolo11n.pt` | Base model architecture |
+| `--epochs` | `120` | Training epochs |
+| `--batch-size` | `32` | Batch size |
+| `--img-size` | `640` | Image size |
+| `--patience` | `30` | Early stopping patience |
+| `--device` | `0` | GPU device ID |
+| `--lr0` | `0.01` | Initial learning rate |
+
+### Dataset Merge Scripts
+
+Each merge script combines datasets into YOLO format with class remapping:
+
+```bash
+# Model 1: TACO + TrashNet + Roboflow (6,802 images)
+py scripts/merge_model1.py
+py scripts/merge_model1.py --output-dir datasets/MeinModell
+py scripts/merge_model1.py --dry-run
+
+# Model 2: TACO + TrashNet + WaRP (~14,000 images)
+py scripts/merge_model2.py
+py scripts/merge_model2.py --dry-run
+
+# Model 3: WaRP only (~3,000 images)
+py scripts/merge_model3.py
+
+# Model 4: All combined (~17,000 images)
+py scripts/merge_model4.py
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--output-dir` | `datasets/<model_name>` | Output dataset directory |
+| `--dry-run` | `false` | Preview stats without copying files |
 
 ### Verify Installation
 
