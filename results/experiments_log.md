@@ -348,3 +348,55 @@ The EXP-010 model was successfully quantized using its original high-variance tr
 
 ### Observation
 EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both smaller (2.58M vs 3.01M parameters) and more efficient. Training on the fused mira_v2 dataset for 120 epochs yields a balanced 55.1% mAP50 -- a significant +20 point improvement over the wild-only baseline (EXP-011: 35.0%) while remaining realistic for cluttered scenes (unlike the inflated 72.8% tabletop-only EXP-009). Paper remains the strongest class (79.3% mAP50) due to large surface area and clear texture, while trash continues to struggle (15.6%) due to extreme intra-class diversity. The quantized 2.9 MB INT8 model is well-suited for Raspberry Pi edge deployment.
+
+---
+
+## EXP-014: YOLO11n on TACO + TrashNet + Roboflow (Model 1 — 4-Model Comparison)
+* **Date:** July 12, 2026
+* **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
+* **Dataset Size:** 6,802 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,778 Roboflow Trash Detection)
+* **Dataset Source:** TACO + Stanford TrashNet + Roboflow Trash Detection (64 classes remapped to 5 MIRA classes)
+* **Training Platform:** Kaggle Notebooks (NVIDIA Tesla T4 GPU)
+* **Training Time:** 4.700 hours (120 epochs)
+* **Framework:** Ultralytics 8.4.92 | Python-3.12.13 | torch-2.10.0+cu128
+
+### Hyperparameters
+* **Image Size (imgsz):** 640
+* **Batch Size:** 32
+* **Early Stopping Patience:** 30
+
+### Model Summary
+* **Total Parameters:** 2,583,127 (5.5 MB)
+* **Layers:** 101 (fused)
+* **FLOPs:** 6.3 GFLOPs
+
+### Validation Metrics (all, 1588 images, 3126 instances)
+| Metric | Value |
+|---|---|
+| Mean Precision | 0.662 |
+| Mean Recall | 0.584 |
+| **mAP50** | **0.607** |
+| **mAP50-95** | **0.506** |
+
+### Class-Specific Validation Performance
+| Class | Precision | Recall | mAP50 | mAP50-95 | Instances |
+|---|---|---|---|---|---|
+| Glass | 0.580 | 0.521 | 0.502 | 0.400 | 336 |
+| Metal | 0.670 | 0.699 | 0.713 | 0.613 | 439 |
+| Paper | 0.820 | 0.772 | **0.829** | 0.745 | 474 |
+| Plastic | 0.715 | 0.699 | 0.721 | 0.601 | 1316 |
+| Trash | 0.523 | 0.230 | 0.269 | 0.173 | 561 |
+
+### Speed (GPU)
+* **Preprocess:** 0.2 ms
+* **Inference:** 1.8 ms
+* **Postprocess:** 1.3 ms
+
+### Quantization (INT8 LiteRT Export)
+* **Original Model Size:** 10.14 MiB
+* **Quantized INT8 Model Size:** 2.90 MiB
+* **Compression Ratio:** 3.5x smaller
+* **Export Time:** 1093.7 s
+
+### Observation
+EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% — a +5.6 point improvement. The biggest gains come from Trash (+11.3 pp, 15.6% → 26.9%) and Glass (+6.3 pp, 46.2% → 50.2%), validating that Roboflow's diverse outdoor litter images help the model generalize to real-world waste. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) — consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
