@@ -20,6 +20,19 @@ available_models = [
     if p.suffix in [".pt", ".tflite"] and "classifier" not in p.name.lower()
 ]
 
+# Add experiment labels for context
+MODEL_LABELS = {
+    "mira_v2_detector.pt": "EXP-013 (YOLO11n, TACO+TrashNet)",
+    "mira_v2_detector_int8.tflite": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
+    "mira_detector_wild.pt": "EXP-006 (YOLOv8n, multi-dataset)",
+    "mira_detector_wild_v2.pt": "EXP-011 (YOLOv8n, TACO-only)",
+    "mira_detector_tabletop_int8_320.tflite": "EXP-009 INT8 (inflated mAP)",
+}
+available_models_display = [
+    f"{m}  [{MODEL_LABELS[m]}]" if m in MODEL_LABELS else m
+    for m in available_models
+]
+
 if not available_models:
     st.error("No compatible detection models found inside the /models folder.")
     st.stop()
@@ -30,7 +43,9 @@ st.title("MIRA - Interactive Diagnostic Dashboard (Optimized)")
 
 # 3. INTERACTIVE SIDEBAR CONTROLS
 st.sidebar.header("Model Parameters")
-selected_model = st.sidebar.selectbox("Active Model Brain", available_models, index=0)
+selected_model_display = st.sidebar.selectbox("Active Model Brain", available_models_display, index=0)
+# Map display name back to actual filename
+selected_model = available_models[available_models_display.index(selected_model_display)]
 camera_index = st.sidebar.number_input(
     "Camera Index", min_value=0, max_value=10, value=0, step=1,
     help="0 = default webcam. Change if you have multiple cameras."
