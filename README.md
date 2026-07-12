@@ -359,7 +359,6 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 
 | Command | Description |
 |---|---|
-| `.\mira data-build` | Build the pristine tabletop YOLO dataset from raw images |
 | `.\mira data-viz` | Visualize dataset class distribution and sample grids |
 
 ### Training Commands

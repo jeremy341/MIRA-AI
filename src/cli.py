@@ -52,7 +52,6 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # --- DATA COMMANDS ---
-    subparsers.add_parser("data-build", help="Build the pristine tabletop YOLO dataset")
     subparsers.add_parser("data-viz", help="Visualize dataset distribution and sample grids")
 
     # --- TRAINING COMMANDS (STAGE A) ---
@@ -61,7 +60,7 @@ def main():
     subparsers.add_parser("train-tune", help="Train fine-tuned MobileNetV2 classification model (EXP-003)")
 
     # --- TRAINING COMMANDS (STAGE B) ---
-    subparsers.add_parser("train-detection", help="Initiate local YOLOv8 training pipeline")
+    subparsers.add_parser("train-detection", help="Initiate local YOLOv8 training pipeline (legacy)")
 
     # --- QUANTIZATION COMMANDS ---
     subparsers.add_parser("quant-class", help="Execute Keras post-training quantization (EXP-004)")
