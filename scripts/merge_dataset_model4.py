@@ -2,9 +2,9 @@
 """Merge ALL datasets: TACO + TrashNet + Roboflow + WaRP into one YOLO dataset.
 
 Usage:
-    py scripts/merge_model4.py
-    py scripts/merge_model4.py --output-dir datasets/MyCustom
-    py scripts/merge_model4.py --dry-run
+    py scripts/merge_dataset_model4.py
+    py scripts/merge_dataset_model4.py --output-dir datasets/MyCustom
+    py scripts/merge_dataset_model4.py --dry-run
 """
 import argparse
 import shutil

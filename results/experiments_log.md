@@ -144,7 +144,7 @@ Edge Case identified: "End-on" metal cans (opening facing camera) lead to detect
 ## EXP-007: YOLOv8-Nano INT8 Quantization (LiteRT)
 * **Date:** July 4, 2026
 * **Architecture:** YOLOv8-Nano (TFLite INT8)
-* **Base Model:** EXP-006 (`mira_detector_wild.pt`)
+* **Base Model:** EXP-006 (`mira_exp006.pt`)
 
 ### Quantitative Metrics
 * **Original Intermediate Graph Size:** 11.69 MB
@@ -226,7 +226,7 @@ This run represents the final, verified baseline of MIRA's Stage B software. By 
 ## EXP-010: Quantized Wild YOLOv8-Nano (INT8 Calibration)
 * **Date:** July 6, 2026
 * **Architecture:** YOLOv8-Nano (TFLite INT8 / LiteRT)
-* **Base Model:** EXP-006 (`mira_detector_wild.pt`)
+* **Base Model:** EXP-006 (`mira_exp006.pt`)
 * **Dataset Size:** ~3,300 images (Custom + TrashNet + Remapped Roboflow)
 * **Dataset Source:** Hand-collected custom images + Stanford TrashNet + Roboflow Trash Detection Dataset (64 classes, outdoor/wild, remapped to 5 MIRA classes)
 * **Calibration Set:** 100 representative samples from `mira_wild_data`
@@ -278,7 +278,7 @@ EXP-011 represents an investigation into pure out-of-distribution generalization
 * **Date:** July 6, 2026
 * **Commit Hash:** `decb9d1`
 * **Architecture:** YOLOv8-Nano (TFLite INT8 / LiteRT)
-* **Base Model:** EXP-011 (`mira_detector_wild_v2.pt`)
+* **Base Model:** EXP-011 (`mira_exp011.pt`)
 * **Dataset Source:** Same as EXP-011 (TACO only)
 * **Calibration Dataset:** `wild_data/data.yaml`
 

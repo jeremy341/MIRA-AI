@@ -1,4 +1,4 @@
-"""Shared WaRP dataset utilities for merge_model2/3/4.py.
+"""Shared WaRP dataset utilities for merge_dataset_model2/3/4.py.
 
 Handles the 28->5 class remapping, valid split creation, and stats printing.
 """

@@ -52,6 +52,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # --- DATA COMMANDS ---
+    subparsers.add_parser("data-build", help="Build YOLO detection dataset from classification folder")
     subparsers.add_parser("data-viz", help="Visualize dataset distribution and sample grids")
 
     # --- TRAINING COMMANDS (STAGE A) ---
@@ -83,8 +84,8 @@ def main():
     # --- DEPLOYMENT COMMANDS ---
     live_parser = subparsers.add_parser("live", help="Start real-time YOLOv8 webcam tracking stream")
     live_parser.add_argument(
-        "--model", type=str, default="mira_detector_wild.pt",
-        help="Model filename inside models/ (default: mira_detector_wild.pt)."
+        "--model", type=str, default="mira_exp014.pt",
+         help="Model filename inside models/ (default: mira_exp014.pt)."
     )
     live_parser.add_argument(
         "--camera", type=int, default=0,
@@ -110,28 +111,28 @@ def main():
 
     # COMMAND ROUTING
     if args.command == "data-build":
-        run_script(REF_DIR / "build_detection_dataset.py")
+        run_script(REF_DIR / "build_detector_dataset.py")
     elif args.command == "data-viz":
-        run_script(SCRIPT_DIR / "visualize_dataset.py")
+        run_script(SCRIPT_DIR / "visualize_classifier_dataset.py")
     elif args.command == "train-baseline":
-        run_script(REF_DIR / "train_baseline.py")
+        run_script(REF_DIR / "train_classifier_baseline.py")
     elif args.command == "train-transfer":
-        run_script(REF_DIR / "train_transfer.py")
+        run_script(REF_DIR / "train_classifier_transfer.py")
     elif args.command == "train-tune":
-        run_script(REF_DIR / "train_fine_tune.py")
+        run_script(REF_DIR / "train_classifier_finetune.py")
     elif args.command == "train-detection":
-        run_script(REF_DIR / "train_detection.py")
+        run_script(REF_DIR / "train_detector.py")
     elif args.command == "quant-class":
-        run_script(REF_DIR / "quantize.py")
+        run_script(REF_DIR / "quantize_classifier.py")
     elif args.command == "quant-yolo":
-        run_script(REF_DIR / "quantize_yolo.py")
+        run_script(REF_DIR / "quantize_detector.py")
     elif args.command == "live":
         if "classifier" in args.model.lower():
             print(f"ERROR: '{args.model}' is a classifier model, not a detector.")
             print("Live detection requires a detection model (.pt or detection .tflite).")
             print(f"Use: mira eval-class --model {args.model} --exp <folder>")
             sys.exit(1)
-        run_script(SCRIPT_DIR / "live_detection.py", [
+        run_script(SCRIPT_DIR / "live_detector.py", [
             "--model",          args.model,
             "--camera",         str(args.camera),
             "--resolution",     args.resolution,
@@ -142,7 +143,7 @@ def main():
         print("Launching Streamlit web server...")
         subprocess.run(["streamlit", "run", str(SCRIPT_DIR / "dashboard.py")], check=True)
     elif args.command == "eval-class":
-        run_script(REF_DIR / "evaluate.py", ["--model", args.model, "--exp", args.exp])
+        run_script(REF_DIR / "evaluate_classifier.py", ["--model", args.model, "--exp", args.exp])
     elif args.command == "eval-yolo":
         model_path = ROOT_DIR / "models" / args.model
         if not model_path.exists():

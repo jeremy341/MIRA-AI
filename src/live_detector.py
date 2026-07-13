@@ -13,8 +13,8 @@ from collections import deque
 # ---------------------------------------------------------------------------
 parser = argparse.ArgumentParser(description="MIRA Live Detection (Optimized)")
 parser.add_argument(
-    "--model", type=str, default="mira_detector_wild.pt",
-    help="Model filename inside the models/ folder (default: mira_detector_wild.pt). "
+    "--model", type=str, default="mira_exp014.pt",
+    help="Model filename inside the models/ folder (default: mira_exp014.pt). "
          "Run without arguments to see all available models printed on startup."
 )
 parser.add_argument(

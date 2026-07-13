@@ -100,24 +100,30 @@ MIRA-AI/
 │   ├── mira_classifier_tuned.keras
 │   ├── mira_classifier_fp32.tflite
 │   ├── mira_classifier_int8.tflite      ← Best Stage A deployment model
-│   ├── mira_detector_wild.pt
-│   ├── mira_detector_wild_v2.pt         ← Improved wild-world detection model
-│   ├── mira_detector_tabletop_int8_320.tflite  ← Best Stage B deployment model
-│   ├── mira_detector_wild_v2_int8_320.tflite   ← Quantized improved wild-world model
-│   └── mira_yolo_int8_320.tflite
+│   ├── mira_exp006.pt                    ← Multi-dataset detection (YOLOv8n, EXP-006)
+│   ├── mira_exp006_int8.tflite           ← Quantized wild model
+│   ├── mira_exp009_int8.tflite           ← Tabletop model (EXP-009, inflated mAP)
+│   ├── mira_exp011.pt                    ← TACO-only detection (YOLOv8n, EXP-011)
+│   ├── mira_exp011_int8.tflite           ← Quantized TACO-only model
+│   ├── mira_exp013.pt                    ← YOLO11n on TACO+TrashNet (EXP-013)
+│   ├── mira_exp013_int8.tflite           ← Quantized EXP-013
+│   ├── mira_exp014.pt                    ← **CURRENT BEST** — YOLO11n +Roboflow (EXP-014)
+│   ├── mira_exp014_int8.tflite           ← Quantized EXP-014
+│   ├── mira_exp015.pt                    ← YOLO11n +WaRP (EXP-015)
+│   └── mira_exp015_int8.tflite           ← Quantized EXP-015
 │
 ├── reference/                # All training, evaluation, and quantization scripts
-│   ├── build_detection_dataset.py
-│   ├── classify_archive.py
-│   ├── evaluate.py
-│   ├── evaluate_reference.py
-│   ├── prepare_super_dataset.py
-│   ├── quantize.py
-│   ├── quantize_yolo.py
-│   ├── train_baseline.py
-│   ├── train_detection.py
-│   ├── train_fine_tune.py
-│   └── train_transfer.py
+│   ├── build_detector_dataset.py
+│   ├── evaluate_classifier.py
+│   ├── evaluate_classifier_reference.py
+│   ├── live_classifier.py
+│   ├── prepare_detector_super_dataset.py
+│   ├── quantize_classifier.py
+│   ├── quantize_detector.py
+│   ├── train_classifier_baseline.py
+│   ├── train_classifier_finetune.py
+│   ├── train_classifier_transfer.py
+│   └── train_detector.py
 │
 ├── results/                  # Experiment outputs, confusion matrices, and logs
 │   ├── EXP-001_Baseline/
@@ -135,19 +141,26 @@ MIRA-AI/
 │   └── experiments_log.md    # Full quantitative metrics for all experiments
 │
 ├── scripts/                  # Dataset merge, training, and evaluation scripts
-│   ├── kaggle_train.py       # Configurable Kaggle training (change DATASET_NAME per model)
-│   ├── merge_model1.py       # TACO + TrashNet + Roboflow → 6,802 images
-│   ├── merge_model2.py       # TACO + TrashNet + WaRP → ~14,000 images
-│   ├── merge_model3.py       # WaRP only → ~3,000 images
-│   └── merge_model4.py       # All datasets → ~17,000 images
+│   ├── add_trashnet_to_dataset.py
+│   ├── build_raw_dataset.py
+│   ├── check_detector_mapping.py
+│   ├── convert_taco_to_yolo.py
+│   ├── label_trashnet_with_sam.py
+│   ├── merge_dataset_mira_v3.py
+│   ├── merge_dataset_model1.py       # TACO + TrashNet + Roboflow → 6,802 images
+│   ├── merge_dataset_model2.py       # TACO + TrashNet + WaRP → ~14,000 images
+│   ├── merge_dataset_model3.py       # WaRP only → ~3,000 images
+│   ├── merge_dataset_model4.py       # All datasets → ~17,000 images
+│   ├── train_detector_kaggle.py      # Configurable Kaggle training (change DATASET_NAME per model)
+│   └── warp_utils.py
 │
 ├── src/                      # Runtime tools for demos and development
+│   ├── capture_classifier_frames.py  # Webcam data collection tool (Stage A)
 │   ├── cli.py                # Unified MIRA command-line interface
-│   ├── capture_frame.py      # Webcam data collection tool (Stage A)
 │   ├── dashboard.py          # Streamlit web control center
-│   ├── debug_detection.py    # Camera diagnostics for detection models
-│   ├── live_detection.py     # Real-time YOLOv8 detection and tracking
-│   └── visualize_dataset.py  # Dataset distribution and sample grid viewer
+│   ├── debug_detector.py     # Camera diagnostics for detection models
+│   ├── live_detector.py      # Real-time YOLOv8 detection and tracking
+│   └── visualize_classifier_dataset.py  # Dataset distribution and sample grid viewer
 │
 ├── .gitignore
 ├── LICENSE
@@ -176,8 +189,8 @@ MIRA-AI/
 |---|---|---|---|---|
 | `YOLO11n` (EXP-014) | **60.7%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on TACO+TrashNet+Roboflow |
 | `YOLO11n` (EXP-013) | 55.1% | 2.58M | 2.9 MB | YOLO11n on TACO+TrashNet (no Roboflow) |
-| `mira_detector_wild.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
-| `mira_detector_tabletop_int8_320.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
+| `mira_exp006.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
+| `mira_exp009_int8.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
 
 > **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. EXP-014 (60.7% mAP50) is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8).
 
@@ -217,12 +230,12 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 
 | Model | Datasets | ~Images | Script | Status |
 |---|---|---|---|---|
-| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_model1.py` | **Done — 60.7% mAP50** |
-| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_model2.py` | **Done — 56.0% mAP50** |
-| Model 3 | WaRP only | ~3,000 | `scripts/merge_model3.py` | Pending |
-| Model 4 | All four datasets | ~17,000 | `scripts/merge_model4.py` | Pending |
+| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_dataset_model1.py` | **Done — 60.7% mAP50** |
+| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_dataset_model2.py` | **Done — 56.0% mAP50** |
+| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | Pending |
+| Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | Pending |
 
-All models train with YOLO11n using `scripts/kaggle_train.py` on Kaggle.
+All models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle.
 
 Full per-class metrics, confusion matrices, and training curves are in [`results/experiments_log.md`](results/experiments_log.md).
 
@@ -252,29 +265,29 @@ pip install -r requirements.txt
 
 ### Kaggle Training
 
-For training on Kaggle (free GPU), use `scripts/kaggle_train.py`:
+For training on Kaggle (free GPU), use `scripts/train_detector_kaggle.py`:
 
 1. Upload the dataset ZIP to Kaggle
 2. Run the notebook with argparse flags:
 
 ```bash
 # Default (Model 1, YOLO11n, 120 epochs)
-py scripts/kaggle_train.py
+py scripts/train_detector_kaggle.py
 
 # Model 2
-py scripts/kaggle_train.py --dataset TACO+TrashNet+WaRP
+py scripts/train_detector_kaggle.py --dataset TACO+TrashNet+WaRP
 
 # Model 3 (WaRP only, fewer epochs)
-py scripts/kaggle_train.py --dataset WaRP_only --epochs 80 --batch-size 16
+py scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 80 --batch-size 16
 
 # Model 4 (all data, longer training)
-py scripts/kaggle_train.py --dataset All_TACO+TrashNet+Roboflow+WaRP --epochs 200
+py scripts/train_detector_kaggle.py --dataset All_TACO+TrashNet+Roboflow+WaRP --epochs 200
 
 # Different architecture
-py scripts/kaggle_train.py --model yolo8n.pt --dataset TACO+TrashNet+Roboflow
+py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset TACO+TrashNet+Roboflow
 
 # Custom learning rate
-py scripts/kaggle_train.py --lr0 0.005 --epochs 150
+py scripts/train_detector_kaggle.py --lr0 0.005 --epochs 150
 ```
 
 | Flag | Default | Description |
@@ -294,19 +307,19 @@ Each merge script combines datasets into YOLO format with class remapping:
 
 ```bash
 # Model 1: TACO + TrashNet + Roboflow (6,802 images)
-py scripts/merge_model1.py
-py scripts/merge_model1.py --output-dir datasets/MeinModell
-py scripts/merge_model1.py --dry-run
+py scripts/merge_dataset_model1.py
+py scripts/merge_dataset_model1.py --output-dir datasets/MeinModell
+py scripts/merge_dataset_model1.py --dry-run
 
 # Model 2: TACO + TrashNet + WaRP (~14,000 images)
-py scripts/merge_model2.py
-py scripts/merge_model2.py --dry-run
+py scripts/merge_dataset_model2.py
+py scripts/merge_dataset_model2.py --dry-run
 
 # Model 3: WaRP only (~3,000 images)
-py scripts/merge_model3.py
+py scripts/merge_dataset_model3.py
 
 # Model 4: All combined (~17,000 images)
-py scripts/merge_model4.py
+py scripts/merge_dataset_model4.py
 ```
 
 | Flag | Default | Description |
@@ -322,11 +335,11 @@ py scripts/merge_model4.py
 
 ### Collecting Your Own Training Data
 
-`capture_frame.py` is a keyboard-driven frame capture tool for building your own Stage A dataset:
+`capture_classifier_frames.py` is a keyboard-driven frame capture tool for building your own Stage A dataset:
 
 ```powershell
 .\mira data-viz       # First check the existing class distribution
-python src/capture_frame.py   # Open the capture window
+python src/capture_classifier_frames.py   # Open the capture window
 ```
 
 Controls inside the capture window:
@@ -345,8 +358,8 @@ The camera defaults to **640x360** to match the edge AI target hardware. Each fr
 To capture at a different resolution (e.g. if your webcam doesn't support 640x360 natively or you want higher quality images):
 
 ```powershell
-python src/capture_frame.py --resolution 1280x720
-python src/capture_frame.py --camera 1 --resolution 1920x1080
+python src/capture_classifier_frames.py --resolution 1280x720
+python src/capture_classifier_frames.py --camera 1 --resolution 1920x1080
 ```
 
 > **Important:** If you collect data at a higher resolution and then train on it, make sure your inference resolution (`imgsz`) matches accordingly.
@@ -386,22 +399,22 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 .\mira eval-class --model mira_classifier_int8.tflite --exp EXP-004_Quantized_INT8
 
 # Evaluate a YOLO detection model
-.\mira eval-yolo --model mira_detector_wild.pt
-.\mira eval-yolo --model mira_detector_wild.pt --data path/to/dataset.yaml
+.\mira eval-yolo --model mira_exp014.pt
+.\mira eval-yolo --model mira_exp014.pt --data path/to/dataset.yaml
 
 # For TFLite models, imgsz is auto-detected from the model's input tensor shape
-.\mira eval-yolo --model mira_detector_tabletop_int8_320.tflite  # automatically uses imgsz=320
-.\mira eval-yolo --model mira_detector_wild_v2_int8_320.tflite   # automatically uses imgsz=320
+.\mira eval-yolo --model mira_exp009_int8.tflite  # automatically uses imgsz=320
+.\mira eval-yolo --model mira_exp011_int8.tflite   # automatically uses imgsz=320
 ```
 
 ### Deployment Commands
 
 | Command | Description |
 |---|---|
-| `.\mira live --model mira_detector_wild_v2.pt` | **RECOMMENDED** — Best accuracy, non-quantized detection |
-| `.\mira live` | Live detection with default model (`mira_detector_wild.pt`) at 640x360 |
-| `.\mira live --model mira_detector_tabletop_int8_320.tflite` | Edge deployment (smaller, faster but lower accuracy) |
-| `.\mira live --model mira_detector_wild.pt --resolution 1280x720` | Wild model at 720p display |
+| `.\mira live --model mira_exp014.pt` | **RECOMMENDED** — Best accuracy, YOLO11n on TACO+TrashNet+Roboflow |
+| `.\mira live` | Live detection with default model (`mira_exp014.pt`) at 640x360 |
+| `.\mira live --model mira_exp009_int8.tflite` | INT8 edge deployment (smaller, lower accuracy) |
+| `.\mira live --model mira_exp015.pt --resolution 1280x720` | Model 2 at 720p display |
 | `.\mira live --camera 1` | Use a specific camera by index |
 | `.\mira dashboard` | Launch the Streamlit web control center (model switchable via sidebar) |
 
@@ -409,13 +422,17 @@ On startup, `.\mira live` prints all available models with the selected one mark
 
 ```
 Available models in models/:
-  mira_classifier_baseline.keras
-  mira_classifier_int8.tflite
-  mira_detector_tabletop_int8_320.tflite
-  mira_detector_wild.pt          <-- selected
-  mira_detector_wild_v2.pt
-  mira_detector_wild_v2_int8_320.tflite
-  mira_yolo_int8_320.tflite
+  mira_exp006.pt
+  mira_exp006_int8.tflite
+  mira_exp009_int8.tflite
+  mira_exp011.pt
+  mira_exp011_int8.tflite
+  mira_exp013.pt
+  mira_exp013_int8.tflite
+  mira_exp014.pt          <-- selected
+  mira_exp014_int8.tflite
+  mira_exp015.pt
+  mira_exp015_int8.tflite
 ```
 
 > **Note:** `--resolution` controls the **camera capture resolution** (what you see on screen). The model always infers at `imgsz=640` internally regardless of this setting — so accuracy is unaffected. Use `640x360` when running on edge AI hardware, or a higher resolution for a cleaner display on a desktop.
@@ -443,7 +460,7 @@ Available models in models/:
 
 ### Camera Performance Optimizations
 
-All three camera scripts (`live_detection.py`, `capture_frame.py`, `dashboard.py`) apply the following optimizations for stable, low-latency capture:
+All three camera scripts (`live_detector.py`, `capture_classifier_frames.py`, `dashboard.py`) apply the following optimizations for stable, low-latency capture:
 
 | Optimization | Setting | Effect |
 |---|---|---|
@@ -455,7 +472,7 @@ All three camera scripts (`live_detection.py`, `capture_frame.py`, `dashboard.py
 | **Autofocus off** | `CAP_PROP_AUTOFOCUS = 0` | Eliminates mid-inference blur from focus hunting |
 | **Warmup frames** | 10 frames discarded on start | Lets auto-exposure settle so the first saved/detected frames aren't washed out |
 
-`live_detection.py` additionally runs the camera capture in a **background thread** (`CameraStream` class). This decouples frame grabbing from inference: the main loop always processes the newest available frame instead of blocking on `cap.read()` while the model is busy, eliminating the lag that compounds over time in single-threaded loops.
+`live_detector.py` additionally runs the camera capture in a **background thread** (`CameraStream` class). This decouples frame grabbing from inference: the main loop always processes the newest available frame instead of blocking on `cap.read()` while the model is busy, eliminating the lag that compounds over time in single-threaded loops.
 
 ---
 

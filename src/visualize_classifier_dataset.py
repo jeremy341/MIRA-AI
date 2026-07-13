@@ -25,7 +25,7 @@ for class_name in CLASSES:
 print(f"Total:   {total_files}")
 
 if total_files == 0:
-    print("No images found to visualize. Run capture_frame.py first to collect some data!")
+    print("No images found to visualize. Run capture_classifier_frames.py first to collect some data!")
     exit(0)
 
 SAMPLES = 5
