@@ -1,9 +1,8 @@
 """Benchmark: compare all detection models on a YOLO-format validation set.
 
 Usage:
-    py src/field_benchmark.py --dataset datasets/TACO+TrashNet+Roboflow
-    py src/field_benchmark.py --dataset datasets/WaRP_only
-    py src/field_benchmark.py --capture              # webcam mode (manual)
+    py src/field_benchmark.py --dataset datasets/mira_tnr
+    py src/field_benchmark.py --dataset datasets/mira_warp_only
 """
 import argparse
 import json
@@ -12,12 +11,9 @@ import sys
 import time
 from ultralytics import YOLO
 
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
-MODELS_DIR = ROOT_DIR / "models" / "detection"
-RESULTS_DIR = ROOT_DIR / "results"
+from config import ROOT_DIR, DETECTION_DIR, CLASS_NAMES
 
-CLASS_NAMES = ["glass", "metal", "paper", "plastic", "trash"]
+RESULTS_DIR = ROOT_DIR / "results"
 
 
 def load_dataset(dataset_path):
@@ -63,7 +59,7 @@ def load_dataset(dataset_path):
 
 def get_detection_models():
     models = []
-    for p in sorted(MODELS_DIR.glob("*")):
+    for p in sorted(DETECTION_DIR.glob("*")):
         if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower():
             models.append((p.name, p))
     return models
@@ -72,7 +68,10 @@ def get_detection_models():
 def run_models(models, annotations, img_dir, conf=0.5):
     results = {}
     for name, path in models:
-        print(f"  Running {name}...", end=" ", flush=True)
+        is_int8 = "int8" in name.lower() and path.suffix == ".tflite"
+        effective_conf = min(conf, 0.25) if is_int8 else conf
+        thresh_note = f" (INT8: conf capped at {effective_conf:.2f})" if is_int8 else ""
+        print(f"  Running {name}...{thresh_note}", end=" ", flush=True)
         task_type = "detect" if path.suffix == ".tflite" else None
         try:
             model = YOLO(str(path), task=task_type)
@@ -84,7 +83,7 @@ def run_models(models, annotations, img_dir, conf=0.5):
             img_path = img_dir / fname
             if not img_path.exists():
                 continue
-            preds = model(str(img_path), conf=conf, verbose=False)
+            preds = model(str(img_path), conf=effective_conf, verbose=False)
             detections = preds[0].boxes
             detected = set()
             if detections is not None:

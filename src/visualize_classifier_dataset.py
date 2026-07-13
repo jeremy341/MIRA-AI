@@ -1,14 +1,8 @@
 import random
 import cv2
 import matplotlib.pyplot as plt
-import pathlib
 
-# 1. PATH RESOLUTION (Using pathlib to work from any CWD)
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
-DATA_DIR = ROOT_DIR / "data" / "classes"
-
-CLASSES = ['glass', 'metal', 'paper', 'plastic', 'trash']
+from config import DATA_CLASSES_DIR as DATA_DIR, CLASS_NAMES as CLASSES
 
 total_files = 0
 

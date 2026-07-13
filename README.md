@@ -96,12 +96,15 @@ MIRA-AI/
 │       ├── plastic/          # ~500 plastic samples
 │       └── trash/            # ~500 residual waste samples
 │
-├── datasets/                 # YOLO-format detection datasets (gitignored)
-│   ├── mira_v2/              # TACO + TrashNet (current best, 4,024 images)
-│   ├── TACO+TrashNet+Roboflow/  # Model 1: + Roboflow Trash Detection
-│   ├── TACO+TrashNet+WaRP/      # Model 2: + WaRP waste detection
-│   ├── WaRP_only/                # Model 3: WaRP only
-│   └── All_TACO+TrashNet+Roboflow+WaRP/  # Model 4: all combined
+├── datasets/                 # Detection datasets (gitignored)
+│   ├── mira_v2/              # TACO + TrashNet (3,924 images)
+│   ├── mira_tnr/             # Model 1: TACO+TrashNet+Roboflow
+│   ├── mira_tnw/             # Model 2: TACO+TrashNet+WaRP
+│   ├── mira_all/             # Model 4: all four combined
+│   ├── taco_raw/             # Raw TACO source (COCO annotations)
+│   ├── roboflow_raw/         # Raw Roboflow Trash Detection (64-class)
+│   ├── mira_warp/            # Raw WaRP source (Warp-D, 28 classes)
+│   └── trashnet_labeled/     # SAM-labeled TrashNet (bbox format)
 │
 ├── models/                   # All trained model exports (ready to use)
 │   ├── classifier/            # Stage A: image classification (Keras / TFLite)
@@ -149,7 +152,7 @@ MIRA-AI/
 │   ├── EXP-010_Quantized_Wild/
 │   ├── EXP-011_Wild_Only/
 │   ├── EXP-012_Quantized_Wild_v2/
-│   ├── EXP-013_YOLO11n_TACO+TrashNet/
+│   ├── exp013_yolo11n_v2/
 │   └── experiments_log.md    # Full quantitative metrics for all experiments
 │
 ├── scripts/                  # Dataset merge, training, and evaluation scripts
@@ -201,7 +204,7 @@ MIRA-AI/
 
 | Model | mAP50 | Params | Size | Notes |
 |---|---|---|---|---|
-| `YOLO11n` (EXP-014) | **60.7%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on TACO+TrashNet+Roboflow |
+| `YOLO11n` (EXP-014) | **60.7%** | 2.58M | 2.9 MB | **CURRENT BEST** — YOLO11n on mira_tnr |
 | `YOLO11n` (EXP-013) | 55.1% | 2.58M | 2.9 MB | YOLO11n on TACO+TrashNet (no Roboflow) |
 | `mira_exp006.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
 | `mira_exp009_int8.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
@@ -234,9 +237,9 @@ MIRA-AI/
 | EXP-011 | YOLOv8n | TACO only (3,365 img) | 35.0% | Kaggle T4 |
 | EXP-012 | YOLOv8n INT8 | TACO only (quantized) | 35.0% | — |
 | EXP-013 | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
-| **EXP-014** | **YOLO11n** | **TACO + TrashNet + Roboflow (6,802 img)** | **60.7%** | **Kaggle T4 (4.7 h)** |
-| **EXP-015** | **YOLO11n** | **TACO + TrashNet + WaRP (~6,800 img)** | **56.0%** | **Kaggle T4 (3.7 h)** |
-| **EXP-016** | **YOLO11n** | **WaRP only (~3,000 img)** | **58.8%** | **Kaggle T4 (1.1 h)** |
+| **EXP-014** | **YOLO11n** | **mira_tnr — TACO+TrashNet+Roboflow (6,802 img)** | **60.7%** | **Kaggle T4 (4.7 h)** |
+| **EXP-015** | **YOLO11n** | **mira_tnw — TACO+TrashNet+WaRP (~6,800 img)** | **56.0%** | **Kaggle T4 (3.7 h)** |
+| **EXP-016** | **YOLO11n** | **mira_warp_only — WaRP (~3,000 img)** | **58.8%** | **Kaggle T4 (1.1 h)** |
 
 > **Key finding:** Roboflow (EXP-014) outperforms WaRP (EXP-015) by +4.7 pp mAP50. Roboflow helps Trash (+11.3 pp), while WaRP helps Glass (+24.8 pp) but hurts Trash (-12.6 pp) since WaRP has zero trash-class images. EXP-016 (WaRP only) shows strong Glass (77.7%) and Plastic (73.1%) but zero Trash detection.
 
@@ -246,10 +249,12 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 
 | Model | Datasets | ~Images | Script | Status |
 |---|---|---|---|---|
-| Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_dataset_model1.py` | **Done — 60.7% mAP50** |
-| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_dataset_model2.py` | **Done — 56.0% mAP50** |
-| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | **Done — 58.8% mAP50** |
-| Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | Planned |
+| Model | Datasets | ~Images | Script | Dataset folder | Status |
+|---|---|---|---|---|---|
+| Model 1 | TACO + TrashNet + Roboflow | 6,802 | `scripts/merge_dataset_model1.py` | `datasets/mira_tnr/` | **Done — 60.7% mAP50** |
+| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_dataset_model2.py` | `datasets/mira_tnw/` | **Done — 56.0% mAP50** |
+| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | `datasets/mira_warp_only/` | **Done — 58.8% mAP50** |
+| Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | `datasets/mira_all/` | Planned |
 
 All models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle (free T4 GPU).
 
@@ -291,16 +296,16 @@ For training on Kaggle (free GPU), use `scripts/train_detector_kaggle.py`:
 py scripts/train_detector_kaggle.py
 
 # Model 2
-py scripts/train_detector_kaggle.py --dataset TACO+TrashNet+WaRP
+py scripts/train_detector_kaggle.py --dataset mira_tnw
 
 # Model 3 (WaRP only, fewer epochs)
-py scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 80 --batch-size 16
+py scripts/train_detector_kaggle.py --dataset mira_warp_only --epochs 80 --batch-size 16
 
 # Model 4 (all data, longer training)
-py scripts/train_detector_kaggle.py --dataset All_TACO+TrashNet+Roboflow+WaRP --epochs 200
+py scripts/train_detector_kaggle.py --dataset mira_all --epochs 200
 
 # Different architecture
-py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset TACO+TrashNet+Roboflow
+py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset mira_tnr
 
 # Custom learning rate
 py scripts/train_detector_kaggle.py --lr0 0.005 --epochs 150
@@ -308,7 +313,7 @@ py scripts/train_detector_kaggle.py --lr0 0.005 --epochs 150
 
 | Flag | Default | Description |
 |---|---|---|
-| `--dataset` | `TACO+TrashNet+Roboflow` | Kaggle dataset name |
+| `--dataset` | `mira_tnr` | Kaggle dataset name |
 | `--model` | `yolo11n.pt` | Base model architecture |
 | `--epochs` | `120` | Training epochs |
 | `--batch-size` | `32` | Batch size |
@@ -322,25 +327,25 @@ py scripts/train_detector_kaggle.py --lr0 0.005 --epochs 150
 Each merge script combines datasets into YOLO format with class remapping:
 
 ```bash
-# Model 1: TACO + TrashNet + Roboflow (6,802 images)
+# Model 1: TACO + TrashNet + Roboflow (output: datasets/mira_tnr)
 py scripts/merge_dataset_model1.py
 py scripts/merge_dataset_model1.py --output-dir datasets/MeinModell
 py scripts/merge_dataset_model1.py --dry-run
 
-# Model 2: TACO + TrashNet + WaRP (~14,000 images)
+# Model 2: TACO + TrashNet + WaRP (output: datasets/mira_tnw)
 py scripts/merge_dataset_model2.py
 py scripts/merge_dataset_model2.py --dry-run
 
-# Model 3: WaRP only (~3,000 images)
+# Model 3: WaRP only (output: datasets/mira_warp_only)
 py scripts/merge_dataset_model3.py
 
-# Model 4: All combined (~17,000 images)
+# Model 4: All combined (output: datasets/mira_all)
 py scripts/merge_dataset_model4.py
 ```
 
 | Flag | Default | Description |
 |---|---|---|
-| `--output-dir` | `datasets/<model_name>` | Output dataset directory |
+| `--output-dir` | `datasets/<dataset_name>` | Output dataset directory |
 | `--dry-run` | `false` | Preview stats without copying files |
 
 ### Verify Installation
@@ -505,7 +510,7 @@ MIRA's YOLO11n models target a specific niche: **5-class recycling detection on 
 | Marwah & Chowanda (2025) | YOLO11s | household waste | TACO + custom (11,876 inst.) | 72.6% | After quantization; uses TACO like MIRA |
 | Messai et al. (2025) | YOLO11-x | 8 recycling classes | Industrial recycling dataset | 62.8 | YOLO11-x (56.9M params) vs MIRA's YOLO11n (2.58M) |
 | Lightweight YOLO for PET/HDPE (2025) | YOLO11n | 2 (PET, HDPE) | Drinking Waste + FORTH/RECLAIM | 99.2+ (99.9) | Binary classification, not comparable |
-| **MIRA EXP-014 (this repo)** | **YOLO11n** | **5 (glass, metal, paper, plastic, trash)** | **TACO + TrashNet + Roboflow** | **60.7%** | **2.9 MB INT8, edge-optimized** |
+| **MIRA EXP-014 (this repo)** | **YOLO11n** | **5 (glass, metal, paper, plastic, trash)** | **mira_tnr — TACO+TrashNet+Roboflow** | **60.7%** | **2.9 MB INT8, edge-optimized** |
 
 **Key takeaway:** Direct comparison is difficult because every study uses different class schemas, datasets, and evaluation protocols. MIRA's *trash* class (residual waste) is particularly challenging — most recycling datasets omit it entirely, which inflates their reported metrics.
 

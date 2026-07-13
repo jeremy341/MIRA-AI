@@ -1,12 +1,14 @@
 import argparse
 import cv2
-import pathlib
 import sys
 import threading
 import time
 import numpy as np
-from ultralytics import YOLO
 from collections import deque
+from ultralytics import YOLO
+
+from config import DETECTION_DIR, get_tflite_imgsz
+from visualize import draw_boxes
 
 # ---------------------------------------------------------------------------
 # 1. ARGUMENT PARSING
@@ -97,12 +99,9 @@ class CameraStream:
 # ---------------------------------------------------------------------------
 # 3. PATH RESOLUTION & MODEL LOAD (with TFLite int8 optimization)
 # ---------------------------------------------------------------------------
-SCRIPT_DIR  = pathlib.Path(__file__).resolve().parent
-ROOT_DIR    = SCRIPT_DIR.parent
-MODELS_DIR  = ROOT_DIR / "models" / "detection"
-MODEL_PATH  = MODELS_DIR / args.model
+MODEL_PATH  = DETECTION_DIR / args.model
 
-available = sorted(p.name for p in MODELS_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))
+available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))
 print("\nAvailable models in models/:")
 for name in available:
     marker = "  <-- selected" if name == args.model else ""
@@ -112,7 +111,7 @@ print()
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(
-        f"Model '{args.model}' not found in {MODELS_DIR}.\n"
+        f"Model '{args.model}' not found in {DETECTION_DIR}.\n"
         f"Available models: {', '.join(available)}"
     )
 
@@ -130,11 +129,7 @@ model = YOLO(MODEL_PATH, task=task_type)
 is_tflite_int8 = MODEL_PATH.suffix == ".tflite" and "int8" in args.model.lower()
 
 if MODEL_PATH.suffix == ".tflite":
-    from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
-    _tmp = LiteRTInterpreter(model_path=str(MODEL_PATH))
-    _shape = _tmp.get_input_details()[0]["shape"]
-    img_size = int(max(_shape))
-    del _tmp
+    img_size = get_tflite_imgsz(MODEL_PATH)
     if is_tflite_int8:
         print(f"TFLite INT8 model: input {img_size}x{img_size}, auto-setting conf=0.25 (INT8 reduces confidence)")
     else:
@@ -149,50 +144,7 @@ if is_tflite_int8:
 
 
 # ---------------------------------------------------------------------------
-# 4. CUSTOM BOX DRAWING (fixes scaling issues with tabletop setup)
-# ---------------------------------------------------------------------------
-def draw_boxes_corrected(frame, results, conf_threshold=0.3):
-    """
-    Manually draw bounding boxes with proper scaling.
-    Ultralytics already scales boxes back to original frame coordinates.
-    """
-    h, w = frame.shape[:2]
-    annotated = frame.copy()
-    
-    if results[0].boxes is None or len(results[0].boxes) == 0:
-        return annotated
-    
-    boxes = results[0].boxes
-    for box in boxes:
-        conf = float(box.conf[0])
-        if conf < conf_threshold:
-            continue
-        
-        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
-        cls_id = int(box.cls[0])
-        cls_name = results[0].names[cls_id]
-        
-        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
-        
-        color = (0, 255, 0)
-        cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-        
-        label = f"{cls_name} {conf:.2f}"
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        thickness = 2
-        text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
-        text_bg_x1, text_bg_y1 = x1, y1 - 25
-        text_bg_x2, text_bg_y2 = x1 + text_size[0], y1
-        
-        cv2.rectangle(annotated, (text_bg_x1, text_bg_y1), (text_bg_x2, text_bg_y2), color, -1)
-        cv2.putText(annotated, label, (x1, y1 - 5), font, font_scale, (0, 0, 0), thickness)
-    
-    return annotated
-
-
-# ---------------------------------------------------------------------------
-# 5. OPEN CAMERA STREAM
+# 4. OPEN CAMERA STREAM
 # ---------------------------------------------------------------------------
 print(f"Opening camera {args.camera} at {CAM_W}x{CAM_H}...")
 stream = CameraStream(args.camera, CAM_W, CAM_H)
@@ -203,7 +155,7 @@ latency_history = deque(maxlen=30)
 skip_frame = False
 
 # ---------------------------------------------------------------------------
-# 6. MAIN INFERENCE LOOP (with adaptive frame skipping)
+# 5. MAIN INFERENCE LOOP (with adaptive frame skipping)
 # ---------------------------------------------------------------------------
 try:
     while True:
@@ -232,7 +184,7 @@ try:
                 tracker="bytetrack.yaml"
             )
 
-        annotated_frame = draw_boxes_corrected(frame, results, conf_threshold=args.conf)
+        annotated_frame = draw_boxes(frame, results, conf_threshold=args.conf)
 
         curr_time = time.perf_counter()
         frame_time = curr_time - prev_time

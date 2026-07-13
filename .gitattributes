@@ -1,0 +1,36 @@
+# Auto-detect text files and normalize to LF
+* text=auto eol=lf
+
+# Python
+*.py text diff=python
+
+# Markdown / docs
+*.md text
+*.md diff=markdown
+
+# YAML / config
+*.yaml text
+*.yml text
+*.json text
+
+# Shell scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.sh text eol=lf
+
+# Images (binary)
+*.png binary
+*.jpg binary
+*.jpeg binary
+
+# Archives
+*.zip binary
+*.tar.gz binary
+
+# Model files
+*.pt binary
+*.tflite binary
+*.onnx binary
+*.keras binary
+*.h5 binary
+*.safetensors binary

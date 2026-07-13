@@ -4,24 +4,7 @@ import subprocess
 import sys
 from model_picker import pick_model
 
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
-REF_DIR = ROOT_DIR / "reference"
-MODELS_DIR = ROOT_DIR / "models" / "detection"
-
-MODEL_LABELS = {
-    "mira_exp006.pt": "EXP-006 (YOLOv8n, multi-dataset)",
-    "mira_exp006_int8.tflite": "EXP-006 INT8",
-    "mira_exp009_int8.tflite": "EXP-009 (inflated mAP)",
-    "mira_exp011.pt": "EXP-011 (YOLOv8n, TACO-only)",
-    "mira_exp011_int8.tflite": "EXP-011 INT8",
-    "mira_exp013.pt": "EXP-013 (YOLO11n, TACO+TrashNet)",
-    "mira_exp013_int8.tflite": "EXP-013 INT8",
-    "mira_exp014.pt": "EXP-014 (YOLO11n, +Roboflow) BEST",
-    "mira_exp014_int8.tflite": "EXP-014 INT8",
-    "mira_exp015.pt": "EXP-015 (YOLO11n, +WaRP)",
-    "mira_exp015_int8.tflite": "EXP-015 INT8",
-}
+from config import ROOT_DIR, SCRIPT_DIR, REF_DIR, DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS, get_detection_models, get_tflite_imgsz
 
 
 def run_script(script_path, args_list=None):
@@ -53,17 +36,9 @@ def resolve_detection_data_yaml(explicit_path=None):
     )
 
 
-def _get_detection_models():
-    """Return sorted list of detection model filenames."""
-    return sorted(
-        p.name for p in MODELS_DIR.glob("*")
-        if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower()
-    )
-
-
 def _pick_model_interactive(title="Available models"):
     """Show interactive picker for detection models. Returns model name or None."""
-    models = _get_detection_models()
+    models = get_detection_models()
     return pick_model(models, labels=MODEL_LABELS, title=title)
 
 
@@ -150,20 +125,14 @@ def main():
             model = _pick_model_interactive("Available detection models")
             if model is None:
                 sys.exit(0)
-        model_path = ROOT_DIR / "models" / "detection" / model
+        model_path = DETECTION_DIR / model
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found at {model_path}")
         from ultralytics import YOLO
         data_path = resolve_detection_data_yaml(args.data)
         task_type = "detect" if model_path.suffix == ".tflite" else None
         model = YOLO(str(model_path), task=task_type)
-        if model_path.suffix == ".tflite":
-            from ai_edge_litert.interpreter import Interpreter as LiteRTInterpreter
-            _tmp = LiteRTInterpreter(model_path=str(model_path))
-            val_imgsz = int(max(_tmp.get_input_details()[0]["shape"]))
-            del _tmp
-        else:
-            val_imgsz = 640
+        val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix == ".tflite" else 640
         model.val(data=str(data_path), imgsz=val_imgsz)
     else:
         parser.print_help()

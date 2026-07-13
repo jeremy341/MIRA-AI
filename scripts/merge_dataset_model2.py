@@ -17,7 +17,7 @@ from warp_utils import WARP_MAPPING, WARP_DIR, create_warp_split, copy_remapped_
 
 def parse_args():
     p = argparse.ArgumentParser(description="Merge TACO+TrashNet+WaRP into one YOLO dataset")
-    p.add_argument("--output-dir", type=Path, default=DATASETS / "TACO+TrashNet+WaRP",
+    p.add_argument("--output-dir", type=Path, default=DATASETS / "mira_tnw",
                    help="Output dataset directory")
     p.add_argument("--dry-run", action="store_true",
                    help="Preview stats without copying files")

@@ -7,7 +7,7 @@ from pathlib import Path
 # ============================================================
 # CONFIG
 # ============================================================
-TACO_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\TACO-master\TACO-master")
+TACO_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\taco_raw\TACO-master")
 ANNOTATIONS_PATH = TACO_DIR / "data" / "annotations.json"
 OUTPUT_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\mira_v1")
 TRAIN_SPLIT = 0.8

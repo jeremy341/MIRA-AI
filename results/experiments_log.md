@@ -351,7 +351,7 @@ EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both sma
 
 ---
 
-## EXP-014: YOLO11n on TACO + TrashNet + Roboflow (Model 1 — 4-Model Comparison)
+## EXP-014: YOLO11n on TACO + TrashNet + Roboflow (Model 1 — mira_tnr)
 * **Date:** July 12, 2026
 * **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
 * **Dataset Size:** 6,802 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,778 Roboflow Trash Detection)
@@ -403,7 +403,7 @@ EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash D
 
 ---
 
-## EXP-015: YOLO11n on TACO + TrashNet + WaRP (Model 2 — 4-Model Comparison)
+## EXP-015: YOLO11n on TACO + TrashNet + WaRP (Model 2 — mira_tnw)
 * **Date:** July 13, 2026
 * **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
 * **Dataset Size:** ~6,800 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,800 WaRP waste detection)
@@ -450,13 +450,13 @@ EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+
 
 ---
 
-## EXP-016: WaRP Only — YOLO11n
+## EXP-016: WaRP Only — YOLO11n (dataset: mira_warp_only)
 * **Date:** July 13, 2026
 * **Commit Hash:** `0f90571`
 * **Model Architecture:** YOLO11n (nano, 2.58M params)
 * **Training Hardware:** Kaggle T4 GPU (1.067 hours / 120 epochs)
 * **Dataset:** WaRP only (28 WaRP classes remapped to 5 MIRA classes)
-* **Training Script:** `scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 120`
+* **Training Script:** `scripts/train_detector_kaggle.py --dataset mira_warp_only --epochs 120`
 
 ### Validation Metrics
 | Metric | Value |

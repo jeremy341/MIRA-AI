@@ -15,8 +15,8 @@ from pathlib import Path
 
 def parse_args():
     p = argparse.ArgumentParser(description="Train YOLO detection model on Kaggle GPU")
-    p.add_argument("--dataset", type=str, default="TACO+TrashNet+Roboflow",
-                   help="Kaggle dataset name (default: TACO+TrashNet+Roboflow)")
+    p.add_argument("--dataset", type=str, default="mira_tnr",
+                   help="Kaggle dataset name (default: mira_tnr)")
     p.add_argument("--model", type=str, default="yolo11n.pt",
                    help="Base model architecture (default: yolo11n.pt)")
     p.add_argument("--epochs", type=int, default=120,
