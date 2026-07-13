@@ -14,7 +14,7 @@ from ultralytics import YOLO
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "detection"
 RESULTS_DIR = ROOT_DIR / "results"
 
 CLASS_NAMES = ["glass", "metal", "paper", "plastic", "trash"]

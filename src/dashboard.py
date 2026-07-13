@@ -9,7 +9,7 @@ import numpy as np
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "detection"
 
 if not MODELS_DIR.exists():
     st.error(f"Models directory not found at: {MODELS_DIR}")

@@ -7,7 +7,7 @@ import os
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data" / "classes"
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "classifier"
 
 
 def representative_data_gen():

@@ -7,7 +7,7 @@ from tensorflow.keras import layers
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data" / "classes"
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "classifier"
 
 SAVE_DIR = ROOT_DIR / 'results' / 'EXP-003_FineTuning'
 SAVE_DIR.mkdir(parents=True, exist_ok=True)

@@ -7,7 +7,7 @@ from model_picker import pick_model
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 REF_DIR = ROOT_DIR / "reference"
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "detection"
 
 MODEL_LABELS = {
     "mira_exp006.pt": "EXP-006 (YOLOv8n, multi-dataset)",
@@ -150,7 +150,7 @@ def main():
             model = _pick_model_interactive("Available detection models")
             if model is None:
                 sys.exit(0)
-        model_path = ROOT_DIR / "models" / model
+        model_path = ROOT_DIR / "models" / "detection" / model
         if not model_path.exists():
             raise FileNotFoundError(f"Model file not found at {model_path}")
         from ultralytics import YOLO

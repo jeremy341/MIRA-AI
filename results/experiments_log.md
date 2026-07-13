@@ -447,3 +447,44 @@ EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash D
 
 ### Observation
 EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+TrashNet fusion. Overall mAP50 drops to 56.0% — a -4.7 pp decline compared to EXP-014 (60.7%). The WaRP dataset significantly boosts Glass (+24.8 pp, 50.2% → 75.0%) due to its large number of glass bottle images, but drags down Metal (-14.3 pp, 71.3% → 57.0%), Paper (-20.3 pp, 82.9% → 62.6%), and especially Trash (-12.6 pp, 26.9% → 14.3%). The Trash decline is expected — WaRP contains zero trash-class images, diluting the trash signal from TACO/TrashNet. The high Precision (0.707) but extremely low Recall (0.087) for Trash confirms the model detects trash when present but misses most instances. Glass benefits strongly from WaRP's bottle-focused imagery, making this dataset combination viable only if Glass detection is the priority.
+
+---
+
+## EXP-016: WaRP Only — YOLO11n
+* **Date:** July 13, 2026
+* **Commit Hash:** `0f90571`
+* **Model Architecture:** YOLO11n (nano, 2.58M params)
+* **Training Hardware:** Kaggle T4 GPU (1.067 hours / 120 epochs)
+* **Dataset:** WaRP only (28 WaRP classes remapped to 5 MIRA classes)
+* **Training Script:** `scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 120`
+
+### Validation Metrics
+| Metric | Value |
+|---|---|
+| mAP50 | 0.588 |
+| mAP50-95 | 0.432 |
+| Precision | 0.621 |
+| Recall | 0.559 |
+
+### Per-Class mAP50
+| Class | mAP50 |
+|---|---|
+| Glass | 0.777 |
+| Metal | 0.421 |
+| Paper | 0.422 |
+| Plastic | 0.731 |
+| Trash | — (no trash in WaRP dataset) |
+
+### Speed (GPU)
+* **Preprocess:** 0.1 ms
+* **Inference:** 1.2 ms
+* **Postprocess:** 1.3 ms
+
+### Quantization (INT8 LiteRT Export)
+* **Original Model Size:** 10.14 MiB
+* **Quantized INT8 Model Size:** 2.90 MiB
+* **Compression Ratio:** 3.5x smaller
+* **Export Time:** 702.3 s
+
+### Observation
+EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 classes). With 58.8% mAP50 overall, it outperforms the mixed-dataset EXP-015 (56.0%) despite having no Trash class. Glass (77.7%) and Plastic (73.1%) are strong — WaRP is rich in bottles and packaging. Metal (42.1%) and Paper (42.2%) are weaker, likely because WaRP's metal/paper subclasses are fewer and more diverse. Trash is absent entirely (WaRP has zero residual waste images), so the model cannot detect it. This makes EXP-016 a specialized model: excellent at glass/plastic detection but unusable for trash sorting. As a 4-model comparison entry, it confirms that WaRP alone is not a viable general-purpose recycling detector.
