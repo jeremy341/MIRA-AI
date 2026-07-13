@@ -39,7 +39,7 @@
 
 1. **mira_exp014.pt (EXP-014) is the best model overall** with 85.8% F1 — highest on every metric.
 2. **Trash is the weakest class** across all models (best: 54.0% F1 by EXP-014). Most models hover around 30-37%.
-3. **mira_exp011_int8.tflite is broken** — 0% detection across all classes. Likely a quantization issue.
+3. **mira_exp011_int8.tflite needs a lower confidence threshold** — at default conf=0.5 it produces 0 detections because INT8 quantization shifts scores downward. At conf=0.25 it performs normally (1.6 detections/image vs FP32's 1.9). The benchmark auto-caps INT8 models to conf=0.25 going forward.
 4. **INT8 quantization costs ~13 pp F1** on average (85.8% → 72.8% for EXP-014).
 5. **EXP-013 (TACO+TrashNet) and EXP-015 (+WaRP) are similar** at ~77-78% F1. Adding WaRP doesn't help on this dataset.
 6. **EXP-009 (int8) at 79.5% F1** outperforms its reputation — though this benchmark uses mira_v2 which may differ from its inflated white-background validation.
@@ -66,4 +66,4 @@
 - Plastic: **73.1%**
 - Trash: — (no trash in WaRP)
 
-*Run `.\mira field-bench --dataset datasets/WaRP_only` to get real precision/recall for this model.*
+*Run `.\mira field-bench --dataset datasets/mira_warp_only` to get real precision/recall for this model.*

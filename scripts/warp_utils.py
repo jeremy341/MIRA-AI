@@ -25,7 +25,7 @@ WARP_MAPPING = {
     # Trash: none in this dataset
 }
 
-WARP_DIR = DATASETS / "WaRP" / "Warp-D"
+WARP_DIR = DATASETS / "mira_warp" / "Warp-D"
 CLASS_NAMES = {0: "glass", 1: "metal", 2: "paper", 3: "plastic", 4: "trash"}
 
 

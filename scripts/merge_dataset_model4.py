@@ -24,12 +24,12 @@ ROBOFLOW_MAPPING = {
     3: 4, 5: 4, 6: 4, 18: 4, 50: 4, 52: 4, 57: 4, 61: 4, 62: 4,
 }
 
-ROBOFLOW_DIR = DATASETS / "Trash Detection.yolov8 (1)"
+ROBOFLOW_DIR = DATASETS / "roboflow_raw"
 
 
 def parse_args():
     p = argparse.ArgumentParser(description="Merge ALL datasets into one YOLO dataset")
-    p.add_argument("--output-dir", type=Path, default=DATASETS / "All_TACO+TrashNet+Roboflow+WaRP",
+    p.add_argument("--output-dir", type=Path, default=DATASETS / "mira_all",
                    help="Output dataset directory")
     p.add_argument("--dry-run", action="store_true",
                    help="Preview stats without copying files")

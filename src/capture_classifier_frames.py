@@ -1,7 +1,8 @@
 import argparse
 import cv2
 import datetime
-import pathlib
+
+from config import DATA_CLASSES_DIR as DATA_DIR
 
 # ---------------------------------------------------------------------------
 # 1. ARGUMENT PARSING
@@ -19,13 +20,6 @@ parser.add_argument(
 )
 args = parser.parse_args()
 CAM_W, CAM_H = (int(v) for v in args.resolution.split("x"))
-
-# ---------------------------------------------------------------------------
-# 2. PATH RESOLUTION
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR   = SCRIPT_DIR.parent
-DATA_DIR   = ROOT_DIR / "data" / "classes"
 
 # ---------------------------------------------------------------------------
 # 3. CAMERA SETUP

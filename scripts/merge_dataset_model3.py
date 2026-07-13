@@ -16,7 +16,7 @@ from warp_utils import WARP_MAPPING, WARP_DIR, create_warp_split, copy_remapped_
 
 def parse_args():
     p = argparse.ArgumentParser(description="Create WaRP-only YOLO dataset (28->5 remap)")
-    p.add_argument("--output-dir", type=Path, default=DATASETS / "WaRP_only",
+    p.add_argument("--output-dir", type=Path, default=DATASETS / "mira_warp_only",
                    help="Output dataset directory")
     p.add_argument("--dry-run", action="store_true",
                    help="Preview stats without copying files")

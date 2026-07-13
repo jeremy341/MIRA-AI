@@ -27,8 +27,8 @@ ROBOFLOW_MAPPING = {
 
 def parse_args():
     p = argparse.ArgumentParser(description="Merge TACO+TrashNet+Roboflow into one YOLO dataset")
-    p.add_argument("--output-dir", type=Path, default=DATASETS / "TACO+TrashNet+Roboflow",
-                   help="Output dataset directory (default: datasets/TACO+TrashNet+Roboflow)")
+    p.add_argument("--output-dir", type=Path, default=DATASETS / "mira_tnr",
+                   help="Output dataset directory (default: datasets/mira_tnr)")
     p.add_argument("--dry-run", action="store_true",
                    help="Preview stats without copying files")
     return p.parse_args()
@@ -36,7 +36,7 @@ def parse_args():
 
 def merge(args):
     TACO_TRASHNET_DIR = DATASETS / "mira_v2"
-    ROBOFLOW_DIR = DATASETS / "Trash Detection.yolov8 (1)"
+    ROBOFLOW_DIR = DATASETS / "roboflow_raw"
     OUTPUT_DIR = args.output_dir
 
     if args.dry_run:
