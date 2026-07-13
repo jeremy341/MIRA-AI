@@ -1,7 +1,15 @@
 # MIRA — Machine Intelligence for Recycling Automation
 
 > **Jugend forscht 2026 — Category: Technology**  
-> A lightweight, edge-AI-optimized computer vision system for automated recycling sorting. MIRA progresses through two research stages: image classification (Stage A) and real-time spatial object detection (Stage B), ultimately targeting deployment on resource-constrained hardware such as the Raspberry Pi Zero 2W.
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Ultralytics](https://img.shields.io/badge/YOLO-11n-%2300bcd4)](https://github.com/ultralytics/ultralytics)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/jeremy341/MIRA-AI)](https://github.com/jeremy341/MIRA-AI/commits/main)
+
+A lightweight, edge-AI-optimized computer vision system for automated recycling sorting — targeting deployment on resource-constrained hardware such as the Raspberry Pi Zero 2W. MIRA progresses from image classification (Stage A) to real-time object detection (Stage B), with a 4-model comparison to find the optimal training data mix for YOLO11n.
+
+> **Quick start:** `.\mira live` → interactive model picker → live webcam detection
 
 ---
 
@@ -15,8 +23,9 @@
 6. [Setup & Installation](#6-setup--installation)
 7. [CLI Reference](#7-cli-reference)
 8. [Hardware Requirements](#8-hardware-requirements)
-9. [Known Limitations](#9-known-limitations)
-10. [Repository Notes](#10-repository-notes)
+9. [Related Benchmarks](#9-related-benchmarks)
+10. [Known Limitations](#10-known-limitations)
+11. [Repository Notes](#11-repository-notes)
 
 **Additional Resources:**
 - **[Quick Start Guide](CLAUDE/QUICK_START.md)** — Get running in 3 minutes
@@ -160,6 +169,7 @@ MIRA-AI/
 │   ├── dashboard.py          # Streamlit web control center
 │   ├── debug_detector.py     # Camera diagnostics for detection models
 │   ├── live_detector.py      # Real-time YOLOv8 detection and tracking
+│   ├── model_picker.py       # Interactive arrow-key model selector
 │   └── visualize_classifier_dataset.py  # Dataset distribution and sample grid viewer
 │
 ├── .gitignore
@@ -232,10 +242,10 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 |---|---|---|---|---|
 | Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_dataset_model1.py` | **Done — 60.7% mAP50** |
 | Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_dataset_model2.py` | **Done — 56.0% mAP50** |
-| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | Pending |
-| Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | Pending |
+| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | Planned |
+| Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | Planned |
 
-All models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle.
+All models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle (free T4 GPU).
 
 Full per-class metrics, confusion matrices, and training curves are in [`results/experiments_log.md`](results/experiments_log.md).
 
@@ -411,28 +421,25 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 
 | Command | Description |
 |---|---|
-| `.\mira live --model mira_exp014.pt` | **RECOMMENDED** — Best accuracy, YOLO11n on TACO+TrashNet+Roboflow |
-| `.\mira live` | Live detection with default model (`mira_exp014.pt`) at 640x360 |
+| `.\mira live` | Interactive model picker — arrow keys to choose, Enter to confirm |
+| `.\mira live --model mira_exp014.pt` | Direct launch with a specific model |
 | `.\mira live --model mira_exp009_int8.tflite` | INT8 edge deployment (smaller, lower accuracy) |
 | `.\mira live --model mira_exp015.pt --resolution 1280x720` | Model 2 at 720p display |
 | `.\mira live --camera 1` | Use a specific camera by index |
 | `.\mira dashboard` | Launch the Streamlit web control center (model switchable via sidebar) |
 
-On startup, `.\mira live` prints all available models with the selected one marked:
+Running `.\mira live` without `--model` opens an interactive picker:
 
-```
-Available models in models/:
-  mira_exp006.pt
-  mira_exp006_int8.tflite
-  mira_exp009_int8.tflite
-  mira_exp011.pt
-  mira_exp011_int8.tflite
-  mira_exp013.pt
-  mira_exp013_int8.tflite
-  mira_exp014.pt          <-- selected
-  mira_exp014_int8.tflite
-  mira_exp015.pt
-  mira_exp015_int8.tflite
+```text
+  Available models
+
+    mira_exp006.pt
+    → mira_exp014.pt          EXP-014 (YOLO11n, +Roboflow) BEST  <--
+    mira_exp014_int8.tflite   EXP-014 INT8
+    mira_exp015.pt            EXP-015 (YOLO11n, +WaRP)
+    [Cancel]                  Exit without selecting
+
+  ↑↓ navigate  |  Enter: select  |  Esc: cancel
 ```
 
 > **Note:** `--resolution` controls the **camera capture resolution** (what you see on screen). The model always infers at `imgsz=640` internally regardless of this setting — so accuracy is unaffected. Use `640x360` when running on edge AI hardware, or a higher resolution for a cleaner display on a desktop.
@@ -476,7 +483,25 @@ All three camera scripts (`live_detector.py`, `capture_classifier_frames.py`, `d
 
 ---
 
-## 9. Known Limitations
+## 9. Related Benchmarks
+
+MIRA's YOLO11n models target a specific niche: **5-class recycling detection on edge hardware** (Raspberry Pi Zero 2W). No single public benchmark matches this exact setup, but several related works provide context:
+
+| Work | Model | Classes | Dataset | mAP@0.5 | Notes |
+|------|-------|---------|---------|---------|-------|
+| Nasien et al. (2025) | YOLO11 | 5 (glass, plastic, metal, paper, biodegradable) | 10,464 custom images | ~94% accuracy | Accuracy metric, not mAP; biodegradable ≠ trash |
+| Marwah & Chowanda (2025) | YOLO11s | household waste | TACO + custom (11,876 inst.) | 72.6% | After quantization; uses TACO like MIRA |
+| Messai et al. (2025) | YOLO11-x | 8 recycling classes | Industrial recycling dataset | 62.8 | YOLO11-x (56.9M params) vs MIRA's YOLO11n (2.58M) |
+| Lightweight YOLO for PET/HDPE (2025) | YOLO11n | 2 (PET, HDPE) | Drinking Waste + FORTH/RECLAIM | 99.2+ (99.9) | Binary classification, not comparable |
+| **MIRA EXP-014 (this repo)** | **YOLO11n** | **5 (glass, metal, paper, plastic, trash)** | **TACO + TrashNet + Roboflow** | **60.7%** | **2.9 MB INT8, edge-optimized** |
+
+**Key takeaway:** Direct comparison is difficult because every study uses different class schemas, datasets, and evaluation protocols. MIRA's *trash* class (residual waste) is particularly challenging — most recycling datasets omit it entirely, which inflates their reported metrics.
+
+> **Kaggle AI Credits:** You can use your credits to run a standardized benchmark of MIRA's models on the [TACO dataset](http://tacodataset.org/) or [Drinking Waste Classification](https://www.kaggle.com/datasets/arkadiyhacks/drinking-waste-classification) to produce a directly comparable published result. The training script `scripts/train_detector_kaggle.py` is already configured for this — just upload the dataset and run.
+
+---
+
+## 10. Known Limitations
 
 - **End-on metal cans** — cans facing the camera opening-first cause frequent detection drop-outs due to a lack of representative training samples for this orientation.
 - **Overlapping objects** — heavily stacked or occluded items reduce bounding box accuracy, particularly for paper and trash classes.
@@ -485,7 +510,7 @@ All three camera scripts (`live_detector.py`, `capture_classifier_frames.py`, `d
 
 ---
 
-## 10. Repository Notes
+## 11. Repository Notes
 
 - **Training data** (`data/classes/`) and **detection datasets** (`datasets/`) are excluded from the repository. The models are fully trained and ready to use without the raw images.
 - **Documentation** (`doc/`) is excluded from the public repository.
