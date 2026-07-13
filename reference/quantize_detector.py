@@ -3,7 +3,7 @@ from ultralytics import YOLO
 
 # 1. PFADE
 ROOT_DIR = pathlib.Path(__file__).resolve().parent.parent
-MODEL_PATH = ROOT_DIR / "models" / "mira_detector_wild.pt"
+MODEL_PATH = ROOT_DIR / "models" / "mira_exp006.pt"
 
 # 2. MODELL LADEN
 model = YOLO(MODEL_PATH)

@@ -19,7 +19,7 @@ def representative_data_gen():
 
     for path in sample_paths:
         img = tf.io.read_file(str(path))
-        img = tf.image.decode_jpeg(img, channels=3)
+        img = tf.image.decode_image(img, channels=3, expand_animations=False)
 
         # Get image dimensions dynamically
         shape = tf.shape(img)

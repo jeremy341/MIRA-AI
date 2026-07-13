@@ -22,11 +22,17 @@ available_models = [
 
 # Add experiment labels for context
 MODEL_LABELS = {
-    "mira_v2_detector.pt": "EXP-013 (YOLO11n, TACO+TrashNet)",
-    "mira_v2_detector_int8.tflite": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
-    "mira_detector_wild.pt": "EXP-006 (YOLOv8n, multi-dataset)",
-    "mira_detector_wild_v2.pt": "EXP-011 (YOLOv8n, TACO-only)",
-    "mira_detector_tabletop_int8_320.tflite": "EXP-009 INT8 (inflated mAP)",
+    "mira_exp006.pt": "EXP-006 (YOLOv8n, multi-dataset)",
+    "mira_exp006_int8.tflite": "EXP-006 INT8 (YOLOv8n, multi-dataset)",
+    "mira_exp009_int8.tflite": "EXP-009 INT8 (inflated mAP)",
+    "mira_exp011.pt": "EXP-011 (YOLOv8n, TACO-only)",
+    "mira_exp011_int8.tflite": "EXP-011 INT8 (YOLOv8n, TACO-only)",
+    "mira_exp013.pt": "EXP-013 (YOLO11n, TACO+TrashNet)",
+    "mira_exp013_int8.tflite": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
+    "mira_exp014.pt": "EXP-014 (YOLO11n, +Roboflow)",
+    "mira_exp014_int8.tflite": "EXP-014 INT8 (YOLO11n, +Roboflow)",
+    "mira_exp015.pt": "EXP-015 (YOLO11n, +WaRP)",
+    "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP)",
 }
 available_models_display = [
     f"{m}  [{MODEL_LABELS[m]}]" if m in MODEL_LABELS else m
@@ -153,51 +159,50 @@ if run_camera:
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
 
     try:
-        ret, frame = cap.read()
-        if not ret:
-            st.error("Failed to capture video.")
-            st.session_state.run_camera = False
-            st.stop()
+        while st.session_state.get("run_camera", False):
+            ret, frame = cap.read()
+            if not ret:
+                st.error("Failed to capture video.")
+                st.session_state.run_camera = False
+                break
 
-        start_time = time.perf_counter()
+            start_time = time.perf_counter()
 
-        if is_tflite_int8:
-            results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
-        elif enable_tracking:
-            results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False, tracker="bytetrack.yaml")
-        else:
-            results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
+            if is_tflite_int8:
+                results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
+            elif enable_tracking:
+                results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False, tracker="bytetrack.yaml")
+            else:
+                results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
 
-        end_time = time.perf_counter()
+            end_time = time.perf_counter()
 
-        latency_ms = (end_time - start_time) * 1000
-        fps = 1.0 / (end_time - start_time) if (end_time - start_time) > 0 else 0
+            latency_ms = (end_time - start_time) * 1000
+            fps = 1.0 / (end_time - start_time) if (end_time - start_time) > 0 else 0
 
-        fps_display.metric("FPS", f"{fps:.1f}")
-        latency_display.metric("Latency", f"{latency_ms:.1f} ms")
+            fps_display.metric("FPS", f"{fps:.1f}")
+            latency_display.metric("Latency", f"{latency_ms:.1f} ms")
 
-        if results[0].boxes is not None and results[0].boxes.id is not None:
-            track_ids = results[0].boxes.id.cpu().numpy().astype(int)
-            class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
+            if results[0].boxes is not None and results[0].boxes.id is not None:
+                track_ids = results[0].boxes.id.cpu().numpy().astype(int)
+                class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
 
-            for track_id, class_id in zip(track_ids, class_ids):
-                if track_id not in st.session_state.seen_ids:
-                    st.session_state.seen_ids.add(track_id)
-                    class_name = model.names[class_id]
-                    if class_name in st.session_state.counts:
-                        st.session_state.counts[class_name] += 1
+                for track_id, class_id in zip(track_ids, class_ids):
+                    if track_id not in st.session_state.seen_ids:
+                        st.session_state.seen_ids.add(track_id)
+                        class_name = model.names[class_id]
+                        if class_name in st.session_state.counts:
+                            st.session_state.counts[class_name] += 1
 
-        annotated_frame = draw_boxes_streamlit(frame, results, conf)
+            annotated_frame = draw_boxes_streamlit(frame, results, conf)
 
-        annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-        image_placeholder.image(annotated_frame_rgb, channels="RGB", use_container_width=True)
+            annotated_frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+            image_placeholder.image(annotated_frame_rgb, channels="RGB", use_container_width=True)
 
-        df = pd.DataFrame(list(st.session_state.counts.items()), columns=["Material", "Count"])
-        chart_placeholder.bar_chart(df.set_index("Material"))
+            df = pd.DataFrame(list(st.session_state.counts.items()), columns=["Material", "Count"])
+            chart_placeholder.bar_chart(df.set_index("Material"))
 
-        time.sleep(0.03)
-        if st.session_state.get("run_camera", False):
-            request_rerun()
+            time.sleep(0.01)
     finally:
         cap.release()
 else:

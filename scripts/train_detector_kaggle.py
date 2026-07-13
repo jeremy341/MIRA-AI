@@ -2,10 +2,10 @@
 """YOLO11n Training Script for Kaggle GPU.
 
 Usage (on Kaggle):
-    py scripts/kaggle_train.py
-    py scripts/kaggle_train.py --dataset TACO+TrashNet+Roboflow
-    py scripts/kaggle_train.py --dataset WaRP_only --epochs 200 --batch-size 16
-    py scripts/kaggle_train.py --model yolo8n.pt --dataset All_TACO+TrashNet+Roboflow+WaRP
+    py scripts/train_detector_kaggle.py
+    py scripts/train_detector_kaggle.py --dataset TACO+TrashNet+Roboflow
+    py scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 200 --batch-size 16
+    py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset All_TACO+TrashNet+Roboflow+WaRP
 """
 import argparse
 import subprocess

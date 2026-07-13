@@ -2,9 +2,9 @@
 """Merge TACO + TrashNet + Roboflow Trash Detection into one YOLO dataset.
 
 Usage:
-    py scripts/merge_model1.py
-    py scripts/merge_model1.py --output-dir datasets/MyCustom
-    py scripts/merge_model1.py --dry-run
+    py scripts/merge_dataset_model1.py
+    py scripts/merge_dataset_model1.py --output-dir datasets/MyCustom
+    py scripts/merge_dataset_model1.py --dry-run
 """
 import argparse
 import shutil

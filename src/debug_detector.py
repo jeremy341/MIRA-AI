@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser(description="MIRA Live Diagnostic & Testing Sui
 parser.add_argument(
     "--model",
     type=str,
-    default="mira_detector_wild.pt",
+    default="mira_exp014.pt",
     help="Filename of the model in your /models directory"
 )
 parser.add_argument(
@@ -143,7 +143,7 @@ while True:
         prev_time = curr_time
         frame_count = 0
 
-    latency_ms = results[0].speed['inference']
+    latency_ms = results[0].speed.get('inference', 0)
     detected_count = len(results[0].boxes) if results[0].boxes else 0
     
     status_label = (
