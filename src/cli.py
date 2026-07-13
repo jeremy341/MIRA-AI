@@ -92,6 +92,8 @@ def main():
     eval_yolo_parser.add_argument("--model", type=str, default=None, nargs="?", help="Model filename. Omit to use interactive picker.")
     eval_yolo_parser.add_argument("--data", type=str, default=None, help="Optional dataset YAML path.")
 
+    subparsers.add_parser("field-bench", help="Field benchmark: capture real images, test all models, compare accuracy")
+
     live_parser = subparsers.add_parser("live", help="Start real-time YOLOv8 webcam tracking stream")
     live_parser.add_argument("--model", type=str, default=None, nargs="?", help="Model filename. Omit to use interactive picker.")
     live_parser.add_argument("--camera", type=int, default=0, help="Camera device index (default: 0).")
@@ -119,6 +121,8 @@ def main():
         run_script(REF_DIR / "quantize_classifier.py")
     elif args.command == "quant-yolo":
         run_script(REF_DIR / "quantize_detector.py")
+    elif args.command == "field-bench":
+        run_script(SCRIPT_DIR / "field_benchmark.py")
     elif args.command == "live":
         model = args.model
         if model is None:
