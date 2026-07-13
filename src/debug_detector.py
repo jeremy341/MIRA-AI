@@ -46,7 +46,7 @@ args = parser.parse_args()
 # 2. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-MODEL_PATH = ROOT_DIR / "models" / args.model
+MODEL_PATH = ROOT_DIR / "models" / "detection" / args.model
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Model file not found at: {MODEL_PATH}")

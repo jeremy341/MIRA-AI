@@ -10,7 +10,7 @@ from tensorflow.keras.models import Sequential
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data" / "classes"
-MODELS_DIR = ROOT_DIR / "models"  # Or root path
+MODELS_DIR = ROOT_DIR / "models" / "classifier"
 
 SAVE_DIR = ROOT_DIR / 'results' / 'EXP-002_MobileNetV2'
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
@@ -125,8 +125,8 @@ print(f"Trainingskurven erfolgreich gespeichert unter: {plot_save_path}")
 plt.show()
 
 # Modell als .keras-Datei im zentralen /models Ordner speichern
-MODELS_DIR = ROOT_DIR / "models"
-MODELS_DIR.mkdir(exist_ok=True)
+MODELS_DIR = ROOT_DIR / "models" / "classifier"
+MODELS_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_SAVE_PATH = MODELS_DIR / "mira_classifier_transfer.keras"
 model.save(MODEL_SAVE_PATH)
 print(f"Modell erfolgreich unter {MODEL_SAVE_PATH} gespeichert!")

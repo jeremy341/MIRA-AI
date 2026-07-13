@@ -11,7 +11,7 @@ from tensorflow.keras.models import Sequential
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data" / "classes"
-MODELS_DIR = ROOT_DIR / "models"
+MODELS_DIR = ROOT_DIR / "models" / "classifier"
 
 # Verzeichnis für Modelle erstellen, falls es nicht existiert
 MODELS_DIR.mkdir(parents=True, exist_ok=True)

@@ -99,7 +99,7 @@ class CameraStream:
 # ---------------------------------------------------------------------------
 SCRIPT_DIR  = pathlib.Path(__file__).resolve().parent
 ROOT_DIR    = SCRIPT_DIR.parent
-MODELS_DIR  = ROOT_DIR / "models"
+MODELS_DIR  = ROOT_DIR / "models" / "detection"
 MODEL_PATH  = MODELS_DIR / args.model
 
 available = sorted(p.name for p in MODELS_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))

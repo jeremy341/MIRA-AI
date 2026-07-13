@@ -104,22 +104,25 @@ MIRA-AI/
 │   └── All_TACO+TrashNet+Roboflow+WaRP/  # Model 4: all combined
 │
 ├── models/                   # All trained model exports (ready to use)
-│   ├── mira_classifier_baseline.keras
-│   ├── mira_classifier_transfer.keras
-│   ├── mira_classifier_tuned.keras
-│   ├── mira_classifier_fp32.tflite
-│   ├── mira_classifier_int8.tflite      ← Best Stage A deployment model
-│   ├── mira_exp006.pt                    ← Multi-dataset detection (YOLOv8n, EXP-006)
-│   ├── mira_exp006_int8.tflite           ← Quantized wild model
-│   ├── mira_exp009_int8.tflite           ← Tabletop model (EXP-009, inflated mAP)
-│   ├── mira_exp011.pt                    ← TACO-only detection (YOLOv8n, EXP-011)
-│   ├── mira_exp011_int8.tflite           ← Quantized TACO-only model
-│   ├── mira_exp013.pt                    ← YOLO11n on TACO+TrashNet (EXP-013)
-│   ├── mira_exp013_int8.tflite           ← Quantized EXP-013
-│   ├── mira_exp014.pt                    ← **CURRENT BEST** — YOLO11n +Roboflow (EXP-014)
-│   ├── mira_exp014_int8.tflite           ← Quantized EXP-014
-│   ├── mira_exp015.pt                    ← YOLO11n +WaRP (EXP-015)
-│   └── mira_exp015_int8.tflite           ← Quantized EXP-015
+│   ├── classifier/            # Stage A: image classification (Keras / TFLite)
+│   │   ├── mira_classifier_baseline.keras
+│   │   ├── mira_classifier_transfer.keras
+│   │   ├── mira_classifier_tuned.keras
+│   │   ├── mira_classifier_fp32.tflite
+│   │   └── mira_classifier_int8.tflite      ← Best Stage A deployment model
+│   └── detection/             # Stage B: object detection (YOLO .pt / .tflite)
+│       ├── mira_exp006.pt                    ← Multi-dataset detection (YOLOv8n, EXP-006)
+│       ├── mira_exp006_int8.tflite           ← Quantized wild model
+│       ├── mira_exp009_int8.tflite           ← Tabletop model (EXP-009, inflated mAP)
+│       ├── mira_exp011.pt                    ← TACO-only detection (YOLOv8n, EXP-011)
+│       ├── mira_exp011_int8.tflite           ← Quantized TACO-only model
+│       ├── mira_exp013.pt                    ← YOLO11n on TACO+TrashNet (EXP-013)
+│       ├── mira_exp013_int8.tflite           ← Quantized EXP-013
+│       ├── mira_exp014.pt                    ← **CURRENT BEST** — YOLO11n +Roboflow (EXP-014)
+│       ├── mira_exp014_int8.tflite           ← Quantized EXP-014
+│       ├── mira_exp015.pt                    ← YOLO11n +WaRP (EXP-015)
+│       ├── mira_exp015_int8.tflite           ← Quantized EXP-015
+│       └── ... (place downloaded WaRP weights here)
 │
 ├── reference/                # All training, evaluation, and quantization scripts
 │   ├── build_detector_dataset.py
@@ -202,8 +205,9 @@ MIRA-AI/
 | `YOLO11n` (EXP-013) | 55.1% | 2.58M | 2.9 MB | YOLO11n on TACO+TrashNet (no Roboflow) |
 | `mira_exp006.pt` (EXP-006) | 39.4% | 3.01M | 5.94 MB | Multi-dataset fusion, proven in live demos |
 | `mira_exp009_int8.tflite` (EXP-009) | 72.8% | 3.01M | 3.18 MB | **WEAK** — Inflated from clean backgrounds, fails on real scenes |
+| `YOLO11n` (EXP-016) | 58.8% | 2.58M | 2.9 MB | WaRP only — strong glass/plastic, no trash |
 
-> **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. EXP-014 (60.7% mAP50) is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8).
+> **Note:** EXP-009's 72.8% mAP50 is inflated by clean white-background validation. EXP-014 (60.7% mAP50) is the most realistic for real-world deployment, with the added benefit of being the smallest (2.58M params, 2.9 MB INT8). EXP-016 (WaRP only) shows that a WaRP-only model can reach 58.8% mAP50 but cannot detect trash at all.
 
 ---
 
@@ -232,8 +236,9 @@ MIRA-AI/
 | EXP-013 | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
 | **EXP-014** | **YOLO11n** | **TACO + TrashNet + Roboflow (6,802 img)** | **60.7%** | **Kaggle T4 (4.7 h)** |
 | **EXP-015** | **YOLO11n** | **TACO + TrashNet + WaRP (~6,800 img)** | **56.0%** | **Kaggle T4 (3.7 h)** |
+| **EXP-016** | **YOLO11n** | **WaRP only (~3,000 img)** | **58.8%** | **Kaggle T4 (1.1 h)** |
 
-> **Key finding:** Roboflow (EXP-014) outperforms WaRP (EXP-015) by +4.7 pp mAP50. Roboflow helps Trash (+11.3 pp), while WaRP helps Glass (+24.8 pp) but hurts Trash (-12.6 pp) since WaRP has zero trash-class images.
+> **Key finding:** Roboflow (EXP-014) outperforms WaRP (EXP-015) by +4.7 pp mAP50. Roboflow helps Trash (+11.3 pp), while WaRP helps Glass (+24.8 pp) but hurts Trash (-12.6 pp) since WaRP has zero trash-class images. EXP-016 (WaRP only) shows strong Glass (77.7%) and Plastic (73.1%) but zero Trash detection.
 
 ### 4-Model Comparison (In Progress)
 
@@ -243,7 +248,7 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 |---|---|---|---|---|
 | Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_dataset_model1.py` | **Done — 60.7% mAP50** |
 | Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_dataset_model2.py` | **Done — 56.0% mAP50** |
-| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | Planned |
+| Model 3 | WaRP only | ~3,000 | `scripts/merge_dataset_model3.py` | **Done — 58.8% mAP50** |
 | Model 4 | All four datasets | ~17,000 | `scripts/merge_dataset_model4.py` | Planned |
 
 All models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle (free T4 GPU).

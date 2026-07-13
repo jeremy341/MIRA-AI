@@ -38,7 +38,7 @@ SAVE_DIR = ROOT_DIR / 'results' / args.exp
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Central models directory path with safe fallback logic
-MODEL_PATH = ROOT_DIR / "models" / args.model
+MODEL_PATH = ROOT_DIR / "models" / "classifier" / args.model
 if not MODEL_PATH.exists():
     MODEL_PATH = SCRIPT_DIR / args.model
 

@@ -19,7 +19,7 @@ SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 
 # Waehle das Modell: "mira_classifier_int8.tflite" (Quantisiert) oder "mira_classifier_fp32.tflite"
-MODEL_PATH = ROOT_DIR / "models" / "mira_classifier_int8.tflite"
+MODEL_PATH = ROOT_DIR / "models" / "classifier" / "mira_classifier_int8.tflite"
 
 print(f"Loading TFLite Model from {MODEL_PATH}...")
 interpreter = tflite.Interpreter(model_path=str(MODEL_PATH))
