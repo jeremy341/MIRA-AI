@@ -26,7 +26,7 @@ results = model.train(
     epochs=30,               # Number of passes over the dataset
     imgsz=640,               # Training image resolution
     batch=16,                # Number of images per batch
-    name="mira_yolo_exp",    # Subfolder name in results
+    name="mira_exp005",    # Subfolder name in results
     project=str(ROOT_DIR / "results" / "EXP-005_YOLOv8"),
     exist_ok=True,           # Overwrite if folder exists
     device="cpu",            # Force CPU (change to 0 if you have an NVIDIA GPU)
@@ -35,4 +35,4 @@ results = model.train(
 )
 
 print("\nTraining complete.")
-print(f"Results saved to: {ROOT_DIR / 'results' / 'EXP-005_YOLOv8' / 'mira_yolo_exp'}")
+print(f"Results saved to: {ROOT_DIR / 'results' / 'EXP-005_YOLOv8' / 'mira_exp005'}")
