@@ -168,6 +168,7 @@ MIRA-AI/
 │   ├── cli.py                # Unified MIRA command-line interface
 │   ├── dashboard.py          # Streamlit web control center
 │   ├── debug_detector.py     # Camera diagnostics for detection models
+│   ├── field_benchmark.py    # Real-world model comparison on webcam images
 │   ├── live_detector.py      # Real-time YOLOv8 detection and tracking
 │   ├── model_picker.py       # Interactive arrow-key model selector
 │   └── visualize_classifier_dataset.py  # Dataset distribution and sample grid viewer
@@ -401,6 +402,12 @@ MIRA uses a unified CLI launched via `mira.bat` (Windows) or `python src/cli.py`
 |---|---|
 | `.\mira quant-class` | Post-training INT8 quantization of the Keras classifier |
 | `.\mira quant-yolo` | Export YOLOv8 model to INT8 TFLite |
+
+### Benchmark Command
+
+| Command | Description |
+|---|---|
+| `.\mira field-bench` | Capture webcam images with manual labels, run all models, compare real-world precision/recall |
 
 ### Evaluation Commands
 
