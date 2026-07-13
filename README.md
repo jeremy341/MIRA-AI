@@ -207,8 +207,9 @@ MIRA-AI/
 | EXP-012 | YOLOv8n INT8 | TACO only (quantized) | 35.0% | — |
 | EXP-013 | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4 (2.7 h)** |
 | **EXP-014** | **YOLO11n** | **TACO + TrashNet + Roboflow (6,802 img)** | **60.7%** | **Kaggle T4 (4.7 h)** |
+| **EXP-015** | **YOLO11n** | **TACO + TrashNet + WaRP (~6,800 img)** | **56.0%** | **Kaggle T4 (3.7 h)** |
 
-> **Key finding:** Adding Roboflow Trash Detection (EXP-013 → EXP-014) raised mAP50 from 55.1% to **60.7%** (+5.6 pp), with Trash improving by +11.3 pp (15.6% → 26.9%). The 4-Model Comparison is underway to find the optimal dataset mix.
+> **Key finding:** Roboflow (EXP-014) outperforms WaRP (EXP-015) by +4.7 pp mAP50. Roboflow helps Trash (+11.3 pp), while WaRP helps Glass (+24.8 pp) but hurts Trash (-12.6 pp) since WaRP has zero trash-class images.
 
 ### 4-Model Comparison (In Progress)
 
@@ -217,7 +218,7 @@ To find the optimal training data mix, we are training YOLO11n on 4 dataset comb
 | Model | Datasets | ~Images | Script | Status |
 |---|---|---|---|---|
 | Model 1 | TACO + TrashNet + Roboflow Trash Detection | 6,802 | `scripts/merge_model1.py` | **Done — 60.7% mAP50** |
-| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_model2.py` | Pending |
+| Model 2 | TACO + TrashNet + WaRP | ~14,000 | `scripts/merge_model2.py` | **Done — 56.0% mAP50** |
 | Model 3 | WaRP only | ~3,000 | `scripts/merge_model3.py` | Pending |
 | Model 4 | All four datasets | ~17,000 | `scripts/merge_model4.py` | Pending |
 
