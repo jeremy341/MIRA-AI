@@ -400,3 +400,50 @@ EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both sma
 
 ### Observation
 EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% — a +5.6 point improvement. The biggest gains come from Trash (+11.3 pp, 15.6% → 26.9%) and Glass (+6.3 pp, 46.2% → 50.2%), validating that Roboflow's diverse outdoor litter images help the model generalize to real-world waste. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) — consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
+
+---
+
+## EXP-015: YOLO11n on TACO + TrashNet + WaRP (Model 2 — 4-Model Comparison)
+* **Date:** July 13, 2026
+* **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
+* **Dataset Size:** ~6,800 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,800 WaRP waste detection)
+* **Dataset Source:** TACO + Stanford TrashNet + WaRP Waste Detection (28 classes remapped to 5 MIRA classes)
+* **Training Platform:** Kaggle Notebooks (NVIDIA Tesla T4 GPU)
+* **Training Time:** 3.707 hours (120 epochs)
+* **Framework:** Ultralytics 8.4.93 | Python-3.12.13 | torch-2.10.0+cu128
+
+### Model Summary
+* **Total Parameters:** 2,583,127 (5.5 MB)
+* **Layers:** 101 (fused)
+* **FLOPs:** 6.3 GFLOPs
+
+### Validation Metrics (all, 1816 images, 4845 instances)
+| Metric | Value |
+|---|---|
+| Mean Precision | 0.723 |
+| Mean Recall | 0.477 |
+| **mAP50** | **0.560** |
+| **mAP50-95** | **0.451** |
+
+### Class-Specific Validation Performance
+| Class | Precision | Recall | mAP50 | mAP50-95 | Instances |
+|---|---|---|---|---|---|
+| Glass | 0.781 | 0.689 | **0.750** | 0.590 | 876 |
+| Metal | 0.660 | 0.499 | 0.570 | 0.470 | 391 |
+| Paper | 0.688 | 0.499 | 0.626 | 0.549 | 592 |
+| Plastic | 0.778 | 0.608 | 0.712 | 0.544 | 2682 |
+| Trash | 0.707 | 0.087 | 0.143 | 0.104 | 304 |
+
+### Speed (GPU)
+* **Preprocess:** 0.1 ms
+* **Inference:** 1.5 ms
+* **Postprocess:** 1.3 ms
+
+### Quantization (INT8 LiteRT Export)
+* **Original Model Size:** 10.14 MiB
+* **Quantized INT8 Model Size:** 2.90 MiB
+* **Compression Ratio:** 3.5x smaller
+* **Export Time:** 1239.5 s
+
+### Observation
+EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+TrashNet fusion. Overall mAP50 drops to 56.0% — a -4.7 pp decline compared to EXP-014 (60.7%). The WaRP dataset significantly boosts Glass (+24.8 pp, 50.2% → 75.0%) due to its large number of glass bottle images, but drags down Metal (-14.3 pp, 71.3% → 57.0%), Paper (-20.3 pp, 82.9% → 62.6%), and especially Trash (-12.6 pp, 26.9% → 14.3%). The Trash decline is expected — WaRP contains zero trash-class images, diluting the trash signal from TACO/TrashNet. The high Precision (0.707) but extremely low Recall (0.087) for Trash confirms the model detects trash when present but misses most instances. Glass benefits strongly from WaRP's bottle-focused imagery, making this dataset combination viable only if Glass detection is the priority.
