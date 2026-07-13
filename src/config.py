@@ -33,15 +33,6 @@ DETECTION_MODEL_LABELS: dict[str, str] = {
     "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP)",
 }
 
-CAMERA_SETTINGS: dict = {
-    "fourcc": "MJPG",
-    "buffer_size": 1,
-    "fps": 30,
-    "autofocus": 0,
-    "auto_exposure": 1,
-    "warmup_frames": 10,
-}
-
 
 def get_detection_models() -> list[str]:
     """Return sorted list of detection model filenames."""

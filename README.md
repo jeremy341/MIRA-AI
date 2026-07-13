@@ -118,7 +118,7 @@ MIRA-AI/
 │       ├── mira_exp006_int8.tflite           ← Quantized wild model
 │       ├── mira_exp009_int8.tflite           ← Tabletop model (EXP-009, inflated mAP)
 │       ├── mira_exp011.pt                    ← TACO-only detection (YOLOv8n, EXP-011)
-│       ├── mira_exp011_int8.tflite           ← Quantized TACO-only model
+│       ├── mira_exp011_int8.tflite           ← Quantized TACO-only model (use conf ≤0.25)
 │       ├── mira_exp013.pt                    ← YOLO11n on TACO+TrashNet (EXP-013)
 │       ├── mira_exp013_int8.tflite           ← Quantized EXP-013
 │       ├── mira_exp014.pt                    ← **CURRENT BEST** — YOLO11n +Roboflow (EXP-014)
@@ -153,7 +153,13 @@ MIRA-AI/
 │   ├── EXP-011_Wild_Only/
 │   ├── EXP-012_Quantized_Wild_v2/
 │   ├── exp013_yolo11n_v2/
+│   ├── exp014_yolo11n_tnr/
+│   ├── exp015_yolo11n_tnw/
+│   ├── exp016_yolo11n_warp/
 │   └── experiments_log.md    # Full quantitative metrics for all experiments
+│
+├── docs/                     # Project documentation
+│   └── naming_convention.md  # Dataset, experiment, and model naming rules
 │
 ├── scripts/                  # Dataset merge, training, and evaluation scripts
 │   ├── add_trashnet_to_dataset.py
@@ -161,7 +167,6 @@ MIRA-AI/
 │   ├── check_detector_mapping.py
 │   ├── convert_taco_to_yolo.py
 │   ├── label_trashnet_with_sam.py
-│   ├── merge_dataset_mira_v3.py
 │   ├── merge_dataset_model1.py       # TACO + TrashNet + Roboflow → 6,802 images
 │   ├── merge_dataset_model2.py       # TACO + TrashNet + WaRP → ~14,000 images
 │   ├── merge_dataset_model3.py       # WaRP only → ~3,000 images
@@ -172,14 +177,17 @@ MIRA-AI/
 ├── src/                      # Runtime tools for demos and development
 │   ├── capture_classifier_frames.py  # Webcam data collection tool (Stage A)
 │   ├── cli.py                # Unified MIRA command-line interface
+│   ├── config.py             # Shared paths, constants, and utility functions
 │   ├── dashboard.py          # Streamlit web control center
 │   ├── debug_detector.py     # Camera diagnostics for detection models
 │   ├── field_benchmark.py    # Real-world model comparison on webcam images
 │   ├── live_detector.py      # Real-time YOLOv8 detection and tracking
 │   ├── model_picker.py       # Interactive arrow-key model selector
+│   ├── visualize.py          # Shared bounding-box drawing utilities
 │   └── visualize_classifier_dataset.py  # Dataset distribution and sample grid viewer
 │
 ├── .gitignore
+├── .gitattributes
 ├── LICENSE
 ├── mira.bat                  # Windows CLI launcher
 ├── README.md
@@ -247,8 +255,6 @@ MIRA-AI/
 
 To find the optimal training data mix, we are training YOLO11n on 4 dataset combinations:
 
-| Model | Datasets | ~Images | Script | Status |
-|---|---|---|---|---|
 | Model | Datasets | ~Images | Script | Dataset folder | Status |
 |---|---|---|---|---|---|
 | Model 1 | TACO + TrashNet + Roboflow | 6,802 | `scripts/merge_dataset_model1.py` | `datasets/mira_tnr/` | **Done — 60.7% mAP50** |
