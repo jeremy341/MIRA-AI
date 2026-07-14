@@ -1,0 +1,64 @@
+\section{Theoretische Grundlagen}
+
+\subsection{Edge AI und Ressourceneffizienz}
+Die herkömmliche Verarbeitung von Machine-Learning-Modellen erfolgt meist auf leistungsstarken Cloud-Servern mit dedizierter Grafikbeschleunigung (GPU). Im Kontext der dezentralen Wertstoffsortierung stößt dieser Ansatz jedoch auf signifikante Hürden: Hohe Latenzzeiten bei der Datenübertragung, Abhängigkeit von einer permanenten Internetverbindung und erhebliche Betriebskosten. 
+
+Das Paradigma der \emph{Edge AI} beschreibt die Ausführung von KI-Modellen direkt auf lokalen, ressourcenbeschränkten Endgeräten wie Einplatinencomputern (z.B. Raspberry Pi) oder Mikrocontrollern \cite{deng2020model}. Für ein mechanisches Sortiersystem wie \mira ergeben sich daraus drei kritische Zielgrößen, die in einem permanenten Spannungsverhältnis stehen:
+\begin{enumerate}
+    \item \textbf{Minimierung der Modellgröße:} Der lokale Speicher (RAM/Flash) ist stark begrenzt \cite{deng2020model}.
+    \item \textbf{Maximierung der Inferenzgeschwindigkeit:} Um Objekte auf einem bewegten Förderband präzise zu greifen, muss die Latenz im zweistelligen Millisekundenbereich liegen \cite{deng2020model}.
+    \item \textbf{Erhaltung der Robustheit:} Das System muss trotz wechselnder Beleuchtung und verrauschter Hintergründe stabile Vorhersagen liefern.
+\end{enumerate}
+
+Die technologische Herausforderung besteht darin, diese drei Parameter durch gezielte Modellwahl und Kompressionstechniken zu optimieren \cite{deng2020model}.
+
+\subsection{Convolutional Neural Networks (CNNs)}
+Für Aufgaben der Computer Vision haben sich Convolutional Neural Networks (CNNs) als Standard etabliert \cite{lecun2015deep}. Im Gegensatz zu klassischen, vollverknüpften Netzen nutzen CNNs die räumliche Struktur von Bildern aus. Ein CNN extrahiert Merkmale schrittweise über zweidimensionale Faltungsoperationen (Convolutions). Mathematisch wird die diskrete Faltung eines Bildes $I$ mit einem Faltungskern (Kernel) $K$ der Dimension $M \times N$ wie folgt definiert:
+
+\begin{equation}
+S(i,j) = (I * K)(i,j) = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} I(i-m, j-n) \cdot K(m,n)
+\end{equation}
+
+Frühe Schichten des Netzwerks extrahieren elementare geometrische Strukturen wie Kanten, Farbgradienten und Kontraste. Tiefere Schichten kombinieren diese zu komplexen semantischen Konzepten (z. B. der Krümmung einer Flasche oder der Textur von Kartonagen). 
+
+Nachgeschaltete Aktivierungsfunktionen wie die Rectified Linear Unit ($\text{ReLU}(x) = \max(0, x)$) führen Nichtlinearitäten in das System ein. Am Ende des Netzwerks wandelt eine Softmax-Schicht die berechneten Rohwerte (Logits) $z_k$ in eine normierte Wahrscheinlichkeitsverteilung über die Klassen um:
+
+\begin{equation}
+p(y = k \mid x) = \frac{e^{z_k}}{\sum_{j=1}^{C} e^{z_j}}
+\end{equation}
+
+Die Evaluierung der Modellgüte erfolgt über das harmonische Mittel aus Precision (Präzision) und Recall (Sensitivität), ausgedrückt durch den $F_1$-Score:
+
+\begin{equation}
+F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
+\end{equation}
+
+\subsection{Transfer Learning und MobileNetV2}
+Das Training tiefer Netze von Grund auf erfordert zehntausende annotierte Bilder. Beim \emph{Transfer Learning} wird ein auf einem sehr großen Datensatz (ImageNet mit 1,4 Millionen Bildern) vortrainiertes Modell als Feature-Extractor wiederverwendet \cite{yosinski2014transferable}. 
+
+Als Rückgrat (Backbone) der Klassifikationsstufe von \mira wurde die MobileNetV2-Architektur gewählt \cite{sandler2018mobilenetv2}. Diese ist speziell für mobile Endgeräte optimiert und basiert auf \emph{Depthwise Separable Convolutions}. Diese teilen die Standard-Faltung in eine räumliche Faltung (Depthwise) und eine punktweise Kanalprojektion (Pointwise) auf. Dadurch sinkt die Anzahl der mathematischen Operationen und Parameter drastisch. 
+
+MobileNetV2 nutzt zudem \emph{Inverted Residual Blocks} mit \emph{Linear Bottlenecks}, um den Informationsverlust in schmalen Schichten zu minimieren. Im Projekt wurde der Backbone zunächst eingefroren, um generische Filter zu erhalten, und anschließend ab Layer 100 feingetunt, um sich an die spezifischen Reflexionen von Wertstoffen anzupassen.
+
+\subsection{Post-Training-Quantisierung (INT8)}
+Die Post-Training-Quantisierung (PTQ) konvertiert die Gewichte und Aktivierungen des fertig trainierten Modells von 32-Bit-Fließkommazahlen (FP32) in hocheffiziente 8-Bit-Ganzzahlen (INT8) \cite{deng2020model}. Die Abbildung erfolgt über einen Skalierungsfaktor $S$ und einen ganzzahligen Nullpunkt $Z$:
+
+\begin{equation}
+q = \text{round}\left( \frac{r}{S} \right) + Z
+\end{equation}
+
+Wobei $r$ der kontinuierliche FP32-Wert und $q$ der quantisierte Ganzzahlwert ist. Der Speicherbedarf schrumpft dadurch um ca. \SI{75}{\percent} \cite{deng2020model}. Moderne ARM-Prozessoren (wie der Cortex-A72 des Raspberry Pi) können dank NEON-Vektoreinheiten vier 8-Bit-Integer-Operationen im selben Taktzyklus berechnen, den eine einzige 32-Bit-Gleitkomma-Operation benötigt. Dies führt zu einer massiven Reduktion der Inferenzlatenz \cite{deng2020model}.
+
+\subsection{Echtzeit-Objekterkennung mit YOLO11n}
+Für den mechatronischen Sortierprozess reicht eine reine Klassifikation ("Was ist im Bild?") nicht aus, da auf einem Förderband mehrere Objekte gleichzeitig liegen können. Das System benötigt exakte Ortskoordinaten.
+
+MIRA nutzt hierfür das Single-Shot-Detektionsmodell YOLO11n \cite{ultralyticsyolov8}. YOLO-Architekturen \cite{redmon2016yolo} verzichten auf komplexe, zweistufige Vorschlagsnetzwerke (wie sie in Faster R-CNN genutzt werden) und berechnen stattdessen in einem einzigen Vorwärtspass (Single Pass) über ein neuronales Netz sowohl die Begrenzungsrahmen (Bounding Boxes) als auch die Klassenwahrscheinlichkeiten für jedes Objekt.
+
+\subsection{Temporale Signalstabilisierung (EMA-Filter)}
+In der Live-Inferenz führen wechselnde Helligkeitswerte und Sensorrauschen der Kamera zu stochastischem Flackern (Jitter) der Konfidenzwerte. Zur Dämpfung dieser Schwingungen wurde ein Exponential Moving Average (EMA) auf dem Wahrscheinlichkeitsvektor der Klassen implementiert:
+
+\begin{equation}
+p_{\text{smooth}}(t) = \alpha \cdot p_{\text{raw}}(t) + (1 - \alpha) \cdot p_{\text{smooth}}(t-1)
+\end{equation}
+
+Der Dämpfungsfaktor $\alpha = 0,15$ wurde empirisch ermittelt, um ein optimales Gleichgewicht zwischen Rauschunterdrückung und Ansprechzeit (Latenz) zu erzielen. Ein kleinerer $\alpha$-Wert (z.\ B.\ $0,05$) führt zwar zu einer noch stärkeren Signalglättung, erzeugt jedoch eine spürbare mechanische Verzögerung von über \SI{500}{\milli\second} beim Anfahren eines Objekts. Ein größerer Wert (z.\ B.\ $0,40$) hingegen leitet das stochastische Rauschen der Klassensicherheiten nahezu ungefiltert an die Servosteuerung weiter, was ein mechanisch schädliches Vibrieren der Motoren (Servo Jitter) verursacht. Mit $\alpha = 0,15$ liegt der Signalverzug im Bereich von nur ca.\ \num{5} bis \num{7} Frames (ca.\ \SI{250}{\milli\second} bei \SI{20}{\text{FPS}}), was für die mechanischen Anforderungen des Sortierarms vernachlässigbar ist und gleichzeitig Fehltriggerungen vollständig eliminiert.

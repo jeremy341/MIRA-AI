@@ -7,8 +7,6 @@ Thumbs.db
 *.swo
 *~
 
-
-
 # --- Python ---
 .venv/
 __pycache__/
@@ -20,8 +18,6 @@ __pycache__/
 # --- Archives ---
 archive/
 archive (1)/
-*.zip
-*.tar.gz
 
 # --- Datasets (too large for git) ---
 datasets/
@@ -37,19 +33,23 @@ results/**/*.pt
 results/**/*.onnx
 results/**/*.tflite
 
-# --- Docs & notes (not for public repo) ---
-doc/
-CLAUDE/fixes.md
-CLAUDE/roadmap.md
-claude/
+# --- Latex build artifacts ---
+latex/*.aux
+latex/*.bcf
+latex/*.fdb_latexmk
+latex/*.fls
+latex/*.log
+latex/*.run.xml
+latex/*.synctex.gz
+latex/*.toc
+
+# --- CLAUDE AI context (private) ---
+CLAUDE/
 
 # --- Dataset images in data/classes (training pictures) ---
-# Ignore all images inside data/classes subfolders
 data/classes/**/*.jpg
 data/classes/**/*.jpeg
 data/classes/**/*.png
-
-
 
 # --- YOLO raw data ---
 yolo_data/images/
@@ -61,5 +61,7 @@ mira_wild_data/
 
 # --- YOLOv8 training runs and detection outputs ---
 runs/
-# --- EXP results with large images ---
-results/EXP-010_YOLOv8_Wild_v2/
+
+# --- Large archives ---
+*.zip
+*.tar.gz

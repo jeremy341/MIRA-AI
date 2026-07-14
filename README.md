@@ -1,10 +1,9 @@
-# MIRA — Machine Intelligence for Recycling Automation
+# MIRA (Machine Intelligence for Recycling Automation)
 
-> **Jugend forscht 2026 — Category: Technology**  
-
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Ultralytics](https://img.shields.io/badge/YOLO-11n-%2300bcd4)](https://github.com/ultralytics/ultralytics)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.15-FF6F00.svg?logo=tensorflow)](https://www.tensorflow.org/)
+[![YOLO11](https://img.shields.io/badge/YOLO-11n-00FFFF.svg?logo=ultralytics)](https://ultralytics.com/)
 [![Last Commit](https://img.shields.io/github/last-commit/jeremy341/MIRA-AI)](https://github.com/jeremy341/MIRA-AI/commits/main)
 
 A lightweight, edge-AI-optimized computer vision system for automated recycling sorting — targeting deployment on resource-constrained hardware such as the Raspberry Pi Zero 2W. MIRA progresses from image classification (Stage A) to real-time object detection (Stage B), with a 4-model comparison to find the optimal training data mix for YOLO11n.
@@ -536,7 +535,7 @@ MIRA's YOLO11n models target a specific niche: **5-class recycling detection on 
 ## 11. Repository Notes
 
 - **Training data** (`data/classes/`) and **detection datasets** (`datasets/`) are excluded from the repository. The models are fully trained and ready to use without the raw images.
-- **Documentation** (`doc/`) is excluded from the public repository.
+- **Documentation** (`docs/`) is excluded from the public repository.
 - All model exports in `models/` are committed and ready for use.
 - Confusion matrices and training curves are committed under `results/`.
 - Dataset merge and training scripts are in `scripts/`.

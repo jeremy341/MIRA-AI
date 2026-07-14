@@ -1,0 +1,26 @@
+\section{Einleitung und Motivation}
+
+\subsection{Problemstellung und ökologische Relevanz}
+In modernen Kreislaufsystemen stellt die Reinheit der gesammelten Fraktionen den kritischsten Faktor für die ökonomische Tragfähigkeit von Recycling dar. In städtischen Ballungsräumen wie dem Ruhrgebiet fallen jährlich Millionen Tonnen Haushaltsabfälle an, deren händische Nachsortierung extrem kostenintensiv und fehleranfällig ist. 
+
+Bereits eine Fehlwurfquote von \SI{15}{\percent} in der Papiertonne kann den Marktwert des Altpapiers halbieren, da Kunststoffe und Verbundmaterialien den anschließenden Recyclingprozess blockieren \cite{uba2023verpackungsabfall}. 
+
+Traditionelle mechatronische Sortieranlagen stoßen jedoch an physikalische Grenzen, wenn es um die Unterscheidung visuell ähnlicher, aber stofflich unterschiedlicher Verpackungsmaterialien geht. Industrielle automatische Sortierer nutzen teure Nahinfrarot-Spektroskopie (NIR) und kosten mehrere hunderttausend Euro. Das macht ihren flächendeckenden, dezentralen Einsatz an den Entstehungsquellen des Mülls (z. B. in Schulen, Bürogebäuden oder kleineren Betrieben) unmöglich.
+
+\subsection{Zielsetzung der Arbeit}
+Das primäre Ziel dieses Projekts ist die Entwicklung und systematische Evaluation der softwareseitigen Grundlagen für einen autonomen Recycling-Sortierarm namens \emph{\mira} (Machine Intelligence for Recycling Automation). Es soll empirisch bewiesen werden, dass ein ressourceneffizientes Deep-Learning-Modell auf kostengünstiger Edge-Hardware (wie einem Raspberry Pi) ohne signifikante Einbußen bei der Erkennungsgenauigkeit im Echtzeitbetrieb operieren kann \cite{deng2020model}. Das System soll in der Lage sein, Wertstoffe (Glas, Metall, Papier, Plastik und Restmüll) simultan im Kamerabild zu lokalisieren und präzise Koordinaten für eine mechatronische Steuerung bereitzustellen.
+
+\subsection{Themenfindung}
+Die Fragestellung ergab sich aus der Beobachtung der ineffizienten händischen Mülltrennung im schulischen Alltag sowie bei Besuchen lokaler Recyclinghöfe in Mülheim an der Ruhr. Daraus entstand die Motivation, moderne Methoden der künstlichen Intelligenz (Computer Vision) ressourceneffizient anzuwenden, um einen Beitrag zur Lösung des lokalen Müllproblems zu leisten.
+
+\subsection{Forschungshypothesen und Entwurfsziele}
+Auf Basis der theoretischen Vorüberlegungen werden in dieser Arbeit drei zentrale wissenschaftliche Hypothesen sowie ein übergeordnetes Entwurfsziel untersucht:
+\begin{enumerate}
+    \item \textbf{H1 (Transfer Learning):} Ein auf dem ImageNet-Datensatz vortrainiertes Modell (MobileNetV2) erzielt auf einem limitierten Recycling-Datensatz eine um mindestens \num{20} Prozentpunkte höhere Validierungsgenauigkeit als ein klassisches, dreischichtiges CNN, das von Grund auf trainiert wurde.
+    \item \textbf{H2 (Quantisierung):} Die Post-Training-Quantisierung (INT8) reduziert den Speicherbedarf um mindestens den Faktor 4 und senkt die CPU-Inferenzlatenz um über \SI{40}{\percent}, bei einem Genauigkeitsverlust von unter 2 Prozentpunkten im statischen Testdatensatz \cite{deng2020model}.
+    \item \textbf{H3 (Multi-Objekt-Erkennung):} Der Übergang von globaler Klassifikation zu lokalisierter Objekterkennung (YOLO11n) erlaubt die gleichzeitige Lokalisierung mehrerer Objekte im Raum, was die Voraussetzung für einen kontinuierlichen Betrieb darstellt \cite{ultralyticsyolov8}.
+    \item \textbf{E1 (Entwurfsziel -- Signalstabilisierung):} Vorhersageschwankungen im Live-Stream sollen durch einen Exponential Moving Average (EMA) Filter algorithmisch so gedämpft werden, dass künftige mechatronische Fehltriggerungen eines angeschlossenen Sortierarms vermieden werden.
+\end{enumerate}
+
+\subsection{Aufbau der Arbeit}
+Die Arbeit gliedert sich wie folgt: Kapitel 2 erläutert die theoretischen Grundlagen des Deep Learnings und der Modellkompression. Kapitel 3 beschreibt die Methodik und die Datenerhebung. Kapitel 4 dokumentiert die softwareseitige und mechatronische Implementierung des MIRA-Systems. Kapitel 5 beschreibt das Experimentdesign der Stage-A- und Stage-B-Entwicklungsphasen. In Kapitel 6 werden die quantitativen und qualitativen Ergebnisse des Modells und des Field-Benchmarks präsentiert. Kapitel 7 diskutiert die Forschungsfragen und beleuchtet die Grenzen des Edge-AI-Ansatzes. Kapitel 8 gibt einen Ausblick auf die zukünftige physische und cloudseitige Weiterentwicklung, während Kapitel 9 die Arbeit abschließend zusammenfasst.

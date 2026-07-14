@@ -1,0 +1,67 @@
+\section{Implementierung}
+
+Die funktionale \mira-Softwarearchitektur wurde vollständig modularisiert. Die wichtigsten Steuerungsskripte sind in Python geschrieben, während die mechatronische Aktorik auf C++ basiert.
+
+\subsection{Systemarchitektur}
+Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf dem Host-Rechner mit der präzisen mechatronischen Steuerung des Roboterarms. Abbildung \ref{fig:sys-arch} visualisiert den Signalfluss und die geschlossene Handshake-Schleife der MIRA-Sortierpipeline.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        box/.style={rectangle, draw=black, fill=blue!10, rounded corners, minimum width=6cm, minimum height=0.8cm, align=center, font=\footnotesize},
+        arrow/.style={thick, ->, >=stealth}
+    ]
+        \node (input) [box] {Kamerabild (Webcam Feed)};
+        \node (prep) [box, below of=input, node distance=1.3cm] {Vorverarbeitung (BGR $\rightarrow$ RGB, zentrierter quadratischer Crop)};
+        \node (model) [box, below of=prep, node distance=1.3cm] {YOLO11n-INT8 Inferenz (Begrenzungsrahmen \& Konfidenz)};
+        \node (tracker) [box, below of=model, node distance=1.3cm] {ByteTrack-Algorithmus (Objekt-ID-Zuweisung \& Interpolation)};
+        \node (filter) [box, below of=tracker, node distance=1.3cm] {EMA-Filter ($\alpha=0,15$ Glättung der Konfidenzen)};
+        \node (serial) [box, below of=filter, node distance=1.3cm] {USB Serial-Sender (Queue-basiertes Senden, 115200 Baud)};
+        \node (arm) [box, below of=serial, node distance=1.3cm, fill=green!10] {ESP32-S3-Aktorik (Inverse Kinematik \& Servo-Sweeps)};
+        
+        \draw [arrow] (input) -- (prep);
+        \draw [arrow] (prep) -- (model);
+        \draw [arrow] (model) -- (tracker);
+        \draw [arrow] (tracker) -- (filter);
+        \draw [arrow] (filter) -- (serial);
+        \draw [arrow] (serial) -- (arm);
+        \draw [arrow] (arm.east) -- ++(1,0) |- node[right, pos=0.25, align=left] {done Handshake\\(Inferenz-Freigabe)} (input.east);
+    \end{tikzpicture}
+    \caption{Systemarchitektur und Datenflusspipeline des MIRA-Sortiersystems.}
+    \label{fig:sys-arch}
+\end{figure}
+
+\subsection{Die fehlerbereinigte Live-Inferenz}
+Ein kritischer Moment der Echtzeit-Entwicklung war die Behebung des Farbkanal-Fehlers. OpenCV liest Videoframes im BGR-Format ein, während TensorFlow-Modelle RGB erwarten. Ohne Korrektur stürzte die Inferenzgenauigkeit im Live-Test auf unter \SI{40}{\percent} ab. Der implementierte Fix lautet:
+
+\begin{lstlisting}[style=pythonstyle, caption={Farbraumkonvertierung in der Inferenzschleife}]
+# Behebung des kritischen BGR-zu-RGB-Kanalkonflikts
+frame_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
+resized = cv2.resize(frame_rgb, (224, 224))
+input_data = np.expand_dims(resized, axis=0).astype(np.float32)
+\end{lstlisting}
+
+\subsection{Objektverfolgung mit ByteTrack}
+Im Live-Betrieb führen kurze Verdeckungen oder Beleuchtungsschwankungen dazu, dass Detektionen temporär aussetzen. Um eine kontinuierliche Lokalisierung zu gewährleisten, wurde der ByteTrack-Tracking-Algorithmus integriert \cite{zhang2022bytetrack}. 
+
+Im Gegensatz zu klassischen Trackern, die Boxen mit niedriger Konfidenz verwerfen, nutzt ByteTrack nahezu jede Bounding Box. Es teilt die Detektionen in Boxen mit hoher und niedriger Konfidenz auf. Zunächst werden die Boxen mit hoher Konfidenz über Kalman-Filter und die Schnittmenge der Box-Flächen (Intersection over Union, IoU) den bestehenden Pfaden (Tracks) zugeordnet. Unzugeordnete Pfade werden in einem zweiten Schritt mit den Boxen niedriger Konfidenz abgeglichen. Dies ermöglicht es dem System, verdeckte oder verschwommene Objekte stabil über mehrere Frames hinweg weiterzuverfolgen, ohne die zeitaufwändige Modellinferenz blockieren zu müssen.
+
+\subsection{Das MIRA-Control-Center (Dashboard)}
+Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Streamlit} implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
+
+\subsection{Mechatronische Ansteuerung und Handshake-Protokoll}
+Um die hohe Verarbeitungsgeschwindigkeit der KI (21.8 FPS) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen:
+
+\begin{lstlisting}[style=pythonstyle, caption={Python-seitige Serial-Uebertragung mit Inferenz-Lock}]
+# Senden des Sortierbefehls an den ESP32
+command = f"{predicted_class} {target_angle}\n"
+ser.write(command.encode())
+
+# Inferenz-Sperre: Python wartet blockierend auf Fertigmeldung des Arms
+response = ser.readline().decode().strip()
+if response == "done":
+    # Erst jetzt wird die Kamera fuer das naechste Objekt freigegeben
+    inference_lock = False
+\end{lstlisting}
+
+Der ESP32-S3 empfängt diesen Befehl über die serielle Schnittstelle und steuert die Pulsweitenmodulation (PWM) für die Servomotoren an. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.
