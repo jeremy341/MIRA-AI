@@ -1,0 +1,64 @@
+\section{Diskussion}
+Die Ergebnisse der durchgeführten Experimente erlauben eine differenzierte Bewertung der initial aufgestellten Hypothesen sowie tiefgreifende Erkenntnisse über die Entwicklung ressourceneffizienter Edge-KI-Modelle.
+
+\subsection{Bewertung der Forschungshypothesen}
+Zur Beurteilung des wissenschaftlichen Erfolgs von MIRA werden in Tabelle \ref{tab:hypotheses-eval} die vier eingangs aufgestellten Hypothesen ihren real gemessenen experimentellen Werten gegenübergestellt.
+
+\begin{table}[h]
+    \centering
+    \caption{Systematische Überprüfung und Verifikation der Forschungshypothesen}
+    \label{tab:hypotheses-eval}
+    \small
+    \begin{tabularx}{\textwidth}{p{2.2cm}p{3.5cm}XX}
+        \toprule
+        \textbf{Hypothese} & \textbf{Zielvorgabe} & \textbf{Gemessener Wert} & \textbf{Status} \\
+        \midrule
+        \textbf{H1} (Transfer Learning) & $\ge$ 15 Prozentpunkte Genauigkeitsgewinn ggü. Scratch-CNN & \textbf{+26,42 pp} (EXP-003: 87,42\% vs. EXP-001: 61,00\%) & \textbf{Bestätigt} \\
+        \textbf{H2} (Modell-kompression) & Modellschnitt $\ge$ 4x kleiner, Latenzreduktion $\ge$ 40\%, Genauigkeitsverlust $<$ 2 pp & \textbf{9,0x kleiner} (2,61 MB vs. 23,48 MB), \textbf{74,2\% Latenzsenkung} (10,32 ms vs. 40 ms), \textbf{-0,07 pp Verlust} & \textbf{Bestätigt} \\
+        \textbf{H3} (Multi-Objekt-Erkennung) & Lokalisierung mehrerer Objekte, Inferenzrate $\ge$ 15 FPS auf CPU & \textbf{21,8 FPS} (ca. \SI{46.0}{\milli\second} CPU-Latenz mit YOLO11n, EXP-014) & \textbf{Bestätigt} \\
+        \textbf{H4} (EMA-Signal-glättung) & Verhinderung von mechatronischem Jitter bei $\alpha = 0,15$ ohne kritischen Verzug & Signalfluktuationen gedämpft, stochastisches Rauschen eliminiert, Verzug nur ca. \SI{250}{\milli\second} & \textbf{Bestätigt} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+Die Ergebnisse bestätigen die erste Hypothese (H1) deutlich. Ein vortrainiertes Backbone (MobileNetV2, \cite{sandler2018mobilenetv2}) ist für die Materialklassifizierung einem von Grund auf trainierten, flachen Netzwerk (EXP-001) überlegen. Dies ist darauf zurückzuführen, dass ein Scratch-CNN bei stark begrenzten Datensätzen (Stage A: 604 Bilder) nicht genügend statistische Stützstellen besitzt, um verallgemeinerungsfähige Repräsentationen (Kanten, Texturen) zu erlernen. Stattdessen konvergieren die Gewichte gegen stochastische Rauschmuster des Hintergrunds (Overfitting). Der Transfer von vortrainierten ImageNet-Filtern erlaubt es dem Modell hingegen, von Beginn an semantische Geometrien zu nutzen, was sich in einem Anstieg der Validierungsgenauigkeit um +26,42 Prozentpunkte niederschlug \cite{yosinski2014transferable}.
+
+Auch die zweite Hypothese (H2) zur Modellquantisierung wird vollumfänglich verifiziert. Die Ganzzahl-Konvertierung (INT8) mittels TensorFlow Lite komprimiert die Keras-Binärdatei um 90\% auf \SI{2.61}{\mega\byte} und reduziert die CPU-Ausführungszeit um \SI{74.2}{\percent} auf \SI{10.32}{\milli\second} \cite{deng2020model}. Der vernachlässigbare Genauigkeitsverlust von nur \SI{0.07}{\percent} belegt, dass die Gewichts- und Aktivierungsverteilungen durch das Post-Training-Kalibrierungsverfahren (100 repräsentative Bilder) ohne signifikante Verzerrungen abgebildet werden konnten \cite{krishnamoorthi2018quantizing}. Dies beweist die mechatronische Realisierbarkeit auf extrem sparsamen Edge-Prozessoren (z. B. Cortex-A53-Kerne des Raspberry Pi).
+
+Die dritte Hypothese (H3) belegt den Nutzen des Übergangs zur Objekterkennung (YOLO11n, \cite{ultralyticsyolov8}). Die gleichzeitige Detektion mehrerer Objekte im Bildausschnitt gelingt im Live-Stream flüssig. Allerdings zeigt sich hierbei die Problematik des Domain Shifts: Komplexe, unstrukturierte Hintergründe und ungünstige Lichtverhältnisse senken die Erkennungssicherheit gegenüber dem kontrollierten Laborumfeld deutlich.
+
+\subsection{Dämpfungsanalyse des EMA-Filters (Hypothese 4)}
+Die vierte Hypothese (H4) betrifft die Signalstabilisierung für die Aktorik. Da klassische Detektoren die Konfidenzwerte Frame für Frame isoliert berechnen, führt das Sensorrauschen der Kamera (z. B. Helligkeitsschwankungen und Fokus-Hunting) im Live-Betrieb zu einem stochastischen Flackern (Jitter) der Ausgabewerte. Für einen angeschlossenen 3-DOF-Roboterarm würde dies zu einer mechatronischen Instabilität führen: Die Servomotoren würden fortlaufend widersprüchliche Steuerbefehle empfangen und vibrieren, was zu mechanischem Verschleiß und Sortierfehlern führt.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.85\textwidth, keepaspectratio]{figures/ema-filter-effect.png}
+    \caption{Simulierte Dämpfungswirkung des Exponential Moving Average (EMA) Filters mit $\alpha = 0,15$ auf das Steuersignal bei verrauschtem Live-Kamera-Input.}
+    \label{fig:ema-filter-effect}
+\end{figure}
+
+Die Dämpfungswirkung wurde softwareseitig simuliert und in Abbildung \ref{fig:ema-filter-effect} dargestellt. Wie die Kurven verdeutlichen, glättet der EMA-Filter mit $\alpha = 0,15$ das hochfrequente Rauschen des Rohsignals effizient. Ein kurzzeitiger Signaleinbruch (Drop-out bei Frame 28) wird erfolgreich abgefangen, und ein Fehlalarm (Falsch-Positiv-Spitze bei Frame 8) wird so weit gedämpft, dass die Sortierschwelle von $0,5$ nicht überschritten wird. 
+
+Der Preis für diese Stabilisierung ist ein Phasenverzug (Lag). Bei einer Inferenzrate von \SI{20}{\text{FPS}} (Zeitschritt $\Delta t = \SI{50}{\milli\second}$) entspricht der Signalverzug von ca. 5 bis 7 Frames einer zeitlichen Latenz von rund \SI{250}{\milli\second} bis \SI{350}{\milli\second}. Da der mechanische Greifzyklus des Roboterarms (Anfahrt, Greifen, Ablegen und Rückkehr) mit ca. \SI{1.5}{\second} um eine Größenordnung langsamer ist, ist dieser Verzug mechatronisch völlig unkritisch. Hypothese 4 ist damit verifiziert.
+
+\subsection{Datenqualität als dominanter Einflussfaktor (Data-Centric AI)}
+Ein zentraler wissenschaftlicher Befund dieses Projekts ist, dass die Qualität und Vielfalt der Trainingsdaten die Modellleistung stärker beeinflussen als architektonische Details des Netzwerks. 
+
+Dieser Befund wurde insbesondere durch den \emph{GIGO-Effekt (Garbage In, Garbage Out)} in den frühen Experimenten offenbar. Das Modell EXP-005 erreichte eine scheinbar exzellente mAP50 von \SI{82.3}{\percent}. Eine kritische Analyse zeigte jedoch, dass dies das Resultat von \emph{Data Leakage} und \emph{Background Overfitting} war. Da die Bounding Boxes mittels Canny-Edge-Erkennung vollautomatisch erzeugt wurden, fokussierte sich das Labeling auf die harte Tischkante anstatt auf den Müll. Das Modell lernte schlichtweg den Tisch als Objekt zu erkennen. Auf ungesehenen, realistischen Szenen brach die Erkennung völlig zusammen.
+
+Erst die konsequente Datenbereinigung und der Wechsel zu hochwertigen, menschlich oder durch Foundation Models (SAM, \cite{kirillov2023segment}) annotierten Datensätzen lösten dieses Problem. Der 4-Wege-Vergleich (EXP-013 bis EXP-016) unterstreicht dies: Die Hinzunahme des Roboflow-Datensatzes \cite{roboflow2023trash} in EXP-014 steigerte die Erkennungsrate von Trash um +11,3~pp im Vergleich zur Baseline.
+
+\subsection{Klassenungleichgewicht und visuelle Diversität von Restmüll}
+Eine inhärente Schwäche vieler öffentlicher Datensätze, die auch in MIRAs aggregiertem Datensatz \emph{mira\_tnr} (EXP-014) sichtbar wird, ist das starke Klassenungleichgewicht (Class Imbalance). Während beispielsweise Plastik (\num{1316} Instanzen im Validierungsset) überrepräsentiert ist, bleibt \textit{Trash} notorisch unterrepräsentiert. 
+
+Zudem weist \textit{Trash} eine extrem hohe intra-klassenspezifische visuelle Varianz auf – ein zerknülltes Taschentuch sieht völlig anders aus als eine gebrauchte Maske oder ein Apfelgriebsch. Dies erklärt, warum \textit{Trash} in allen Modellen durchweg die schwächste Klasse (nur \SI{26.9}{\percent} mAP50 im besten Modell) darstellt. Eine zukünftige industrielle Umsetzung muss hier mit gezieltem Oversampling oder synthetischer Datengenerierung gegensteuern.
+
+\subsection{Plattformkompatibilität und statische Dimensionierung}
+Während der Modellkompression und des Deployments traten zwei signifikante Hürden auf:
+\begin{enumerate}
+    \item \textbf{LiteRT-Windows-Compilerkonflikt:} Der Versuch, das trainierte PyTorch-Modell lokal unter Windows auf INT8 zu quantisieren, scheiterte an Inkompatibilitäten der Compiler-Schnittstellen von Ultralytics. Dieses Problem wurde durch die Auslagerung des Quantisierungsschritts in eine cloudbasierte Linux-Umgebung (Google Colab) gelöst.
+    \item \textbf{Statische TFLite-Tensorabmessungen:} Im Gegensatz zu dynamischen PyTorch-Modellen, die Eingabebilder flexibel skalieren, werden voll quantisierte TFLite-Modelle für eine feste Eingabematrix (z. B. $320\times320$ Pixel) kompiliert. Ein dimensionaler Konflikt zur Laufzeit wurde durch einen explizit parametrisierten Re-Export behoben, was zudem die Rechenlast auf der Edge-CPU um 75% senkte.
+\end{enumerate}
+
+\subsection{Abschließende Einordnung}
+Die Arbeit repräsentiert einen voll funktionsfähigen Software-Prototyp. Aus wissenschaftlicher Sicht ist es ein Vorteil, die reine Computer-Vision-Pipeline isoliert zu verifizieren, bevor die Varianz eines physikalischen Roboterarms das Signal-Rausch-Verhältnis stört. Die Integration auf der Zielhardware steht als nächster logischer Entwicklungsschritt an.

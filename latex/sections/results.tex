@@ -1,0 +1,171 @@
+\section{Ergebnisse}
+
+\subsection{Modellvergleich der Klassifikation (Stage A)}
+Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 sind in Tabelle \ref{tab:class-results} zusammengefasst.
+
+\begin{table}[h]
+    \centering
+    \caption{Vergleich der Klassifikationsmodelle}
+    \label{tab:class-results}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Modell} & \textbf{Val. Accuracy} & \textbf{Val. Loss} & \textbf{Latenz (CPU)} & \textbf{Dateigröße} \\
+        \midrule
+        EXP-001 Baseline CNN & \SI{61.00}{\percent} & 1,0633 & \SI{5.81}{\milli\second} & \SI{15.22}{\mega\byte} \\
+        EXP-002 Frozen MobileNetV2 & \SI{84.28}{\percent} & 0,5659 & \SI{38.00}{\milli\second} & \SI{8.49}{\mega\byte} \\
+        EXP-003 Fine-Tuned MobileNetV2 & \SI{87.42}{\percent} & 0,3148 & \SI{40.00}{\milli\second} & \SI{23.48}{\mega\byte} \\
+        EXP-004 INT8 TFLite & \SI{87.35}{\percent} & -- & \SI{10.32}{\milli\second} & \SI{2.61}{\mega\byte} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Die Ergebnisse belegen, dass Transfer Learning den größten Leistungssprung bringt. Das Baseline-CNN bleibt deutlich hinter den anderen Modellen zurück. Die Quantisierung (EXP-004) reduziert die Modellgröße um den Faktor 9,0x auf \SI{2.61}{\mega\byte}, ohne die Validierungsgenauigkeit messbar zu verschlechtern (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent}, $\Delta = -0.07$ pp).
+
+\subsection{Per-Class-Analyse der Klassifikation}
+\begin{table}[h]
+    \centering
+    \caption{Per-Class-Metriken des besten Klassifikationsmodells (EXP-003)}
+    \label{tab:best-class}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \midrule
+        glass & 0.93 & 0.95 & 0.94 \\
+        metal & 0.77 & 0.98 & 0.86 \\
+        paper & 0.96 & 0.64 & 0.77 \\
+        plastic & 0.89 & 0.94 & 0.91 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Die schwierigste Klasse war paper. Der Recall von 0.64 zeigt, dass Papier zwar oft korrekt erkannt wird, aber in einer relevanten Zahl von Fällen mit optisch ähnlichen Verpackungen verwechselt wird. Metal erreicht einen sehr hohen Recall, während glass und plastic insgesamt stabil sind.
+
+\subsection{Detektionsmetriken (Stage B) — Systemübersicht}
+Tabelle \ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detektionsexperimente zusammen und zeigt den Einfluss von Datensatzauswahl und Architektur auf die Modellgüte. 
+
+\begin{table}[H]
+    \centering
+    \caption{Detektionsresultate: Architektur- und Datensatzvergleich (EXP-005 bis EXP-016)}
+    \label{tab:yolo-results}
+    \small
+    \begin{tabular}{llcccc}
+        \toprule
+        \textbf{Experiment} & \textbf{Datensatz} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Latenz (GPU)} & \textbf{Latenz (CPU)} \\
+        \midrule
+        EXP-005 YOLOv8n & Custom+TrashNet & \SI{82.30}{\percent} & \SI{69.80}{\percent} & \SI{1.90}{\milli\second} & \SI{40.40}{\milli\second} \\
+        EXP-006 YOLOv8n & Wild-Fusion & \SI{39.40}{\percent} & \SI{33.00}{\percent} & \SI{2.10}{\milli\second} & \SI{40.40}{\milli\second} \\
+        EXP-008 YOLOv8n & Bereinigter Tisch & \SI{39.60}{\percent} & \SI{32.90}{\percent} & \SI{2.10}{\milli\second} & \SI{40.40}{\milli\second} \\
+        EXP-009 YOLOv8n & Pristine TrashNet & \SI{72.80}{\percent} & \SI{58.30}{\percent} & \SI{1.40}{\milli\second} & \SI{40.40}{\milli\second} \\
+        EXP-011 YOLOv8n & Wild-only (TACO) & \SI{35.00}{\percent} & \SI{29.00}{\percent} & \SI{1.80}{\milli\second} & \SI{40.40}{\milli\second} \\
+        \midrule
+        EXP-013 YOLO11n & TACO+TrashNet (mira\_v2) & \SI{55.10}{\percent} & \SI{49.80}{\percent} & \SI{3.60}{\milli\second} & \SI{45.20}{\milli\second} \\
+        EXP-014 YOLO11n & TACO+TrashNet+Roboflow & \textbf{\SI{60.70}{\percent}} & \SI{50.60}{\percent} & \SI{1.80}{\milli\second} & \SI{46.00}{\milli\second} \\
+        EXP-015 YOLO11n & TACO+TrashNet+WaRP & \SI{56.00}{\percent} & \SI{45.10}{\percent} & \SI{1.50}{\milli\second} & \SI{45.50}{\milli\second} \\
+        EXP-016 YOLO11n & WaRP-only & \SI{58.80}{\percent} & \SI{43.20}{\percent} & \SI{1.20}{\milli\second} & \SI{44.80}{\milli\second} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth, keepaspectratio]{figures/det-map-comparison.png}
+    \caption{Vergleich der mAP50-Werte aller Detektionsexperimente (Stage B). EXP-005 und EXP-009 weisen aufgrund des homogenen Tischhintergrunds künstlich überhöhte Werte auf. EXP-014 stellt die robusteste Fusion dar.}
+    \label{fig:det-map-comparison}
+\end{figure}
+
+\subsection{Architekturvergleich und Fehlermatrix-Heatmap}
+Im Verlauf von Stage B wurde die Basisarchitektur von YOLOv8-Nano auf YOLO11n migriert \cite{ultralyticsyolov8}. Abbildung \ref{fig:heatmap-4datasets} vergleicht die klassenspezifische mAP50 der vier YOLO11n-Modelle als Heatmap. Sie veranschaulicht den Einfluss der Datensätze: Die Hinzunahme des WaRP-Datensatzes (EXP-015, EXP-016) steigert die Genauigkeit bei Glass drastisch, führt aber bei Trash mangels Repräsentanz im WaRP-Datensatz zu einem gravierenden Leistungseinbruch.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth, keepaspectratio]{figures/heatmap-4datasets.png}
+    \caption{Heatmap-Modellvergleich der klassenspezifischen mAP50-Ergebnisse (YOLO11n-Experimente EXP-013 bis EXP-016).}
+    \label{fig:heatmap-4datasets}
+\end{figure}
+
+\subsection{Per-Class-Analyse: Bestes Detektionsmodell (EXP-014)}
+Tabelle \ref{tab:exp014-class} zeigt die detaillierten Validierungsergebnisse des Fusionsmodells EXP-014.
+
+\begin{table}[H]
+    \centering
+    \caption{Klassenspezifische Metriken von EXP-014 (YOLO11n, TACO+TrashNet+Roboflow)}
+    \label{tab:exp014-class}
+    \small
+    \begin{tabular}{lccccr}
+        \toprule
+        \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Instanzen} \\
+        \midrule
+        Glass   & 0.580 & 0.521 & 0.502 & 0.400 & 336 \\
+        Metal   & 0.670 & 0.699 & 0.713 & 0.613 & 439 \\
+        Paper   & 0.820 & 0.772 & \textbf{0.829} & 0.745 & 474 \\
+        Plastic & 0.715 & 0.699 & 0.721 & 0.601 & 1316 \\
+        Trash   & 0.523 & 0.230 & 0.269 & 0.173 & 561 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Paper ist die stärkste Klasse (\SI{82.9}{\percent} mAP50) aufgrund großer Oberfläche und klarer Textur. Trash bleibt die schwächste Klasse (\SI{26.9}{\percent}) wegen extremer intra-klassenspezifischer Variabilität.
+
+Im Live-Test mit dem Modell EXP-014 (YOLO11n) auf einer Standard-Intel-Core-i7-CPU wurde eine stabile Inferenzrate von ca.\ \SI{21.8}{\text{FPS}} (Latenz ca.\ \SI{46.0}{\milli\second}) gemessen, was für einen kontinuierlichen Sortierprozess ausreicht. Alle Latenzen der GPU-Spalte in Tabelle \ref{tab:yolo-results} wurden auf einer Nvidia T4 Cloud-GPU erfasst, um eine Vergleichbarkeit mit Standard-Benchmarks zu gewährleisten. Auf der geplanten Zielhardware (Raspberry Pi Zero 2W CPU) wird nach vorläufigen Compiler-Simulationen durch den LiteRT-INT8-Export eine Latenz von ca.\ \SI{90}{\milli\second} bis \SI{120}{\milli\second} (ca.\ \num{8} bis \num{11} FPS) erwartet. Dies macht die Kopplung mit einem schnellen Tracker wie ByteTrack zur Bewegungsprädiktion zwingend erforderlich.
+
+\subsection{Webcam-Praxistest (Field Benchmark)}
+Um die Generalisierungsfähigkeit der Modelle abseits von statischen Testdaten unter variablen Realbedingungen zu bewerten, wurde ein \emph{Field Benchmark} durchgeführt. Hierbei wurden die Modelle an Live-Webcam-Streams unter unkontrollierten Raumbeleuchtungen evaluiert.
+
+Als Metrik dient der \textit{Image-Level F1-Score}, der misst, ob die Präsenz einer Wertstoffklasse im Bild korrekt detektiert wurde (unabhängig von der exakten Bounding-Box-Überlappung IoU). Dies simuliert die grobe Sortierzuverlässigkeit. Tabelle \ref{tab:field-bench} fasst die Ergebnisse über alle elf Modelle zusammen, visualisiert in Abbildung \ref{fig:field-benchmark-f1}.
+
+\begin{table}[H]
+    \centering
+    \caption{Modellvergleich im realen Praxistest (Field Benchmark)}
+    \label{tab:field-bench}
+    \small
+    \begin{tabular}{lcccccc}
+        \toprule
+        \textbf{Modell} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \midrule
+        \textbf{mira\_exp014.pt} & \textbf{669} & \textbf{51} & \textbf{170} & \textbf{\SI{92.9}{\percent}} & \textbf{\SI{79.7}{\percent}} & \textbf{\SI{85.8}{\percent}} \\
+        mira\_exp014\_int8.tflite & 492 & 20 & 347 & \SI{96.1}{\percent} & \SI{58.6}{\percent} & \SI{72.8}{\percent} \\
+        mira\_exp015.pt & 572 & 68 & 267 & \SI{89.4}{\percent} & \SI{68.2}{\percent} & \SI{77.3}{\percent} \\
+        mira\_exp015\_int8.tflite & 579 & 67 & 260 & \SI{89.6}{\percent} & \SI{69.0}{\percent} & \SI{78.0}{\percent} \\
+        mira\_exp013.pt & 589 & 82 & 250 & \SI{87.8}{\percent} & \SI{70.2}{\percent} & \SI{78.0}{\percent} \\
+        mira\_exp013\_int8.tflite & 475 & 30 & 364 & \SI{94.1}{\percent} & \SI{56.6}{\percent} & \SI{70.7}{\percent} \\
+        mira\_exp011.pt & 624 & 94 & 215 & \SI{86.9}{\percent} & \SI{74.4}{\percent} & \SI{80.2}{\percent} \\
+        mira\_exp009\_int8.tflite & 624 & 107 & 215 & \SI{85.4}{\percent} & \SI{74.4}{\percent} & \SI{79.5}{\percent} \\
+        mira\_exp006.pt & 696 & 139 & 259 & \SI{83.4}{\percent} & \SI{72.9}{\percent} & \SI{77.8}{\percent} \\
+        mira\_exp006\_int8.tflite & 375 & 197 & 473 & \SI{65.6}{\percent} & \SI{44.2}{\percent} & \SI{52.8}{\percent} \\
+        mira\_exp011\_int8.tflite & 0 & 0 & 839 & \SI{0.0}{\percent} & \SI{0.0}{\percent} & \SI{0.0}{\percent} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth, keepaspectratio]{figures/field-benchmark-f1.png}
+    \caption{Vergleich der F1-Scores im realen Praxistest. Das Fusionsmodell EXP-014 (FP32) erreicht mit \SI{85.8}{\percent} das beste Ergebnis. Das TFLite-INT8-Modell von EXP-011 versagt bei einem Standard-Schwellenwert von $0,5$ vollständig.}
+    \label{fig:field-benchmark-f1}
+\end{figure}
+
+Das Fusionsmodell EXP-014 (FP32) erweist sich mit \SI{85.8}{\percent} F1-Score als das mit Abstand praxistauglichste Modell. Durch die INT8-Quantisierung verliert das Modell ca.\ \num{13} Prozentpunkte an F1-Score (\SI{72.8}{\percent}), was auf die starke Unterdrückung von Aktivierungssignalen durch die ganzzahlige Rundung zurückzuführen ist. 
+
+Besonders auffällig ist der Totalausfall von \texttt{mira\_exp011\_int8.tflite} (\SI{0.0}{\percent} F1): Bei einem Standard-Konfidenzschwellenwert von $\text{conf}=0,5$ liefert das Modell keinerlei Detektionen, da die INT8-Gewichtsreduktion die Inferenz-Scores systematisch absenkt. Eine manuelle Reduktion des Schwellenwerts auf $\text{conf}=0,25$ im laufenden Betrieb stellte die Funktionalität dieses Modells wieder her (Inferenzrate ca.\ \num{1,6} Objekte/Frame), was als wichtige Implementierungsrichtlinie in die Steuerungseinheit einfloss.
+
+Tabelle \ref{tab:exp014-field-class} zeigt den klassenspezifischen Praxistest-F1-Score für das beste Modell EXP-014.
+
+\begin{table}[H]
+    \centering
+    \caption{Klassenspezifische F1-Scores von EXP-014 im Praxistest}
+    \label{tab:exp014-field-class}
+    \small
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \midrule
+        Glass   & \SI{93.0}{\percent} & \SI{86.9}{\percent} & \SI{89.9}{\percent} \\
+        Metal   & \SI{89.2}{\percent} & \SI{81.1}{\percent} & \SI{84.9}{\percent} \\
+        Paper   & \SI{94.6}{\percent} & \SI{87.2}{\percent} & \SI{90.7}{\percent} \\
+        Plastic & \SI{96.8}{\percent} & \SI{82.3}{\percent} & \SI{88.9}{\percent} \\
+        Trash   & \SI{75.5}{\percent} & \SI{42.0}{\percent} & \textbf{\SI{54.0}{\percent}} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Im Einklang mit der Offline-Evaluation bleibt die Erkennung von Restmüll (\textit{trash}) mit einem F1-Score von \SI{54.0}{\percent} auch unter Realbedingungen die größte technologische Herausforderung. Die restlichen Klassen liegen mit Werten über \SI{84}{\percent} im Bereich industrieller Anforderungen.
