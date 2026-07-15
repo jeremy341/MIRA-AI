@@ -1,0 +1,236 @@
+"""Shared inference engine: camera setup, model loading, inference loop."""
+import cv2
+import sys
+import threading
+import time
+from collections import deque
+from pathlib import Path
+from ultralytics import YOLO
+
+from config import DETECTION_DIR, get_tflite_imgsz
+from visualize import draw_boxes
+
+
+class CameraStream:
+    """Threaded camera reader with adaptive frame delivery.
+
+    Discards stale frames so the inference loop always gets the freshest image.
+    """
+
+    WARMUP_FRAMES = 10
+
+    def __init__(self, index: int, width: int, height: int):
+        self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        if not self.cap.isOpened():
+            raise RuntimeError(f"Failed to open camera index {index}.")
+
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+
+        print(f"Warming up camera {index} ({self.WARMUP_FRAMES} frames)...")
+        for _ in range(self.WARMUP_FRAMES):
+            self.cap.read()
+
+        self.ret, self.frame = self.cap.read()
+        self._lock = threading.Lock()
+        self._running = True
+        self._thread = threading.Thread(target=self._reader, daemon=True)
+        self._thread.start()
+
+    def _reader(self):
+        while self._running:
+            ret, frame = self.cap.read()
+            with self._lock:
+                self.ret = ret
+                self.frame = frame
+
+    def read(self):
+        with self._lock:
+            return self.ret, self.frame.copy() if self.ret else (False, None)
+
+    def release(self):
+        self._running = False
+        self._thread.join(timeout=2)
+        self.cap.release()
+
+
+class InferenceEngine:
+    """Unified inference engine for MIRA detection models.
+
+    Handles camera initialization, model loading, TFLite/INT8 configuration,
+    and the main real-time inference loop.
+    """
+
+    def __init__(
+        self,
+        model_name: str,
+        camera_index: int = 0,
+        cam_width: int = 640,
+        cam_height: int = 360,
+        target_latency_ms: int = 50,
+        conf_threshold: float = 0.5,
+        imgsz: int | None = None,
+        enable_tracking: bool = True,
+        iou_threshold: float = 0.45,
+    ):
+        self.model_name = model_name
+        self.camera_index = camera_index
+        self.cam_width = cam_width
+        self.cam_height = cam_height
+        self.target_latency_ms = target_latency_ms
+        self.conf_threshold = conf_threshold
+        self.enable_tracking = enable_tracking
+        self.iou_threshold = iou_threshold
+
+        # Resolve and load model
+        self.model_path = DETECTION_DIR / model_name
+        self._load_model(imgsz)
+
+        # Initialize camera
+        self.stream = CameraStream(camera_index, cam_width, cam_height)
+
+        # Tracking state
+        self.prev_time = time.perf_counter()
+        self.latency_history = deque(maxlen=30)
+        self.skip_frame = False
+        self._current_fps = 0.0
+
+    def _load_model(self, imgsz: int | None):
+        """Load YOLO model with TFLite/INT8-specific configuration."""
+        available = sorted(
+            p.name for p in DETECTION_DIR.glob("*")
+            if p.suffix in (".pt", ".tflite", ".keras")
+        )
+
+        print("\nAvailable models in models/:")
+        for name in available:
+            marker = "  <-- selected" if name == self.model_name else ""
+            int8_marker = " [INT8 - Recommended for speed]" if "int8" in name.lower() else ""
+            print(f"  {name}{marker}{int8_marker}")
+        print()
+
+        if not self.model_path.exists():
+            raise FileNotFoundError(
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
+                f"Available models: {', '.join(available)}"
+            )
+
+        if "classifier" in self.model_name.lower():
+            print(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
+            print("Live detection requires a detection model (.pt or detection .tflite).")
+            sys.exit(1)
+
+        task_type = "detect" if self.model_path.suffix == ".tflite" else None
+        self.model = YOLO(str(self.model_path), task=task_type)
+
+        self.is_tflite_int8 = (
+            self.model_path.suffix == ".tflite"
+            and "int8" in self.model_name.lower()
+        )
+
+        if self.model_path.suffix == ".tflite":
+            self.img_size = imgsz or get_tflite_imgsz(self.model_path)
+            if self.is_tflite_int8:
+                print(f"TFLite INT8 model: input {self.img_size}x{self.img_size}, auto-setting conf=0.25")
+            else:
+                print(f"TFLite model: input {self.img_size}x{self.img_size}")
+        else:
+            self.img_size = imgsz or 640
+            print(f"PyTorch model: input {self.img_size}x{self.img_size}")
+
+        if self.is_tflite_int8:
+            self.conf_threshold = 0.25
+            print(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
+
+    def run(self):
+        """Start the real-time inference loop."""
+        print(
+            f"MIRA Live Detection active (camera {self.camera_index}, "
+            f"{self.cam_width}x{self.cam_height}, "
+            f"target latency: {self.target_latency_ms}ms). "
+            f"Press 'q' to exit."
+        )
+
+        try:
+            while True:
+                ret, frame = self.stream.read()
+                if not ret or frame is None:
+                    continue
+
+                if self.skip_frame:
+                    self.skip_frame = False
+                    continue
+
+                results = self._infer(frame)
+                annotated = draw_boxes(frame, results, conf_threshold=self.conf_threshold)
+                self._update_metrics(results)
+                self._draw_status(annotated, results)
+                cv2.imshow("MIRA Real-Time Multi-Object Detection", annotated)
+
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+        finally:
+            self.stream.release()
+            cv2.destroyAllWindows()
+
+    def _infer(self, frame):
+        """Run model inference or tracking on a single frame."""
+        if self.is_tflite_int8:
+            return self.model.predict(
+                frame,
+                imgsz=self.img_size,
+                conf=self.conf_threshold,
+                verbose=False,
+            )
+        elif self.enable_tracking:
+            return self.model.track(
+                frame,
+                imgsz=self.img_size,
+                conf=self.conf_threshold,
+                iou=self.iou_threshold,
+                persist=True,
+                verbose=False,
+                tracker="bytetrack.yaml",
+            )
+        else:
+            return self.model.predict(
+                frame,
+                imgsz=self.img_size,
+                conf=self.conf_threshold,
+                iou=self.iou_threshold,
+                verbose=False,
+            )
+
+    def _update_metrics(self, results):
+        """Track latency history and decide whether to skip the next frame."""
+        curr_time = time.perf_counter()
+        frame_time = curr_time - self.prev_time
+        self.prev_time = curr_time
+
+        self._current_fps = 1.0 / max(frame_time, 1e-6)
+        latency_ms = results[0].speed.get("inference", 0)
+        self.latency_history.append(latency_ms)
+        avg_latency = sum(self.latency_history) / len(self.latency_history)
+
+        self.skip_frame = avg_latency > self.target_latency_ms
+
+    def _draw_status(self, frame, results):
+        """Draw status overlay on the annotated frame."""
+        latency_ms = results[0].speed.get("inference", 0)
+        avg_latency = sum(self.latency_history) / len(self.latency_history)
+        fps = self._current_fps
+
+        status_text = (
+            f"Cam: {self.camera_index} | {self.cam_width}x{self.cam_height} | "
+            f"Latency: {latency_ms:.1f}ms (avg: {avg_latency:.1f}ms) | FPS: {fps:.1f} | "
+            f"Skip: {'ON' if self.skip_frame else 'OFF'}"
+        )
+        cv2.putText(
+            frame, status_text, (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2,
+        )

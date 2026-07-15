@@ -102,3 +102,6 @@ watchdog==6.0.0
 websockets==16.0
 wrapt==2.2.2
 zipp==4.1.0
+pytest>=8.0
+pytest-mock>=3.14
+ruff>=0.9.0

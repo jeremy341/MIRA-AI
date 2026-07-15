@@ -4,16 +4,16 @@ import pathlib
 import random
 import shutil
 
-# 1. PFADE UND ORTE AUFLÖSEN
+# 1. RESOLVE PATHS
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 WILD_DIR = ROOT_DIR / "wild_data"
 CLASSES_DIR = ROOT_DIR / "data" / "classes"
 
-# Isoliertes Ausgabe-Verzeichnis, um yolo_data nicht zu überschreiben [2]
+# Isolated output directory to avoid overwriting yolo_data [2]
 OUTPUT_DIR = ROOT_DIR / "mira_wild_data"
 
-# Bereinige und erstelle die Zielordner-Struktur [2]
+# Clean and create target folder structure [2]
 if OUTPUT_DIR.exists():
     shutil.rmtree(OUTPUT_DIR)
 for split in ['train', 'val']:
@@ -26,7 +26,7 @@ CLASS_TO_ID = {name: idx for idx, name in enumerate(CLASSES)}
 random.seed(123)
 np.random.seed(123)
 
-# 2. KLASSEN-MAPPING DEFINIEREN (64 Klassen -> 5 MIRA-Klassen) [2]
+# 2. DEFINE CLASS MAPPING (64 classes -> 5 MIRA classes) [2]
 # 0:glass, 1:metal, 2:paper, 3:plastic, 4:trash
 MAPPING = {
     # Glass
@@ -43,11 +43,11 @@ MAPPING = {
 }
 
 
-# 3. KANTENDETEKTION FÜR SAUBERE BILDER (Auto-Labeling) [2]
+# 3. EDGE DETECTION FOR CLEAN IMAGES (Auto-Labeling) [2]
 def get_bounding_box(image):
     """
-    Berechnet die Bounding Box auf einheitlichen Hintergründen mittels Canny-Kanten.
-    Fällt bei Fehlern auf eine Standard-Box (70% des Bildbereichs) zurück.
+    Calculates bounding box on uniform backgrounds using Canny edges.
+    Falls back to a default box (70% of image area) on errors.
     """
     h, w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -78,7 +78,7 @@ def get_bounding_box(image):
     return x_center, y_center, norm_w, norm_h
 
 
-# 4. VERARBEITUNGS-FUNKTIONEN
+# 4. PROCESSING FUNCTIONS
 def process_wild_data(source_dir, split_name, target_split):
     img_src = source_dir / split_name / "images"
     lbl_src = source_dir / split_name / "labels"
@@ -155,7 +155,7 @@ process_clean_data(train_entries, "train")
 print("Merging clean validation splits...")
 process_clean_data(val_entries, "val")
 
-# 6. CONFIGURATION SPEICHERN (dataset.yaml)
+# 6. SAVE CONFIGURATION (dataset.yaml)
 yaml_content = f"""path: {str(OUTPUT_DIR)}
 train: images/train
 val: images/val

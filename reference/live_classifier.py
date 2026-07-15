@@ -14,7 +14,7 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
 
-# 1. PFADE UND TFLITE INTERPRETER INITIALISIEREN
+# 1. PATHS AND TFLITE INTERPRETER INITIALIZATION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 
@@ -31,8 +31,8 @@ output_details = interpreter.get_output_details()
 
 class_names = ['glass', 'metal', 'paper', 'plastic', 'trash']
 
-# 2. TEMPORAL SMOOTHING KONFIGURATION
-alpha = 0.15  # Glaettungsfaktor (0.01 = extrem traege/stabil, 0.9 = flackernd/schnell)
+# 2. TEMPORAL SMOOTHING CONFIGURATION
+alpha = 0.15  # Smoothing factor (0.01 = extremely sluggish/stable, 0.9 = flickering/fast)
 smoothed_probs = np.zeros(len(class_names))
 
 # 3. WEBCAM CAPTURE
@@ -47,7 +47,7 @@ while True:
     if not ret:
         break
 
- # 4. BILDVORBEREITUNG (Zuschneiden auf quadratischen 224x224 Ausschnitt)
+ # 4. IMAGE PREPROCESSING (crop to square 224x224 crop)
     h, w, _ = frame.shape
     size = min(h, w)
     start_x = (w - size) // 2
@@ -61,7 +61,7 @@ while True:
     # Batch-Dimension hinzufuegen und Typ in NumPy konvertieren (kein tf nötig!)
     input_data = np.expand_dims(resized, axis=0).astype(np.float32)
 
-    # 5. INFERENCE (TFLite Interpreter ausfuehren)
+    # 5. INFERENCE (run TFLite Interpreter)
     start_time = time.perf_counter()
     interpreter.set_tensor(input_details[0]['index'], input_data)
     interpreter.invoke()
@@ -71,19 +71,19 @@ while True:
     latency_ms = (end_time - start_time) * 1000
     fps = 1000 / latency_ms if latency_ms > 0 else 0
 
-    # Raw Logits in Wahrscheinlichkeiten umrechnen (Softmax)
+    # Convert raw logits to probabilities (Softmax)
     raw_probs = softmax(predictions[0])
 
-    # 6. EXPONENTIAL MOVING AVERAGE (EMA) FILTER ANWENDEN
-    # Stabilisiert das zappelnde Flackern ueber die Zeitachse
+    # 6. APPLY EXPONENTIAL MOVING AVERAGE (EMA) FILTER
+    # Stabilizes jitter over the time axis
     smoothed_probs = alpha * raw_probs + (1 - alpha) * smoothed_probs
 
-    # Klassifizierung ausgeben
+    # Print classification
     class_idx = np.argmax(smoothed_probs)
     predicted_class = class_names[class_idx]
     confidence = smoothed_probs[class_idx] * 100
 
-    # 7. ANZEIGE ERSTELLEN
+    # 7. CREATE DISPLAY
     display_frame = frame.copy()
     cv2.rectangle(display_frame, (start_x, start_y), (start_x + size, start_y + size), (255, 0, 0), 2)
 

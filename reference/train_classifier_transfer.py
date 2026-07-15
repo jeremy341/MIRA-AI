@@ -6,7 +6,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 
-# 1. PFADE UND KONSTANTEN (Fehlerfrei gelöst über pathlib)
+# 1. PATHS AND CONSTANTS (solved via pathlib)
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
 DATA_DIR = ROOT_DIR / "data" / "classes"
@@ -16,11 +16,11 @@ SAVE_DIR = ROOT_DIR / 'results' / 'EXP-002_MobileNetV2'
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
 BATCH_SIZE = 32
-img_height = 224 # Standard-Größe für MobileNetV2
+img_height = 224 # Standard size for MobileNetV2
 img_width = 224
 
-# 2. DATENSÄTZE LADEN
-print("Lade Trainingsdaten...")
+# 2. LOAD DATASETS
+print("Loading training data...")
 train_dataset = tf.keras.utils.image_dataset_from_directory(
     DATA_DIR,
     validation_split=0.2,
@@ -31,7 +31,7 @@ train_dataset = tf.keras.utils.image_dataset_from_directory(
     crop_to_aspect_ratio=True
 )
 
-print("Lade Validierungsdaten...")
+print("Loading validation data...")
 validation_dataset = tf.keras.utils.image_dataset_from_directory(
     DATA_DIR,
     validation_split=0.2,
@@ -45,7 +45,7 @@ validation_dataset = tf.keras.utils.image_dataset_from_directory(
 class_names = train_dataset.class_names
 num_classes = len(class_names)
 
-# Performance-Optimierung für die CPU
+# Performance optimization for CPU
 AUTOTUNE = tf.data.AUTOTUNE
 train_dataset = train_dataset.cache().prefetch(buffer_size=AUTOTUNE)
 validation_dataset = validation_dataset.cache().prefetch(buffer_size=AUTOTUNE)
@@ -57,8 +57,8 @@ data_augmentation = keras.Sequential([
     layers.RandomZoom(0.1),
 ])
 
-# 4. BASE MODEL (MobileNetV2) LADEN
-# include_top=False wirft Googles eigene Klassifizierungsschicht weg.
+# 4. LOAD BASE MODEL (MobileNetV2)
+# include_top=False removes Google's own classification layer.
 IMG_SHAPE = (img_height, img_width, 3)
 base_model = tf.keras.applications.MobileNetV2(
     input_shape=IMG_SHAPE,
@@ -66,11 +66,11 @@ base_model = tf.keras.applications.MobileNetV2(
     weights='imagenet'
 )
 
-# Wir frieren Googles Gewichte ein
+# We freeze Google's weights
 base_model.trainable = False
 
-# 5. ARCHITEKTUR ZUSAMMENBAUEN
-# Rescaling bringt Pixelwerte von [0, 255] auf [-1, 1] für MobileNetV2
+# 5. BUILD ARCHITECTURE
+# Rescaling normalizes pixel values from [0, 255] to [-1, 1] for MobileNetV2
 model = keras.Sequential([
     data_augmentation,
     layers.Rescaling(scale=1./127.5, offset=-1),
@@ -80,8 +80,8 @@ model = keras.Sequential([
     layers.Dense(num_classes, name="outputs")
 ])
 
-# 6. COMPILIEREN & TRAINIEREN
-# Kleine Learning-Rate (0.0001) für stabile Gewichte im neuen Klassifizierungskopf.
+# 6. COMPILE & TRAIN
+# Small learning rate (0.0001) for stable weights in the new classification head.
 model.compile(
     optimizer=keras.optimizers.Adam(learning_rate=0.0001),
     loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -98,7 +98,7 @@ history = model.fit(
     epochs=epochs
 )
 
-# 7. ERGEBNISSE PLOTTEN
+# 7. PLOT RESULTS
 acc = history.history['accuracy']
 val_acc = history.history['val_accuracy']
 loss = history.history['loss']
@@ -109,24 +109,24 @@ plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
 plt.plot(epochs_range, acc, label='Training Accuracy')
 plt.plot(epochs_range, val_acc, label='Validation Accuracy')
-plt.title('EXP-002 Genauigkeit (Accuracy)')
+plt.title('EXP-002 Accuracy')
 plt.legend()
 
 plt.subplot(1, 2, 2)
 plt.plot(epochs_range, loss, label='Training Loss')
 plt.plot(epochs_range, val_loss, label='Validation Loss')
-plt.title('EXP-002 Fehlerrate (Loss)')
+plt.title('EXP-002 Loss')
 plt.legend()
 
 # Speichere die Kurven automatisch
 plot_save_path = SAVE_DIR / 'training_curves.png'
 plt.savefig(plot_save_path, dpi=300)
-print(f"Trainingskurven erfolgreich gespeichert unter: {plot_save_path}")
+print(f"Training curves saved to: {plot_save_path}")
 plt.show()
 
-# Modell als .keras-Datei im zentralen /models Ordner speichern
+# Save model as .keras file in the central /models folder
 MODELS_DIR = ROOT_DIR / "models" / "classifier"
 MODELS_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_SAVE_PATH = MODELS_DIR / "mira_classifier_transfer.keras"
 model.save(MODEL_SAVE_PATH)
-print(f"Modell erfolgreich unter {MODEL_SAVE_PATH} gespeichert!")
+print(f"Model saved successfully to {MODEL_SAVE_PATH}!")
