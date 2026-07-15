@@ -19,7 +19,14 @@ Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 
     \end{tabular}
 \end{table}
 
-Die Ergebnisse belegen, dass Transfer Learning den größten Leistungssprung bringt. Das Baseline-CNN bleibt deutlich hinter den anderen Modellen zurück. Die Quantisierung (EXP-004) reduziert die Modellgröße um den Faktor 9,0x auf \SI{2.61}{\mega\byte}, ohne die Validierungsgenauigkeit messbar zu verschlechtern (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent}, $\Delta = -0.07$ pp).
+Die Ergebnisse belegen, dass Transfer Learning den größten Leistungssprung bringt. Das Baseline-CNN bleibt deutlich hinter den anderen Modellen zurück. Die Quantisierung (EXP-004) reduziert die Modellgröße um den Faktor 9,0x auf \SI{2.61}{\mega\byte}, ohne die Validierungsgenauigkeit messbar zu verschlechtern (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent}, $\Delta = -0.07$ pp). Abbildung \ref{fig:stagea-acc} fasst die Genauigkeitsunterschiede grafisch zusammen.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth, keepaspectratio]{figures/stagea-acc-comparison.png}
+    \caption{Vergleich der Validierungsgenauigkeit der vier Klassifikationsmodelle (Stage A).}
+    \label{fig:stagea-acc}
+\end{figure}
 
 \subsection{Per-Class-Analyse der Klassifikation}
 \begin{table}[h]

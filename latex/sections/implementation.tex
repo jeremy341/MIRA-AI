@@ -50,18 +50,4 @@ Im Gegensatz zu klassischen Trackern, die Boxen mit niedriger Konfidenz verwerfe
 Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Streamlit} implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
 
 \subsection{Mechatronische Ansteuerung und Handshake-Protokoll}
-Um die hohe Verarbeitungsgeschwindigkeit der KI (21.8 FPS) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen:
-
-\begin{lstlisting}[style=pythonstyle, caption={Python-seitige Serial-Uebertragung mit Inferenz-Lock}]
-# Senden des Sortierbefehls an den ESP32
-command = f"{predicted_class} {target_angle}\n"
-ser.write(command.encode())
-
-# Inferenz-Sperre: Python wartet blockierend auf Fertigmeldung des Arms
-response = ser.readline().decode().strip()
-if response == "done":
-    # Erst jetzt wird die Kamera fuer das naechste Objekt freigegeben
-    inference_lock = False
-\end{lstlisting}
-
-Der ESP32-S3 empfängt diesen Befehl über die serielle Schnittstelle und steuert die Pulsweitenmodulation (PWM) für die Servomotoren an. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.
+Um die hohe Verarbeitungsgeschwindigkeit der KI (21.8 FPS) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen. Der ESP32-S3 empfängt Sortierbefehle über die serielle Schnittstelle, steuert die Pulsweitenmodulation (PWM) für die Servomotoren an und sendet nach Abschluss eine Fertigmeldung, woraufhin die nächste Inferenz freigegeben wird. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.

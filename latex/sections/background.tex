@@ -13,19 +13,7 @@ Das Paradigma der \emph{Edge AI} beschreibt die Ausführung von KI-Modellen dire
 Die technologische Herausforderung besteht darin, diese drei Parameter durch gezielte Modellwahl und Kompressionstechniken zu optimieren \cite{deng2020model}.
 
 \subsection{Convolutional Neural Networks (CNNs)}
-Für Aufgaben der Computer Vision haben sich Convolutional Neural Networks (CNNs) als Standard etabliert \cite{lecun2015deep}. Im Gegensatz zu klassischen, vollverknüpften Netzen nutzen CNNs die räumliche Struktur von Bildern aus. Ein CNN extrahiert Merkmale schrittweise über zweidimensionale Faltungsoperationen (Convolutions). Mathematisch wird die diskrete Faltung eines Bildes $I$ mit einem Faltungskern (Kernel) $K$ der Dimension $M \times N$ wie folgt definiert:
-
-\begin{equation}
-S(i,j) = (I * K)(i,j) = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} I(i-m, j-n) \cdot K(m,n)
-\end{equation}
-
-Frühe Schichten des Netzwerks extrahieren elementare geometrische Strukturen wie Kanten, Farbgradienten und Kontraste. Tiefere Schichten kombinieren diese zu komplexen semantischen Konzepten (z. B. der Krümmung einer Flasche oder der Textur von Kartonagen). 
-
-Nachgeschaltete Aktivierungsfunktionen wie die Rectified Linear Unit ($\text{ReLU}(x) = \max(0, x)$) führen Nichtlinearitäten in das System ein. Am Ende des Netzwerks wandelt eine Softmax-Schicht die berechneten Rohwerte (Logits) $z_k$ in eine normierte Wahrscheinlichkeitsverteilung über die Klassen um:
-
-\begin{equation}
-p(y = k \mid x) = \frac{e^{z_k}}{\sum_{j=1}^{C} e^{z_j}}
-\end{equation}
+Für Aufgaben der Computer Vision haben sich Convolutional Neural Networks (CNNs) als Standard etabliert \cite{lecun2015deep}. Im Gegensatz zu klassischen, vollverknüpften Netzen nutzen CNNs die räumliche Struktur von Bildern aus, indem sie Merkmale schrittweise über zweidimensionale Faltungsoperationen extrahieren. Frühe Schichten lernen elementare geometrische Strukturen wie Kanten und Farbgradienten, während tiefere Schichten diese zu komplexen semantischen Konzepten kombinieren. Nachgeschaltete Aktivierungsfunktionen wie die Rectified Linear Unit ($\text{ReLU}(x) = \max(0, x)$) führen Nichtlinearitäten ein, und eine abschließende Softmax-Schicht wandelt die berechneten Rohwerte in eine Wahrscheinlichkeitsverteilung über die Klassen um.
 
 Die Evaluierung der Modellgüte erfolgt über das harmonische Mittel aus Precision (Präzision) und Recall (Sensitivität), ausgedrückt durch den $F_1$-Score:
 

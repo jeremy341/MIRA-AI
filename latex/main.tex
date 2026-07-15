@@ -4,7 +4,8 @@
 \usepackage[ngerman]{babel}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{lmodern}
+\usepackage{mathptmx} % Times-compatible font for main text
+\usepackage[scaled=0.92]{helvet} % Arial-compatible sans-serif
 \usepackage{microtype}
 \usepackage{geometry}
 \usepackage{setspace}
@@ -25,7 +26,7 @@
 \usepackage{listings} % Benötigt für Code-Anzeigen
 \usepackage{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
-\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\usepackage[backend=biber,style=authoryear,sorting=nyt]{biblatex}
 
 % --- CODING STYLE DEFINITION (Verhindert den Compiler-Absturz!) ---
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -114,7 +115,6 @@
 \input{sections/experiments}
 \input{sections/results}
 \input{sections/discussion}
-\input{sections/future_work}
 \input{sections/conclusion}
 \input{sections/appendix}
 
