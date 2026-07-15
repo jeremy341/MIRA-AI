@@ -1,13 +1,27 @@
-\section{Fazit}
+\section{Zusammenfassung und Ausblick}
 
-In dieser Arbeit wurden die softwareseitigen Grundlagen für ein ressourceneffizientes, Edge-KI-gestütztes Recycling-Sortiersystem namens \mira entwickelt, systematisch evaluiert und erfolgreich optimiert. Die durchgeführten Experimente und Systemvergleiche belegen, dass die softwareseitigen Voraussetzungen für eine dezentrale, automatische Mülltrennung auf kostengünstigen Endgeräten vollständig gegeben sind.
+Das Projekt \mira hat erfolgreich demonstriert, dass die Kombination aus Transfer Learning, gezielter Datensatz-Fusion und Post-Training-Quantisierung zu einem praxistauglichen, ressourceneffizienten KI-System für die automatische Wertstoffsortierung führt. Die vier zentralen Hypothesen wurden allesamt bestätigt:
+\begin{itemize}
+    \item \textbf{H1:} Transfer Learning mit MobileNetV2 übertraf das Scratch-CNN um +26,42 Prozentpunkte.
+    \item \textbf{H2:} INT8-Quantisierung reduzierte die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} bei vernachlässigbarem Genauigkeitsverlust (-0,07 pp).
+    \item \textbf{H3:} Das YOLO11n-Detektionsmodell erreicht eine CPU-Inferenzrate von \SI{21.8}{FPS}, was für einen kontinuierlichen Sortierprozess ausreicht.
+    \item \textbf{H4:} Der EMA-Filter ($\alpha=0,15$) eliminiert erfolgreich Signalflackern ohne kritischen Verzug.
+\end{itemize}
 
-Es konnte empirisch bewiesen werden, dass Transfer Learning mittels MobileNetV2 (EXP-003) einem klassischen Scratch-CNN bei stark limitierten Datensätzen weit überlegen ist. Der erzielte Genauigkeitssprung von +26,42 Prozentpunkten (von 61,00\% auf 87,42\%) unterstreicht die Notwendigkeit von vortrainierten Feature-Extractors in der Bildklassifizierung für Nischenanwendungen. Die anschließende Post-Training-Quantisierung auf INT8-Präzision (EXP-004) ermöglichte eine Kompression der Modellgröße um das 9-Fache (von 23,48 MB auf \SI{2.61}{\mega\byte}) und senkte die CPU-Latenz um 74,2\% auf \SI{10.32}{\milli\second} bei einem vernachlässigbaren Genauigkeitsverlust von nur 0,07 Prozentpunkten.
+Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Data-Centric AI (Datenqualität und -vielfalt) die Modellleistung stärker beeinflusst als reine Architektur-Optimierungen. Der GIGO-Effekt beim Auto-Labeling zwang zur Adaption professioneller Datensätze, was die Generalisierungsfähigkeit dramatisch verbesserte.
 
-Die Detektionsphase (Stage B) verdeutlichte, dass in der Objekterkennung die Datenqualität und Datendiversität den Modellerfolg stärker beeinflussen als architektonische Details. Das Aufdecken des GIGO-Effekts (EXP-005) zeigte die inhärenten Gefahren heuristischer Auto-Labeling-Methoden, während die Data-Centric AI Optimierung (EXP-008) bewies, dass saubere Daten in halber Trainingszeit die gleiche Leistung erbringen. Die Migration auf YOLO11n und die gezielte Fusion aus TACO, TrashNet und Roboflow (EXP-014) lieferten das stabilste Detektionsmodell mit einer Gesamt-mAP50 von \SI{60.7}{\percent}.
+Für eine industrielle Umsetzung sind mehrere Entwicklungsschritte notwendig:
 
-Der Webcam-Praxistest (Field Benchmark) demonstrierte die Praxistauglichkeit unter Realbedingungen mit einem F1-Score von \SI{85.8}{\percent} (EXP-014, FP32). Die INT8-Quantisierung reduzierte den Speicher auf nur \SI{2.90}{\mega\byte} bei \SI{72.8}{\percent} F1. Der ByteTrack-Algorithmus und der EMA-Filter mit $\alpha = 0,15$ lösen das Problem des Signalflackerns zuverlässig.
+\begin{enumerate}
+    \item \textbf{Hardware-Integration:} Der Prototyp muss auf der Zielhardware (Raspberry Pi Zero 2W) implementiert und getestet werden. Dies beinhaltet die Anbindung an Servomotoren und Sensoren sowie die Optimierung der Inferenzpipeline für die ARM-Architektur.
+    
+    \item \textbf{Erweiterung der Klassifikation:} Das aktuelle fünfklassige System (Glas, Metall, Papier, Plastik, Restmüll) sollte um weitere relevante Abfallfraktionen erweitert werden, wie z.\,B. Biomüll, Elektroschrott oder Textilien. Dies erfordert die Integration neuer, spezialisierter Datensätze.
+    
+    \item \textbf{Synthetische Datengenerierung:} Um das Problem des Klassenungleichgewichts, insbesondere bei der Klasse \textit{Trash}, zu lösen, sollte ein Pipeline zur synthetischen Datengenerierung mittels Diffusionsmodellen (z.\,B. Stable Diffusion) etabliert werden. Dies würde es ermöglichen, realistische, annotierte Trainingsbilder für unterrepräsentierte Klassen zu erzeugen.
+    
+    \item \textbf{Online-Lernen:} Ein Mechanismus zum kontinuierlichen Lernen aus Fehlsortierungen im Live-Betrieb würde die langfristige Robustheit des Systems erhöhen. Hierfür müsste ein Feedback-Loop implementiert werden, der falsch klassifizierte Objekte in den Trainingsdatensatz zurückführt.
+    
+    \item \textbf{Energieeffizienz-Optimierung:} Für den batteriebetriebenen Einsatz sollte die Inferenzlatenz weiter reduziert werden, z.\,B. durch Pruning, Knowledge Distillation oder die Nutzung spezialisierter Edge-AI-Chips (z.\,B. Google Coral TPU).
+\end{enumerate}
 
-Ein zentrales Nebenergebnis dieser Arbeit ist der Kostenvergleich: Während industrielle Nahinfrarot-Sortieranlagen mehrere hunderttausend Euro kosten, basiert MIRA auf handelsüblicher Hardware (Webcam, PC) mit einem Gesamtwert von unter \SI{50}{\EUR}. Die erreichte Erkennungsgenauigkeit liegt für die Klassen Glas, Metall, Papier und Plastik im Bereich industrieller Anforderungen (F1 $>$ \SI{84}{\percent}), während Restmüll mit \SI{54}{\percent} F1 die größte verbleibende Herausforderung darstellt.
-
-Die Arbeit bestätigt drei von vier Forschungshypothesen (H1--H3 quantitativ, H4 qualitativ) und dokumentiert acht ingenieurwissenschaftliche Problemlösungen (Farbkanalkonvertierung, GIGO-Überwindung, ByteTrack-Integration, EMA-Filter, statische Dimensionierung, Plattformkompilation, USB-Bandbreitenoptimierung, Hintergrund-Überdetektion). Die Übertragung des Modells auf den physischen Sortierarm steht auf einer soliden experimentellen Basis.
+Die Kosten für ein solches System könnten bei einer Serienproduktion auf unter 100 Euro gesenkt werden, was es zu einer kosteneffizienten Alternative zu teuren industriellen Sortieranlagen macht. Insgesamt zeigt diese Arbeit, dass Deep Learning nicht nur in Cloud-Umgebungen, sondern auch auf extrem ressourcenbeschränkter Hardware praktikable Lösungen für reale Probleme liefern kann.

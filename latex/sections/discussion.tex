@@ -27,19 +27,6 @@ Auch die zweite Hypothese (H2) zur Modellquantisierung wird vollumfänglich veri
 
 Die dritte Hypothese (H3) belegt den Nutzen des Übergangs zur Objekterkennung (YOLO11n, \cite{ultralyticsyolov8}). Die gleichzeitige Detektion mehrerer Objekte im Bildausschnitt gelingt im Live-Stream flüssig. Allerdings zeigt sich hierbei die Problematik des Domain Shifts: Komplexe, unstrukturierte Hintergründe und ungünstige Lichtverhältnisse senken die Erkennungssicherheit gegenüber dem kontrollierten Laborumfeld deutlich.
 
-\subsection{Dämpfungsanalyse des EMA-Filters (Hypothese 4)}
-Die vierte Hypothese (H4) betrifft die Signalstabilisierung für die Aktorik. Da klassische Detektoren die Konfidenzwerte Frame für Frame isoliert berechnen, führt das Sensorrauschen der Kamera (z. B. Helligkeitsschwankungen und Fokus-Hunting) im Live-Betrieb zu einem stochastischen Flackern (Jitter) der Ausgabewerte. Für einen angeschlossenen 3-DOF-Roboterarm würde dies zu einer mechatronischen Instabilität führen: Die Servomotoren würden fortlaufend widersprüchliche Steuerbefehle empfangen und vibrieren, was zu mechanischem Verschleiß und Sortierfehlern führt.
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.85\textwidth, keepaspectratio]{figures/ema-filter-effect.png}
-    \caption{Simulierte Dämpfungswirkung des Exponential Moving Average (EMA) Filters mit $\alpha = 0,15$ auf das Steuersignal bei verrauschtem Live-Kamera-Input.}
-    \label{fig:ema-filter-effect}
-\end{figure}
-
-Die Dämpfungswirkung wurde softwareseitig simuliert und in Abbildung \ref{fig:ema-filter-effect} dargestellt. Wie die Kurven verdeutlichen, glättet der EMA-Filter mit $\alpha = 0,15$ das hochfrequente Rauschen des Rohsignals effizient. Ein kurzzeitiger Signaleinbruch (Drop-out bei Frame 28) wird erfolgreich abgefangen, und ein Fehlalarm (Falsch-Positiv-Spitze bei Frame 8) wird so weit gedämpft, dass die Sortierschwelle von $0,5$ nicht überschritten wird. 
-
-Der Preis für diese Stabilisierung ist ein Phasenverzug (Lag). Bei einer Inferenzrate von \SI{20}{\text{FPS}} (Zeitschritt $\Delta t = \SI{50}{\milli\second}$) entspricht der Signalverzug von ca. 5 bis 7 Frames einer zeitlichen Latenz von rund \SI{250}{\milli\second} bis \SI{350}{\milli\second}. Da der mechanische Greifzyklus des Roboterarms (Anfahrt, Greifen, Ablegen und Rückkehr) mit ca. \SI{1.5}{\second} um eine Größenordnung langsamer ist, ist dieser Verzug mechatronisch völlig unkritisch. Hypothese 4 ist damit verifiziert.
 
 \subsection{Datenqualität als dominanter Einflussfaktor (Data-Centric AI)}
 Ein zentraler wissenschaftlicher Befund dieses Projekts ist, dass die Qualität und Vielfalt der Trainingsdaten die Modellleistung stärker beeinflussen als architektonische Details des Netzwerks. 
