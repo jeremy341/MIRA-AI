@@ -1,34 +1,9 @@
 \section{Methodik und Experimentdesign}
 
 \subsection{Datengrundlagen und Vorverarbeitung (Stage A)}
-Die erste Phase der Datenerfassung umfasste die Aufnahme von 796 Bildern unter kontrollierten Laborbedingungen. Als initialer Machbarkeitsnachweis (Proof of Concept) wurden für Stage A zunächst vier Wertstoffklassen definiert: \textit{glass, metal, paper, plastic}. Die Sammelklasse \textit{trash} wurde erst in Stage B (Detektion) ergänzt, um realen Abfallströmen gerecht zu werden. Der Datensatz wurde randomisiert in \SI{80}{\percent} Trainings- und \SI{20}{\percent} Validierungsdaten aufgeteilt (Split-Seed: 123).
+Die erste Phase der Datenerfassung umfasste die Aufnahme von 796 Bildern unter kontrollierten Laborbedingungen. Als initialer Machbarkeitsnachweis (Proof of Concept) wurden für Stage A zunächst vier Wertstoffklassen definiert: \textit{glass, metal, paper, plastic}. Die Sammelklasse \textit{trash} wurde erst in Stage B (Detektion) ergänzt, um realen Abfallströmen gerecht zu werden. Der Datensatz wurde randomisiert in \SI{80}{\percent} Trainings- und \SI{20}{\percent} Validierungsdaten aufgeteilt (Split-Seed: 123, \num{604} Bilder).
 
-\begin{table}[h]
-\centering
-\caption{Klassenverteilung des Stage-A-Datensatzes (EXP-003)}
-\label{tab:dataset_dist_val}
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Klasse} & \textbf{Training (80\%)} & \textbf{Validierung (20\%)} & \textbf{Gesamt} \\
-\midrule
-glass & 120 & 43 & 163 \\
-metal & 115 & 41 & 156 \\
-paper & 118 & 42 & 160 \\
-plastic & 92 & 33 & 125 \\
-\midrule
-\textbf{Gesamt} & \textbf{445} & \textbf{159} & \textbf{604} \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=0.9\textwidth, keepaspectratio]{figures/class-distribution.png}
-    \caption{Klassenverteilung der Datensätze im Vergleich. Links: Stage A (Klassifikation, 4 Klassen). Rechts: Stage B (Detektion, mira\_tnr Datensatz mit dominanter Plastik-Klasse und neu eingeführter Restmüll-Klasse).}
-    \label{fig:class-distribution}
-\end{figure}
-
-Alle Klassifikationsmodelle nutzen TensorFlows \texttt{image\_dataset\_from\_directory} \cite{tensorflow2024transfer}. Das Baseline-CNN arbeitet mit $180\times180$ Pixeln, MobileNetV2 mit $224\times224$ Pixeln \cite{sandler2018mobilenetv2}. Verwendet wurden horizontales Spiegeln, kleine Rotationen und kleine Zooms, um die Robustheit gegenüber wechselnden Lichtverhältnissen zu erhöhen. Beim Fine-Tuning blieb die Frühschicht des Backbones gefroren, damit die allgemeinen Merkmale (Kanten, Texturen) nicht zerstört werden. Die zentrierte Bildausschneidung (\texttt{crop\_to\_aspect\_ratio=True}) verhinderte geometrische Verzerrungen durch unproportionales Skalieren.
+Alle Klassifikationsmodelle nutzen TensorFlows \texttt{image\_dataset\_from\_directory} \cite{tensorflow2024transfer}. Das Baseline-CNN arbeitet mit $180\times180$ Pixeln, MobileNetV2 mit $224\times224$ Pixeln \cite{sandler2018mobilenetv2}. Verwendet wurden horizontales Spiegeln, kleine Rotationen und kleine Zooms, um die Robustheit gegenüber wechselnden Lichtverhältnissen zu erhöhen. Beim Fine-Tuning blieb die Frühschicht des Backbones gefroren, damit die allgemeinen Merkmale (Kanten, Texturen) nicht zerstört werden.
 
 \subsection{Die Hürde des Auto-Labelings (GIGO-Effekt in Stage B)}
 \label{sec:method-gigo}
@@ -57,25 +32,4 @@ Um die stark abweichenden Taxonomien der externen Datenquellen (z.\ B. 64 spezif
         \textbf{Trash} (ID 4) & Batteries, cigarettes, food-waste, face-masks, blister-packs, unlabeled-litter \\
         \bottomrule
     \end{tabularx}
-\end{table}
-
-\subsection{Klassenspezifische Hyperparameter}
-Tabelle \ref{tab:class-hparams} fasst die genutzten Trainingsparameter für die unterschiedlichen Stufen zusammen.
-
-\begin{table}[h]
-    \centering
-    \caption{Wesentliche Hyperparameter der Klassifikationsphase}
-    \label{tab:class-hparams}
-    \begin{tabular}{lll}
-        \toprule
-        \textbf{Parameter} & \textbf{Baseline / Frozen (EXP-001/002)} & \textbf{Fine-Tuning (EXP-003)} \\
-        \midrule
-        Bildgröße & $180 \times 180$ / $224 \times 224$ Pixel & $224 \times 224$ Pixel \\
-        Batch-Size & 32 & 32 \\
-        Optimizer & Adam ($10^{-4}$) & Adam ($10^{-5}$) \\
-        Loss-Funktion & SparseCategoricalCrossentropy & SparseCategoricalCrossentropy \\
-        Augmentation & Flip, Rotation, Zoom & Flip, Rotation, Zoom \\
-        Split-Ratio & 80/20, Seed 123 & 80/20, Seed 123 \\
-        \bottomrule
-    \end{tabular}
 \end{table}
