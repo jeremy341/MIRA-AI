@@ -52,18 +52,12 @@ Tabelle \ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detekt
 
 \begin{table}[H]
     \centering
-    \caption{Detektionsresultate: Architektur- und Datensatzvergleich (EXP-005 bis EXP-016)}
+    \caption{Detektionsresultate: Architektur- und Datensatzvergleich (EXP-013 bis EXP-016)}
     \label{tab:yolo-results}
     \small
     \begin{tabular}{llcccc}
         \toprule
         \textbf{Experiment} & \textbf{Datensatz} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Latenz (GPU)} & \textbf{Latenz (CPU)} \\
-        \midrule
-        EXP-005 YOLOv8n & Custom+TrashNet & \SI{82.30}{\percent} & \SI{69.80}{\percent} & \SI{1.90}{\milli\second} & \SI{40.40}{\milli\second} \\
-        EXP-006 YOLOv8n & Wild-Fusion & \SI{39.40}{\percent} & \SI{33.00}{\percent} & \SI{2.10}{\milli\second} & \SI{40.40}{\milli\second} \\
-        EXP-008 YOLOv8n & Bereinigter Tisch & \SI{39.60}{\percent} & \SI{32.90}{\percent} & \SI{2.10}{\milli\second} & \SI{40.40}{\milli\second} \\
-        EXP-009 YOLOv8n & Pristine TrashNet & \SI{72.80}{\percent} & \SI{58.30}{\percent} & \SI{1.40}{\milli\second} & \SI{40.40}{\milli\second} \\
-        EXP-011 YOLOv8n & Wild-only (TACO) & \SI{35.00}{\percent} & \SI{29.00}{\percent} & \SI{1.80}{\milli\second} & \SI{40.40}{\milli\second} \\
         \midrule
         EXP-013 YOLO11n & TACO+TrashNet (mira\_v2) & \SI{55.10}{\percent} & \SI{49.80}{\percent} & \SI{3.60}{\milli\second} & \SI{45.20}{\milli\second} \\
         EXP-014 YOLO11n & TACO+TrashNet+Roboflow & \textbf{\SI{60.70}{\percent}} & \SI{50.60}{\percent} & \SI{1.80}{\milli\second} & \SI{46.00}{\milli\second} \\
@@ -75,11 +69,10 @@ Tabelle \ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detekt
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth, keepaspectratio]{figures/det-map-comparison.png}
-    \caption{Vergleich der mAP50-Werte aller Detektionsexperimente (Stage B). EXP-005 und EXP-009 weisen aufgrund des homogenen Tischhintergrunds künstlich überhöhte Werte auf. EXP-014 stellt die robusteste Fusion dar.}
-    \label{fig:det-map-comparison}
+    \includegraphics[width=0.75\textwidth, keepaspectratio]{figures/exp14-results.png}
+    \caption{Trainingsmetriken des besten YOLO11n-Detektors (EXP-014). Durch die Datenfusion aus TACO, TrashNet und Roboflow wird ein robuster mAP50 von \SI{60.7}{\percent} erreicht.}
+    \label{fig:yolo11n}
 \end{figure}
-
 \subsection{Architekturvergleich und Fehlermatrix-Heatmap}
 Im Verlauf von Stage B wurde die Basisarchitektur von YOLOv8-Nano auf YOLO11n migriert \cite{ultralyticsyolov8}. Abbildung \ref{fig:heatmap-4datasets} vergleicht die klassenspezifische mAP50 der vier YOLO11n-Modelle als Heatmap. Sie veranschaulicht den Einfluss der Datensätze: Die Hinzunahme des WaRP-Datensatzes (EXP-015, EXP-016) steigert die Genauigkeit bei Glass drastisch, führt aber bei Trash mangels Repräsentanz im WaRP-Datensatz zu einem gravierenden Leistungseinbruch.
 

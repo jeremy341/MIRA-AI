@@ -32,14 +32,7 @@ Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf d
 \end{figure}
 
 \subsection{Die fehlerbereinigte Live-Inferenz}
-Ein kritischer Moment der Echtzeit-Entwicklung war die Behebung des Farbkanal-Fehlers. OpenCV liest Videoframes im BGR-Format ein, während TensorFlow-Modelle RGB erwarten. Ohne Korrektur stürzte die Inferenzgenauigkeit im Live-Test auf unter \SI{40}{\percent} ab. Der implementierte Fix lautet:
-
-\begin{lstlisting}[style=pythonstyle, caption={Farbraumkonvertierung in der Inferenzschleife}]
-# Behebung des kritischen BGR-zu-RGB-Kanalkonflikts
-frame_rgb = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-resized = cv2.resize(frame_rgb, (224, 224))
-input_data = np.expand_dims(resized, axis=0).astype(np.float32)
-\end{lstlisting}
+Ein kritischer Moment der Echtzeit-Entwicklung war die Behebung des Farbkanal-Fehlers. OpenCV liest Videoframes im BGR-Format ein, während TensorFlow-Modelle RGB erwarten. Ohne Korrektur stürzte die Inferenzgenauigkeit im Live-Test auf unter \SI{40}{\percent} ab. Die kritische Farbraumkonvertierung von BGR zu RGB wurde implementiert, um die Inferenzgenauigkeit im Live-Betrieb zu gewährleisten.
 
 \subsection{Objektverfolgung mit ByteTrack}
 Im Live-Betrieb führen kurze Verdeckungen oder Beleuchtungsschwankungen dazu, dass Detektionen temporär aussetzen. Um eine kontinuierliche Lokalisierung zu gewährleisten, wurde der ByteTrack-Tracking-Algorithmus integriert \cite{zhang2022bytetrack}. 
