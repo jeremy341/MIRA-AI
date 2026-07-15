@@ -1,5 +1,32 @@
 \section{Ergebnisse}
 
+\subsection{Experimentdesign}
+Das experimentelle Design wurde in sechs diskrete Phasen (EXP-001 bis EXP-006) sowie nachgeschaltete Optimierungsphasen und Architektur-Experimente unterteilt, um Systemgenauigkeit und Ressourceneffizienz systematisch zu evaluieren. Die Experimente gliedern sich in Stage~A (Klassifikation) und Stage~B (Detektion), wobei Stage~B eine Migration der Basisarchitektur von YOLOv8-Nano zu YOLO11n umfasst.
+
+\subsection{Klassifikationsphase (EXP-001 bis EXP-004)}
+Die erste Phase verglich drei Architekturen auf demselben Validierungssplit: ein Scratch-CNN (EXP-001, Val.~Accuracy~\SI{61.00}{\percent}), MobileNetV2 mit gefrorenem Backbone (EXP-002, \SI{84.28}{\percent}) und MobileNetV2 mit Fine-Tuning (EXP-003, \SI{87.42}{\percent}). Ziel war zu prüfen, wie stark Transfer Learning den Sprung von einem kleinen, direkt trainierten Netz zu einem robusteren Modell verbessert \cite{yosinski2014transferable}.
+
+EXP-001 zeigte starkes Overfitting mit verrauschten Validierungskurven und systematischen Fehlklassifikationen (Papier und Metall wurden häufig als Plastik fehlinterpretiert). EXP-002 profitierte deutlich vom Transfer Learning (\SI{84.28}{\percent} Genauigkeit), erreichte aber noch kein zufriedenstellendes Niveau. EXP-003 lieferte mit \SI{87.42}{\percent} Genauigkeit das stabilste Modell und reduzierte die Fehlklassifikationen erheblich -- insbesondere für Glass (F1: 0,94).
+
+\subsection{Quantisierung (EXP-004)}
+Das beste Keras-Modell (EXP-003) wurde per TensorFlow Lite exportiert. Dabei wurden ein FP32-Modell und anschließend ein voll quantisiertes INT8-Modell erzeugt. Für die Kalibrierung kam eine repräsentative Stichprobe von 100 Bildern zum Einsatz \cite{deng2020model}. Die Klassifikationsleistung blieb dabei nahezu identisch (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent} des FP32-Modells), während die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} sank.
+
+\subsection{Detektionsphase YOLOv8 (EXP-005 bis EXP-009)}
+Die zweite Projektphase drehte sich um Objekterkennung. Zunächst wurde ein YOLOv8-Nano-Modell auf einem einfachen Benchmark trainiert (EXP-005). Dieses Modell erreichte zwar eine scheinbar hohe Validierungsgenauigkeit von \SI{82.3}{\percent} mAP50. Diese hohe Metrik erwies sich jedoch bei einer detaillierten Fehleranalyse als Artefakt eines extremen Hintergrund-Overfittings (Background Leakage): Da der Canny-Edge-Auto-Labeler die kontrastreichen Kanten und Helligkeitsgradienten des Schreibtischrahmens umschloss, lernte das Netzwerk nicht die Müllobjektspezifika selbst, sondern korrelierte die Geometrie der gesamten Arbeitsfläche mit der Zielklasse. Dies erklärt die hohe Genauigkeit auf dem monotonen Test-Set der Tischoberfläche, führte aber zu einem vollständigen Versagen (mAP50 nahe \SI{0}{\percent}) bei Tests auf abweichenden Hintergründen. Dieser GIGO-Effekt (Abschnitt~\ref{sec:method-gigo}) zwang zur Verfeinerung der Datengrundlage. Spätere Modelle (EXP-006, EXP-009) trainierten auf gemischten Wild-Datensätzen und dem bereinigten TrashNet-Datensatz \cite{yang2016classification}.
+
+\subsection{Architekturmigration: YOLO11n (EXP-013 bis EXP-016)}
+\label{sec:exp-yolo11}
+Im dritten Abschnitt der Detektionsphase wurde die Basisarchitektur von YOLOv8-Nano (\SI{3.01}{Mio.}\ Parameter) auf YOLO11n (\SI{2.58}{Mio.}\ Parameter) migriert \cite{ultralyticsyolov8}. YOLO11n ist kompakter (6,3 GFLOPs) und erreicht auf dem fusionierten mira\_v2-Datensatz (\num{4024} Bilder, TACO + TrashNet) einen ausgeglichenen mAP50 von \SI{55.1}{\percent} (EXP-013). Ein systematischer Vergleich evaluierte anschließend den Einfluss zusätzlicher Datenquellen:
+
+\begin{itemize}
+    \item \textbf{EXP-013 (Baseline):} TACO~\cite{proenca2020taco} + TrashNet~\cite{yang2016classification} (\num{4024}~Bilder) $\rightarrow$ mAP50~\SI{55.1}{\percent}
+    \item \textbf{EXP-014 (+Roboflow):} Zusätzlich Roboflow Trash Detection \cite{roboflow2023trash} $\rightarrow$ mAP50~\SI{60.7}{\percent} \textbf{(Bestes Modell)}
+    \item \textbf{EXP-015 (+WaRP):} Roboflow ersetzt durch WaRP~Waste~Detection \cite{warp2024dataset} $\rightarrow$ mAP50~\SI{56.0}{\percent}
+    \item \textbf{EXP-016 (WaRP-only):} Ausschließlich WaRP $\rightarrow$ mAP50~\SI{58.8}{\percent} (jedoch ohne \textit{trash}-Klasse)
+\end{itemize}
+
+EXP-014 erzielt den besten Gesamtmittelwert (+5,6~pp über EXP-013), mit besonders starken Zuwächsen bei Trash (+11,3~pp) und Glass (+6,3~pp). Der WaRP-Datensatz (EXP-015) verbessert Glass signifikant (+24,8~pp), senkt aber Trash drastisch (-12,6~pp), da WaRP keine Trash-Klasse enthält. Der vollständige Modellvergleich ist in Abbildung~\ref{fig:heatmap-4datasets} als Heatmap dargestellt.
+
 \subsection{Modellvergleich der Klassifikation (Stage A)}
 Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 sind in Tabelle \ref{tab:class-results} zusammengefasst.
 
@@ -29,26 +56,9 @@ Die Ergebnisse belegen, dass Transfer Learning den größten Leistungssprung bri
 \end{figure}
 
 \subsection{Per-Class-Analyse der Klassifikation}
-\begin{table}[h]
-    \centering
-    \caption{Per-Class-Metriken des besten Klassifikationsmodells (EXP-003)}
-    \label{tab:best-class}
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
-        \midrule
-        glass & 0.93 & 0.95 & 0.94 \\
-        metal & 0.77 & 0.98 & 0.86 \\
-        paper & 0.96 & 0.64 & 0.77 \\
-        plastic & 0.89 & 0.94 & 0.91 \\
-        \bottomrule
-    \end{tabular}
-\end{table}
 
-Die schwierigste Klasse war paper. Der Recall von 0.64 zeigt, dass Papier zwar oft korrekt erkannt wird, aber in einer relevanten Zahl von Fällen mit optisch ähnlichen Verpackungen verwechselt wird. Metal erreicht einen sehr hohen Recall, während glass und plastic insgesamt stabil sind.
-
-\subsection{Detektionsmetriken (Stage B) — Systemübersicht}
-Tabelle \ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detektionsexperimente zusammen und zeigt den Einfluss von Datensatzauswahl und Architektur auf die Modellgüte. 
+\subsection{Detektionsmetriken (Stage B)}
+Tabelle~\ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detektionsexperimente zusammen.
 
 \begin{table}[H]
     \centering
@@ -73,6 +83,7 @@ Tabelle \ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detekt
     \caption{Trainingsmetriken des besten YOLO11n-Detektors (EXP-014). Durch die Datenfusion aus TACO, TrashNet und Roboflow wird ein robuster mAP50 von \SI{60.7}{\percent} erreicht.}
     \label{fig:yolo11n}
 \end{figure}
+
 \subsection{Architekturvergleich und Fehlermatrix-Heatmap}
 Im Verlauf von Stage B wurde die Basisarchitektur von YOLOv8-Nano auf YOLO11n migriert \cite{ultralyticsyolov8}. Abbildung \ref{fig:heatmap-4datasets} vergleicht die klassenspezifische mAP50 der vier YOLO11n-Modelle als Heatmap. Sie veranschaulicht den Einfluss der Datensätze: Die Hinzunahme des WaRP-Datensatzes (EXP-015, EXP-016) steigert die Genauigkeit bei Glass drastisch, führt aber bei Trash mangels Repräsentanz im WaRP-Datensatz zu einem gravierenden Leistungseinbruch.
 
