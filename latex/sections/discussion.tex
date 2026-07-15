@@ -2,24 +2,7 @@
 Die Ergebnisse der durchgeführten Experimente erlauben eine differenzierte Bewertung der initial aufgestellten Hypothesen sowie tiefgreifende Erkenntnisse über die Entwicklung ressourceneffizienter Edge-KI-Modelle.
 
 \subsection{Bewertung der Forschungshypothesen}
-Zur Beurteilung des wissenschaftlichen Erfolgs von MIRA werden in Tabelle \ref{tab:hypotheses-eval} die vier eingangs aufgestellten Hypothesen ihren real gemessenen experimentellen Werten gegenübergestellt.
-
-\begin{table}[h]
-    \centering
-    \caption{Systematische Überprüfung und Verifikation der Forschungshypothesen}
-    \label{tab:hypotheses-eval}
-    \small
-    \begin{tabularx}{\textwidth}{p{2.2cm}p{3.5cm}XX}
-        \toprule
-        \textbf{Hypothese} & \textbf{Zielvorgabe} & \textbf{Gemessener Wert} & \textbf{Status} \\
-        \midrule
-        \textbf{H1} (Transfer Learning) & $\ge$ 15 Prozentpunkte Genauigkeitsgewinn ggü. Scratch-CNN & \textbf{+26,42 pp} (EXP-003: 87,42\% vs. EXP-001: 61,00\%) & \textbf{Bestätigt} \\
-        \textbf{H2} (Modell-kompression) & Modellschnitt $\ge$ 4x kleiner, Latenzreduktion $\ge$ 40\%, Genauigkeitsverlust $<$ 2 pp & \textbf{9,0x kleiner} (2,61 MB vs. 23,48 MB), \textbf{74,2\% Latenzsenkung} (10,32 ms vs. 40 ms), \textbf{-0,07 pp Verlust} & \textbf{Bestätigt} \\
-        \textbf{H3} (Multi-Objekt-Erkennung) & Lokalisierung mehrerer Objekte, Inferenzrate $\ge$ 15 FPS auf CPU & \textbf{21,8 FPS} (ca. \SI{46.0}{\milli\second} CPU-Latenz mit YOLO11n, EXP-014) & \textbf{Bestätigt} \\
-        \textbf{H4} (EMA-Signal-glättung) & Verhinderung von mechatronischem Jitter bei $\alpha = 0,15$ ohne kritischen Verzug & Signalfluktuationen gedämpft, stochastisches Rauschen eliminiert, Verzug nur ca. \SI{250}{\milli\second} & \textbf{Bestätigt} \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+Die Überprüfung der vier Hypothesen und die zugehörigen Messwerte sind in Tabelle~\ref{tab:hypotheses-targets} und \ref{tab:hypotheses-results} im Anhang dokumentiert.
 
 Die Ergebnisse bestätigen die erste Hypothese (H1) deutlich. Ein vortrainiertes Backbone (MobileNetV2, \cite{sandler2018mobilenetv2}) ist für die Materialklassifizierung einem von Grund auf trainierten, flachen Netzwerk (EXP-001) überlegen. Dies ist darauf zurückzuführen, dass ein Scratch-CNN bei stark begrenzten Datensätzen (Stage A: 604 Bilder) nicht genügend statistische Stützstellen besitzt, um verallgemeinerungsfähige Repräsentationen (Kanten, Texturen) zu erlernen. Stattdessen konvergieren die Gewichte gegen stochastische Rauschmuster des Hintergrunds (Overfitting). Der Transfer von vortrainierten ImageNet-Filtern erlaubt es dem Modell hingegen, von Beginn an semantische Geometrien zu nutzen, was sich in einem Anstieg der Validierungsgenauigkeit um +26,42 Prozentpunkte niederschlug \cite{yosinski2014transferable}.
 

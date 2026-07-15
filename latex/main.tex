@@ -94,17 +94,15 @@
 \input{sections/title}
 \clearpage
 
-% 2. Zusammenfassung (Zählt laut Regeln nicht mit) [2]
-\input{sections/abstract}
-\clearpage
-
-% 3. Projektüberblick (Zählt laut Regeln nicht mit) [2]
-\input{sections/projektueberblick}
-\clearpage
-
-% 4. Das eine Inhaltsverzeichnis (auf einer eigenen Seite!) [2]
+% 2. Das eine Inhaltsverzeichnis (auf einer eigenen Seite!)
 \tableofcontents
-\clearpage             % Beendet die römische Nummerierung und erzeugt einen sauberen Umbruch [2]
+\clearpage
+
+% 3. Projektüberblick + Zusammenfassung (zählen laut Regeln nicht mit, teilen sich eine Seite)
+\input{sections/projektueberblick}
+\vspace{1em}
+\input{sections/abstract}
+\clearpage             % Beendet die römische Nummerierung und erzeugt einen sauberen Umbruch
 
 % ==============================================================================
 % TEIL B: HAUPTBEREICH (Exakt maximal 15 Seiten ab hier) [2]
@@ -116,7 +114,6 @@
 \input{sections/background}
 \input{sections/methodology}
 \input{sections/implementation}
-% \input{sections/experiments}
 \input{sections/results}
 \input{sections/discussion}
 \input{sections/conclusion}

@@ -1,27 +1,29 @@
 \section{Zusammenfassung und Ausblick}
 
+\subsection{Zusammenfassung}
 Das Projekt \mira hat erfolgreich demonstriert, dass die Kombination aus Transfer Learning, gezielter Datensatz-Fusion und Post-Training-Quantisierung zu einem praxistauglichen, ressourceneffizienten KI-System für die automatische Wertstoffsortierung führt. Die vier zentralen Hypothesen wurden allesamt bestätigt:
 \begin{itemize}
-    \item \textbf{H1:} Transfer Learning mit MobileNetV2 übertraf das Scratch-CNN um +26,42 Prozentpunkte.
-    \item \textbf{H2:} INT8-Quantisierung reduzierte die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} bei vernachlässigbarem Genauigkeitsverlust (-0,07 pp).
-    \item \textbf{H3:} Das YOLO11n-Detektionsmodell erreicht eine CPU-Inferenzrate von \SI{21.8}{FPS}, was für einen kontinuierlichen Sortierprozess ausreicht.
-    \item \textbf{H4:} Der EMA-Filter ($\alpha=0,15$) eliminiert erfolgreich Signalflackern ohne kritischen Verzug.
+    \item \textbf{H1:} Transfer Learning mit MobileNetV2 übertraf das Scratch-CNN um +26,42~pp (\SI{87.42}{\percent} vs.\ \SI{61.00}{\percent}).
+    \item \textbf{H2:} INT8-Quantisierung reduzierte die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} bei vernachlässigbarem Genauigkeitsverlust ($-$0,07~pp) und 74,2\% Latenzsenkung.
+    \item \textbf{H3:} Das YOLO11n-Detektionsmodell erreicht eine CPU-Inferenzrate von \SI{21.8}{FPS} und erkennt simultan mehrere Objekte im Kamerabild.
+    \item \textbf{H4:} Der EMA-Filter ($\alpha=0{,}15$) eliminiert erfolgreich Signalflackern ohne kritischen mechanischen Verzug (ca.\ \SI{250}{\milli\second}).
 \end{itemize}
 
-Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Data-Centric AI (Datenqualität und -vielfalt) die Modellleistung stärker beeinflusst als reine Architektur-Optimierungen. Der GIGO-Effekt beim Auto-Labeling zwang zur Adaption professioneller Datensätze, was die Generalisierungsfähigkeit dramatisch verbesserte.
+Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Datenqualität und -vielfalt die Modellleistung stärker beeinflussen als reine Architektur-Optimierungen \cite{zha2023datacentric}. Der GIGO-Effekt beim Auto-Labeling (EXP-005) zwang zur Adaption professioneller Datensätze, was die Generalisierungsfähigkeit dramatisch verbesserte. Der 4-Wege-Datensatzvergleich (EXP-013 bis EXP-016) belegt, dass die Kombination aus TACO, TrashNet und Roboflow das beste generalisierbare Ergebnis liefert (\SI{60.7}{\percent} mAP50, \SI{85.8}{\percent} F1 im Praxistest).
 
-Für eine industrielle Umsetzung sind mehrere Entwicklungsschritte notwendig:
+\subsection{Ausblick}
+Aus den Ergebnissen ergeben sich folgende nächste Schritte zur Fertigstellung des physischen Gesamtsystems:
 
 \begin{enumerate}
-    \item \textbf{Hardware-Integration:} Der Prototyp muss auf der Zielhardware (Raspberry Pi Zero 2W) implementiert und getestet werden. Dies beinhaltet die Anbindung an Servomotoren und Sensoren sowie die Optimierung der Inferenzpipeline für die ARM-Architektur.
+    \item \textbf{Mechatronischer Aufbau:} Das System wird als 3-DOF-Roboterarm realisiert. Ein Raspberry Pi führt die Bildverarbeitung aus und sendet die Objektkoordinaten via Serial-Protokoll an einen ESP32-S3-Mikrocontroller, der die Servomotoren (MG996R) präzise ansteuert. Ein Time-of-Flight-Lasersensor (VL53L0X) am Greifer misst die Z-Achse für den Greifvorgang.
     
-    \item \textbf{Erweiterung der Klassifikation:} Das aktuelle fünfklassige System (Glas, Metall, Papier, Plastik, Restmüll) sollte um weitere relevante Abfallfraktionen erweitert werden, wie z.\,B. Biomüll, Elektroschrott oder Textilien. Dies erfordert die Integration neuer, spezialisierter Datensätze.
+    \item \textbf{Modellkompression:} Durch Knowledge Distillation \cite{hinton2015distilling} könnte ein kleineres „Studenten"-Netzwerk das Verhalten des YOLO11n-Modells imitieren und die Inferenzlatenz weiter reduzieren. Ergänzend sollte Pruning die Modellstruktur verschlanken.
     
-    \item \textbf{Synthetische Datengenerierung:} Um das Problem des Klassenungleichgewichts, insbesondere bei der Klasse \textit{Trash}, zu lösen, sollte ein Pipeline zur synthetischen Datengenerierung mittels Diffusionsmodellen (z.\,B. Stable Diffusion) etabliert werden. Dies würde es ermöglichen, realistische, annotierte Trainingsbilder für unterrepräsentierte Klassen zu erzeugen.
+    \item \textbf{Erweiterung der Klassifikation:} Das fünfklassige System sollte um Biomüll, Elektroschrott oder Textilien erweitert werden. Um das Klassenungleichgewicht bei \textit{Trash} zu lösen, ist eine Pipeline zur synthetischen Datengenerierung mittels Diffusionsmodellen vorgesehen.
     
-    \item \textbf{Online-Lernen:} Ein Mechanismus zum kontinuierlichen Lernen aus Fehlsortierungen im Live-Betrieb würde die langfristige Robustheit des Systems erhöhen. Hierfür müsste ein Feedback-Loop implementiert werden, der falsch klassifizierte Objekte in den Trainingsdatensatz zurückführt.
+    \item \textbf{Cloud-IoT-Erweiterung:} Das lokale Streamlit-Dashboard wird um eine MQTT-Schnittstelle zur Fernüberwachung mehrerer dezentraler Sortiereinheiten erweitert.
     
-    \item \textbf{Energieeffizienz-Optimierung:} Für den batteriebetriebenen Einsatz sollte die Inferenzlatenz weiter reduziert werden, z.\,B. durch Pruning, Knowledge Distillation oder die Nutzung spezialisierter Edge-AI-Chips (z.\,B. Google Coral TPU).
+    \item \textbf{Online-Lernen:} Ein Feedback-Loop, der falsch klassifizierte Objekte in den Trainingsdatensatz zurückführt, soll die langfristige Robustheit des Systems erhöhen.
 \end{enumerate}
 
-Die Kosten für ein solches System könnten bei einer Serienproduktion auf unter 100 Euro gesenkt werden, was es zu einer kosteneffizienten Alternative zu teuren industriellen Sortieranlagen macht. Insgesamt zeigt diese Arbeit, dass Deep Learning nicht nur in Cloud-Umgebungen, sondern auch auf extrem ressourcenbeschränkter Hardware praktikable Lösungen für reale Probleme liefern kann.
+Die Kosten für ein solches System könnten bei Serienproduktion auf unter \SI{100}{\euro} gesenkt werden. Insgesamt zeigt diese Arbeit, dass Deep Learning nicht nur in Cloud-Umgebungen, sondern auch auf extrem ressourcenbeschränkter Hardware praktikable Lösungen für reale Probleme liefern kann.
