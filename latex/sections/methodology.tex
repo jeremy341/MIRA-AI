@@ -14,22 +14,4 @@ Die Deckenbeleuchtung erzeugte starke Reflexionen (glare) auf der weißen Tischp
 Als Konsequenz wurde dieser Ansatz verworfen. Stattdessen wurde eine Datenfusion realisiert: Das Modell wurde auf der unbeschädigten Teilmenge des Stanford-TrashNet-Datensatzes \cite{yang2016classification} trainiert, welche mithilfe des \textit{Segment Anything Models} (SAM, \cite{kirillov2023segment}) halbautomatisch mit präzisen Bounding Boxes re-annotiert wurde. Dieser Kernbestand wurde mit einer hand-annotierten, hochgradig diversifizierten Wild-Data-Kollektion aus Roboflow \cite{roboflow2023trash} sowie dem TACO-Datensatz \cite{proenca2020taco} gemischt. 
 
 \subsection{Taxonomie-Mapping der Detektionsdatensätze}
-Um die stark abweichenden Taxonomien der externen Datenquellen (z.\ B. 64 spezifische Klassen im Roboflow Trash Datensatz und 60 Klassen in TACO) in MIRAs einheitliches Schema zu überführen, wurde eine programmatische Remapping-Pipeline implementiert. Tabelle \ref{tab:taxonomy-mapping} zeigt exemplarisch, wie Unterklassen auf die fünf Hauptklassen abgebildet wurden.
-
-\begin{table}[h]
-    \centering
-    \caption{Taxonomie-Mapping der Rohdatensätze auf die 5 MIRA-Klassen}
-    \label{tab:taxonomy-mapping}
-    \small
-    \begin{tabularx}{\textwidth}{lX}
-        \toprule
-        \textbf{MIRA-Zielklasse} & \textbf{Auswahl remapperter Quellklassen (Roboflow / TACO)} \\
-        \midrule
-        \textbf{Glass} (ID 0) & Glass-bottles, broken-glass, jars, glass-cups \\
-        \textbf{Metal} (ID 1) & Drink-cans, food-cans, aerosols, aluminium-foil, metal-lids, pop-tabs \\
-        \textbf{Paper} (ID 2) & Cardboard-boxes, drink-cartons, egg-cartons, paper-bags, tissues, newspaper \\
-        \textbf{Plastic} (ID 3) & PET-bottles, plastic-bags, bubble-wrap, crisp-packets, plastic-cups, food-wrap \\
-        \textbf{Trash} (ID 4) & Batteries, cigarettes, food-waste, face-masks, blister-packs, unlabeled-litter \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
+Um die stark abweichenden Taxonomien der externen Datenquellen (z.\ B. 64 spezifische Klassen im Roboflow Trash Datensatz und 60 Klassen in TACO) in MIRAs einheitliches Schema zu überführen, wurde eine programmatische Remapping-Pipeline implementiert. Die fünf Zielklassen (Glass, Metal, Paper, Plastic, Trash) wurden so definiert, dass sie die wesentlichen Wertstofffraktionen abdecken. Die vollständige Remapping-Tabelle mit Quellklassen findet sich im Anhang (Tabelle \ref{tab:taxonomy-mapping}).

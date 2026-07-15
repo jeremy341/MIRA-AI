@@ -28,7 +28,34 @@ Im dritten Abschnitt der Detektionsphase wurde die Basisarchitektur von YOLOv8-N
 EXP-014 erzielt den besten Gesamtmittelwert (+5,6~pp über EXP-013), mit besonders starken Zuwächsen bei Trash (+11,3~pp) und Glass (+6,3~pp). Der WaRP-Datensatz (EXP-015) verbessert Glass signifikant (+24,8~pp), senkt aber Trash drastisch (-12,6~pp), da WaRP keine Trash-Klasse enthält. Der vollständige Modellvergleich ist in Abbildung~\ref{fig:heatmap-4datasets} als Heatmap dargestellt.
 
 \subsection{Modellvergleich der Klassifikation (Stage A)}
-Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 sind in Tabelle \ref{tab:class-results} zusammengefasst.
+Kurzfassung der wichtigsten Werte:
+\begin{table}[h]
+    \centering
+    \caption{Kompakter Klassifikationsvergleich}
+    \label{tab:class-results-summary}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Modell} & \textbf{Val. Accuracy} \\
+        \midrule
+        EXP-001 Baseline CNN & \SI{61.00}{\percent} \\
+        EXP-002 Frozen MobileNetV2 & \SI{84.28}{\percent} \\
+        EXP-003 Fine-Tuned MobileNetV2 & \SI{87.42}{\percent} \\
+        EXP-004 INT8 TFLite & \SI{87.35}{\percent} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Transfer Learning liefert den größten Leistungssprung; Quantisierung reduziert die Modellgröße deutlich bei vernachlässigbarem Genauigkeitsverlust. Abbildung~\ref{fig:stagea-acc} visualisiert diesen Vergleich.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth, keepaspectratio]{figures/stagea-acc-comparison.png}
+    \caption{Vergleich der Validierungsgenauigkeit der vier Klassifikationsmodelle (Stage A).}
+    \label{fig:stagea-acc}
+\end{figure}
+
+\subsection{Detaillierter Klassifikationsvergleich}
+Tabelle~\ref{tab:class-results} zeigt die vollständigen Metriken inklusive Loss, Latenz und Dateigröße. Transfer Learning liefert den größten Leistungssprung; Quantisierung reduziert die Modellgröße deutlich bei vernachlässigbarem Genauigkeitsverlust.
 
 \begin{table}[h]
     \centering
@@ -36,7 +63,7 @@ Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 
     \label{tab:class-results}
     \begin{tabular}{lcccc}
         \toprule
-        \textbf{Modell} & \textbf{Val. Accuracy} & \textbf{Val. Loss} & \textbf{Latenz (CPU)} & \textbf{Dateigröße} \\
+        \textbf{Modell} & \textbf{Val. Acc.} & \textbf{Val. Loss} & \textbf{Latenz} & \textbf{Größe} \\
         \midrule
         EXP-001 Baseline CNN & \SI{61.00}{\percent} & 1,0633 & \SI{5.81}{\milli\second} & \SI{15.22}{\mega\byte} \\
         EXP-002 Frozen MobileNetV2 & \SI{84.28}{\percent} & 0,5659 & \SI{38.00}{\milli\second} & \SI{8.49}{\mega\byte} \\
@@ -46,32 +73,38 @@ Die quantitativen Ergebnisse der Klassifikationsexperimente EXP-001 bis EXP-004 
     \end{tabular}
 \end{table}
 
-Die Ergebnisse belegen, dass Transfer Learning den größten Leistungssprung bringt. Das Baseline-CNN bleibt deutlich hinter den anderen Modellen zurück. Die Quantisierung (EXP-004) reduziert die Modellgröße um den Faktor 9,0x auf \SI{2.61}{\mega\byte}, ohne die Validierungsgenauigkeit messbar zu verschlechtern (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent}, $\Delta = -0.07$ pp). Abbildung \ref{fig:stagea-acc} fasst die Genauigkeitsunterschiede grafisch zusammen.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.75\textwidth, keepaspectratio]{figures/stagea-acc-comparison.png}
-    \caption{Vergleich der Validierungsgenauigkeit der vier Klassifikationsmodelle (Stage A).}
-    \label{fig:stagea-acc}
-\end{figure}
-
-\subsection{Per-Class-Analyse der Klassifikation}
-
 \subsection{Detektionsmetriken (Stage B)}
-Tabelle~\ref{tab:yolo-results} fasst die chronologische Entwicklung aller Detektionsexperimente zusammen.
+Kompakte Detektionsübersicht (mAP50):
+\begin{table}[h]
+    \centering
+    \caption{Kompakte Detektionsübersicht}
+    \label{tab:yolo-results-summary}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{Experiment} & \textbf{mAP50} \\
+        \midrule
+        EXP-013 (TACO+TrashNet) & \SI{55.1}{\percent} \\
+        EXP-014 (+Roboflow) & \SI{60.7}{\percent} \\
+        EXP-015 (+WaRP) & \SI{56.0}{\percent} \\
+        EXP-016 (WaRP-only) & \SI{58.8}{\percent} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
-\begin{table}[H]
+EXP-014 liefert das beste Gleichgewicht aus Datenfusion und mAP50. Die vollständigen Metriken inklusive GPU/CPU-Latenz sind in Tabelle~\ref{tab:yolo-results} dokumentiert.
+
+\begin{table}[h]
     \centering
     \caption{Detektionsresultate: Architektur- und Datensatzvergleich (EXP-013 bis EXP-016)}
     \label{tab:yolo-results}
     \small
     \begin{tabular}{llcccc}
         \toprule
-        \textbf{Experiment} & \textbf{Datensatz} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Latenz (GPU)} & \textbf{Latenz (CPU)} \\
+        \textbf{Experiment} & \textbf{Datensatz} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{GPU} & \textbf{CPU} \\
         \midrule
-        EXP-013 YOLO11n & TACO+TrashNet (mira\_v2) & \SI{55.10}{\percent} & \SI{49.80}{\percent} & \SI{3.60}{\milli\second} & \SI{45.20}{\milli\second} \\
-        EXP-014 YOLO11n & TACO+TrashNet+Roboflow & \textbf{\SI{60.70}{\percent}} & \SI{50.60}{\percent} & \SI{1.80}{\milli\second} & \SI{46.00}{\milli\second} \\
-        EXP-015 YOLO11n & TACO+TrashNet+WaRP & \SI{56.00}{\percent} & \SI{45.10}{\percent} & \SI{1.50}{\milli\second} & \SI{45.50}{\milli\second} \\
+        EXP-013 YOLO11n & TACO+TrashNet & \SI{55.10}{\percent} & \SI{49.80}{\percent} & \SI{3.60}{\milli\second} & \SI{45.20}{\milli\second} \\
+        EXP-014 YOLO11n & +Roboflow & \textbf{\SI{60.70}{\percent}} & \SI{50.60}{\percent} & \SI{1.80}{\milli\second} & \SI{46.00}{\milli\second} \\
+        EXP-015 YOLO11n & +WaRP & \SI{56.00}{\percent} & \SI{45.10}{\percent} & \SI{1.50}{\milli\second} & \SI{45.50}{\milli\second} \\
         EXP-016 YOLO11n & WaRP-only & \SI{58.80}{\percent} & \SI{43.20}{\percent} & \SI{1.20}{\milli\second} & \SI{44.80}{\milli\second} \\
         \bottomrule
     \end{tabular}
@@ -95,14 +128,14 @@ Im Verlauf von Stage B wurde die Basisarchitektur von YOLOv8-Nano auf YOLO11n mi
 \end{figure}
 
 \subsection{Per-Class-Analyse: Bestes Detektionsmodell (EXP-014)}
-Tabelle \ref{tab:exp014-class} zeigt die detaillierten Validierungsergebnisse des Fusionsmodells EXP-014.
+Tabelle~\ref{tab:exp014-class} zeigt die klassenspezifischen Validierungsergebnisse. Paper bleibt die stärkste Klasse, Trash die schwächste.
 
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \caption{Klassenspezifische Metriken von EXP-014 (YOLO11n, TACO+TrashNet+Roboflow)}
     \label{tab:exp014-class}
     \small
-    \begin{tabular}{lccccr}
+    \begin{tabular}{lccccc}
         \toprule
         \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Instanzen} \\
         \midrule
@@ -115,23 +148,19 @@ Tabelle \ref{tab:exp014-class} zeigt die detaillierten Validierungsergebnisse de
     \end{tabular}
 \end{table}
 
-Paper ist die stärkste Klasse (\SI{82.9}{\percent} mAP50) aufgrund großer Oberfläche und klarer Textur. Trash bleibt die schwächste Klasse (\SI{26.9}{\percent}) wegen extremer intra-klassenspezifischer Variabilität.
-
 Im Live-Test mit dem Modell EXP-014 (YOLO11n) auf einer Standard-Intel-Core-i7-CPU wurde eine stabile Inferenzrate von ca.\ \SI{21.8}{\text{FPS}} (Latenz ca.\ \SI{46.0}{\milli\second}) gemessen, was für einen kontinuierlichen Sortierprozess ausreicht. Alle Latenzen der GPU-Spalte in Tabelle \ref{tab:yolo-results} wurden auf einer Nvidia T4 Cloud-GPU erfasst, um eine Vergleichbarkeit mit Standard-Benchmarks zu gewährleisten. Auf der geplanten Zielhardware (Raspberry Pi Zero 2W CPU) wird nach vorläufigen Compiler-Simulationen durch den LiteRT-INT8-Export eine Latenz von ca.\ \SI{90}{\milli\second} bis \SI{120}{\milli\second} (ca.\ \num{8} bis \num{11} FPS) erwartet. Dies macht die Kopplung mit einem schnellen Tracker wie ByteTrack zur Bewegungsprädiktion zwingend erforderlich.
 
 \subsection{Webcam-Praxistest (Field Benchmark)}
-Um die Generalisierungsfähigkeit der Modelle abseits von statischen Testdaten unter variablen Realbedingungen zu bewerten, wurde ein \emph{Field Benchmark} durchgeführt. Hierbei wurden die Modelle an Live-Webcam-Streams unter unkontrollierten Raumbeleuchtungen evaluiert.
+Um die Generalisierungsfähigkeit der Modelle abseits von statischen Testdaten zu prüfen, wurde ein Field-Benchmark auf Live-Webcam-Streams durchgeführt. Tabelle~\ref{tab:field-bench} vergleicht die Praxisergebnisse aller Modelle.
 
-Als Metrik dient der \textit{Image-Level F1-Score}, der misst, ob die Präsenz einer Wertstoffklasse im Bild korrekt detektiert wurde (unabhängig von der exakten Bounding-Box-Überlappung IoU). Dies simuliert die grobe Sortierzuverlässigkeit. Tabelle \ref{tab:field-bench} fasst die Ergebnisse über alle elf Modelle zusammen, visualisiert in Abbildung \ref{fig:field-benchmark-f1}.
-
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \caption{Modellvergleich im realen Praxistest (Field Benchmark)}
     \label{tab:field-bench}
     \small
     \begin{tabular}{lcccccc}
         \toprule
-        \textbf{Modell} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+        \textbf{Modell} & \textbf{TP} & \textbf{FP} & \textbf{FN} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\
         \midrule
         \textbf{mira\_exp014.pt} & \textbf{669} & \textbf{51} & \textbf{170} & \textbf{\SI{92.9}{\percent}} & \textbf{\SI{79.7}{\percent}} & \textbf{\SI{85.8}{\percent}} \\
         mira\_exp014\_int8.tflite & 492 & 20 & 347 & \SI{96.1}{\percent} & \SI{58.6}{\percent} & \SI{72.8}{\percent} \\
@@ -148,20 +177,9 @@ Als Metrik dient der \textit{Image-Level F1-Score}, der misst, ob die Präsenz e
     \end{tabular}
 \end{table}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth, keepaspectratio]{figures/field-benchmark-f1.png}
-    \caption{Vergleich der F1-Scores im realen Praxistest. Das Fusionsmodell EXP-014 (FP32) erreicht mit \SI{85.8}{\percent} das beste Ergebnis. Das TFLite-INT8-Modell von EXP-011 versagt bei einem Standard-Schwellenwert von $0,5$ vollständig.}
-    \label{fig:field-benchmark-f1}
-\end{figure}
+Die klassenspezifischen F1-Scores des besten Modells (EXP-014) zeigt Tabelle~\ref{tab:exp014-field-class}. Im Live-Test wurde eine stabile Inferenzrate von ca.\ \SI{21.8}{\text{FPS}} (Latenz ca.\ \SI{46.0}{\milli\second}) auf einer Intel-Core-i7-CPU gemessen.
 
-Das Fusionsmodell EXP-014 (FP32) erweist sich mit \SI{85.8}{\percent} F1-Score als das mit Abstand praxistauglichste Modell. Durch die INT8-Quantisierung verliert das Modell ca.\ \num{13} Prozentpunkte an F1-Score (\SI{72.8}{\percent}), was auf die starke Unterdrückung von Aktivierungssignalen durch die ganzzahlige Rundung zurückzuführen ist. 
-
-Besonders auffällig ist der Totalausfall von \texttt{mira\_exp011\_int8.tflite} (\SI{0.0}{\percent} F1): Bei einem Standard-Konfidenzschwellenwert von $\text{conf}=0,5$ liefert das Modell keinerlei Detektionen, da die INT8-Gewichtsreduktion die Inferenz-Scores systematisch absenkt. Eine manuelle Reduktion des Schwellenwerts auf $\text{conf}=0,25$ im laufenden Betrieb stellte die Funktionalität dieses Modells wieder her (Inferenzrate ca.\ \num{1,6} Objekte/Frame), was als wichtige Implementierungsrichtlinie in die Steuerungseinheit einfloss.
-
-Tabelle \ref{tab:exp014-field-class} zeigt den klassenspezifischen Praxistest-F1-Score für das beste Modell EXP-014.
-
-\begin{table}[H]
+\begin{table}[h]
     \centering
     \caption{Klassenspezifische F1-Scores von EXP-014 im Praxistest}
     \label{tab:exp014-field-class}
@@ -178,5 +196,3 @@ Tabelle \ref{tab:exp014-field-class} zeigt den klassenspezifischen Praxistest-F1
         \bottomrule
     \end{tabular}
 \end{table}
-
-Im Einklang mit der Offline-Evaluation bleibt die Erkennung von Restmüll (\textit{trash}) mit einem F1-Score von \SI{54.0}{\percent} auch unter Realbedingungen die größte technologische Herausforderung. Die restlichen Klassen liegen mit Werten über \SI{84}{\percent} im Bereich industrieller Anforderungen.
