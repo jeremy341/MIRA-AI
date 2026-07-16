@@ -77,6 +77,7 @@ def main():
     live_parser.add_argument("--target-latency", type=int, default=50, help="Target latency in ms (default: 50).")
     live_parser.add_argument("--conf", type=float, default=0.5, help="Confidence threshold (default: 0.5).")
     subparsers.add_parser("dashboard", help="Launch Streamlit web control center")
+    subparsers.add_parser("dashboard-new", help="Launch Flask+SocketIO web control center (B&W theme)")
 
     args = parser.parse_args()
 
@@ -117,6 +118,9 @@ def main():
     elif args.command == "dashboard":
         print("Launching Streamlit web server...")
         subprocess.run(["streamlit", "run", str(SCRIPT_DIR / "dashboard.py")], check=True)
+    elif args.command == "dashboard-new":
+        from dashboard_flask.app import run_dashboard
+        run_dashboard()
     elif args.command == "eval-class":
         run_script(REF_DIR / "evaluate_classifier.py", ["--model", args.model, "--exp", args.exp])
     elif args.command == "eval-yolo":

@@ -399,7 +399,7 @@ EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both sma
 * **Export Time:** 1093.7 s
 
 ### Observation
-EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% — a +5.6 point improvement. The biggest gains come from Trash (+11.3 pp, 15.6% → 26.9%) and Glass (+6.3 pp, 46.2% → 50.2%), validating that Roboflow's diverse outdoor litter images help the model generalize to real-world waste. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) — consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
+EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% — a +5.6 point improvement. The biggest gain comes from Trash (+11.3 pp, 15.6% → 26.9%); Glass drops slightly (−6.3 pp, 56.5% → 50.2%). Roboflow's diverse outdoor litter images help trash generalization. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) — consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
 
 ---
 

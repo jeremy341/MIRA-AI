@@ -2,22 +2,24 @@
 \addcontentsline{toc}{section}{Unterstützungsleistungen}
 
 \begin{itemize}
-    \item \textbf{Anthropic (Claude):} KI-Sprachmodell; Art der Unterstützung: Theoretische Strukturierung der physikalischen Hypothesen, Anpassung der Keras- und TFLite-Exportparameter, Debugging der asynchronen OpenCV-Inferenzschleifen.
+    \item \textbf{Claude (Anthropic PBC, San Francisco, USA):} KI-Sprachmodell; Art der Unterstützung: Theoretische Strukturierung der physikalischen Hypothesen, Anpassung der Keras- und TFLite-Exportparameter, Code-Review und Optimierung der asynchronen OpenCV-Inferenzschleifen.
+    
+    \item \textbf{[Name des Betreuungslehrers], Betreuungslehrer, Gymnasium Mülheim an der Ruhr, Mülheim an der Ruhr:} Art der Unterstützung: Fachliche Begleitung und Beratung bei der Themenfindung sowie der Strukturierung der schriftlichen Arbeit.
     
     \item \textbf{Sparkassenstiftung Mülheim an der Ruhr, Mülheim an der Ruhr:} Stiftung; Art der Unterstützung: Sponsoring-Anträge für mechatronische Hardwarekomponenten eingereicht.
 \end{itemize}
 
-Die physische Datenerfassung der Recyclingobjekte, das Einrichten des lokalen PyCharm-Arbeitsbereichs, das eigenständige Ausführen des Modelltrainings in der Google Colab- und Kaggle-Cloud sowie die systematische Fehleranalyse (wie die Entdeckung des RGB/BGR-Kanalfehlers und des GIGO-Effekts beim Auto-Labeling) erfolgten vollständig eigenständig durch den Jungforscher.
+Die physische Datenerfassung der Recyclingobjekte, das Einrichten des lokalen PyCharm-Arbeitsbereichs, das eigenständige Ausführen des Modelltrainings in der Google Colab- und Kaggle-Cloud sowie die systematische Fehleranalyse (wie die eigenständige Entdeckung des RGB/BGR-Kanalfehlers und des GIGO-Effekts beim Auto-Labeling) erfolgten vollständig eigenständig durch den Jungforscher. Die genannten KI-gestützten Unterstützungsleistungen dienten ausschließlich als methodische Hilfsmittel; alle wissenschaftlichen Schlussfolgerungen, Hypothesenformulierungen und experimentellen Designentscheidungen wurden eigenständig getroffen.
 
 \clearpage
 \section*{Anhang}
 \addcontentsline{toc}{section}{Anhang}
 
-\subsection*{Taxonomie-Mapping}
-\addcontentsline{toc}{subsection}{Taxonomie-Mapping}
+\subsection*{Klassenschema-Mapping}
+\addcontentsline{toc}{subsection}{Klassenschema-Mapping}
 \begin{table}[h]
     \centering
-    \caption{Taxonomie-Mapping der Rohdatensätze auf die 5 MIRA-Klassen}
+    \caption{Klassenschema-Mapping der Rohdatensätze auf die 5 MIRA-Klassen}
     \label{tab:taxonomy-mapping}
     \small
     \begin{tabularx}{\textwidth}{lX}
@@ -33,41 +35,4 @@ Die physische Datenerfassung der Recyclingobjekte, das Einrichten des lokalen Py
     \end{tabularx}
 \end{table}
 
-\subsection*{Hypothesenüberprüfung}
-\addcontentsline{toc}{subsection}{Hypothesenüberprüfung}
 
-Tabelle~\ref{tab:hypotheses-targets} fasst die Zielvorgaben zusammen, Tabelle~\ref{tab:hypotheses-results} die zugehörigen Messwerte.
-
-\begin{table}[h]
-    \centering
-    \caption{Forschungshypothesen und Zielvorgaben}
-    \label{tab:hypotheses-targets}
-    \small
-    \begin{tabularx}{\textwidth}{lX}
-        \toprule
-        \textbf{Hypothese} & \textbf{Zielvorgabe} \\
-        \midrule
-        \textbf{H1} (Transfer Learning) & $\ge$ 15~pp Genauigkeitsgewinn ggü.\ Scratch-CNN \\
-        \textbf{H2} (Modellkompression) & Modell $\ge$ 4$\times$ kleiner, Latenzreduktion $\ge$ 40\%, Verlust $<$ 2~pp \\
-        \textbf{H3} (Multi-Objekt-Erkennung) & Lokalisierung mehrerer Objekte, $\ge$ 15~FPS auf CPU \\
-        \textbf{H4} (EMA-Signalglättung) & Verhinderung von mechatronischem Jitter bei $\alpha = 0{,}15$ \\
-        \bottomrule
-    \end{tabularx}
-\end{table}
-
-\begin{table}[h]
-    \centering
-    \caption{Gemessene Ergebnisse und Verifikationsstatus}
-    \label{tab:hypotheses-results}
-    \small
-    \begin{tabularx}{\textwidth}{lXX}
-        \toprule
-        \textbf{Hypothese} & \textbf{Gemessener Wert} & \textbf{Status} \\
-        \midrule
-        \textbf{H1} & +26,42~pp (EXP-003: 87,42\% vs.\ EXP-001: 61,00\%) & \textbf{Bestätigt} \\
-        \textbf{H2} & 9,0$\times$ kleiner (2,61\,MB vs.\ 23,48\,MB), 74,2\% Latenzsenkung, $-$0,07~pp Verlust & \textbf{Bestätigt} \\
-        \textbf{H3} & 21,8~FPS (ca.\ \SI{46.0}{\milli\second} CPU-Latenz, EXP-014) & \textbf{Bestätigt} \\
-        \textbf{H4} & Signalfluktuationen gedämpft, Verzug ca.\ \SI{250}{\milli\second} & \textbf{Bestätigt} \\
-        \bottomrule
-    \end{tabularx}
-\end{table}

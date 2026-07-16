@@ -15,8 +15,7 @@ Die technologische Herausforderung besteht darin, diese drei Parameter durch gez
 \subsection{Convolutional Neural Networks (CNNs)}
 Für Aufgaben der Computer Vision haben sich Convolutional Neural Networks (CNNs) als Standard etabliert \cite{lecun2015deep, bengio2013representation}. Im Gegensatz zu klassischen, vollverknüpften Netzen nutzen CNNs die räumliche Struktur von Bildern aus, indem sie Merkmale schrittweise über zweidimensionale Faltungsoperationen extrahieren. Frühe Schichten lernen elementare geometrische Strukturen wie Kanten und Farbgradienten, während tiefere Schichten diese zu komplexen semantischen Konzepten kombinieren. Nachgeschaltete Aktivierungsfunktionen wie die Rectified Linear Unit ($\text{ReLU}(x) = \max(0, x)$) führen Nichtlinearitäten ein, und eine abschließende Softmax-Schicht wandelt die berechneten Rohwerte in eine Wahrscheinlichkeitsverteilung über die Klassen um.
 
-Die Evaluierung der Modellgüte erfolgt über das harmonische Mittel aus Precision (Präzision) und Recall (Sensitivität), ausgedrückt durch den $F_1$-Score:
-
+Die Evaluierung der Modellgüte erfolgt über Precision / Recall und den $F_1$-Score:
 \begin{equation}
 F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
 \end{equation}
@@ -24,29 +23,29 @@ F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \te
 \subsection{Transfer Learning und MobileNetV2}
 Das Training tiefer Netze von Grund auf erfordert zehntausende annotierte Bilder. Beim \emph{Transfer Learning} wird ein auf einem sehr großen Datensatz (ImageNet mit 1,4 Millionen Bildern) vortrainiertes Modell als Feature-Extractor wiederverwendet \cite{yosinski2014transferable}. 
 
-Als Rückgrat (Backbone) der Klassifikationsstufe von \mira wurde die MobileNetV2-Architektur gewählt \cite{sandler2018mobilenetv2}. Diese ist speziell für mobile Endgeräte optimiert und basiert auf \emph{Depthwise Separable Convolutions}. Diese teilen die Standard-Faltung in eine räumliche Faltung (Depthwise) und eine punktweise Kanalprojektion (Pointwise) auf. Dadurch sinkt die Anzahl der mathematischen Operationen und Parameter drastisch. 
+Als Rückgrat (Backbone) der Klassifikationsstufe von \mira wurde die MobileNetV2-Architektur gewählt \cite{sandler2018mobilenetv2}. Diese ist speziell für mobile Endgeräte optimiert und basiert auf \emph{Depthwise Separable Convolutions}. Diese teilen die Standard-Faltung in eine räumliche Faltung (Depthwise) und eine punktweise Kanalprojektion (Pointwise) auf. Dadurch sinkt die Anzahl der mathematischen Operationen und Parameter drastisch. Eine Standard-Faltung mit Kernelgröße $k \times k$, $C_{\text{in}}$ Eingabekanälen und $C_{\text{out}}$ Ausgabekanälen erfordert $k \times k \times C_{\text{in}} \times C_{\text{out}}$ Multiplikationen pro Pixel. Die depthwise-separable Variante zerlegt dies in einen räumlichen Filter ($k \times k \times C_{\text{in}}$) und eine punktweise $1 \times 1$-Kanalprojektion ($C_{\text{in}} \times C_{\text{out}}$), wodurch die Rechenkomplexität um einen Faktor von ungefähr $k^2$ (bei typischen $3 \times 3$-Kerneln ca.\ $8$--$9 \times$) reduziert wird. Diese Dekomposition ist möglich, da räumliche und kanalbezogene Korrelationen in Bildern weitgehend entkoppelt vorliegen. 
 
-MobileNetV2 nutzt zudem \emph{Inverted Residual Blocks} mit \emph{Linear Bottlenecks}, um den Informationsverlust in schmalen Schichten zu minimieren. Im Projekt wurde der Backbone zunächst eingefroren, um generische Filter zu erhalten, und anschließend ab Layer 100 feingetunt, um sich an die spezifischen Reflexionen von Wertstoffen anzupassen.
+MobileNetV2 nutzt zudem \emph{Inverted Residual Blocks} mit \emph{Linear Bottlenecks}, um den Informationsverlust in schmalen Schichten zu minimieren. Die „invertierte" Struktur erweitert die Kanaldimension zunächst (Expansionsfaktor $6 \times$), wendet die Depthwise-Faltung an und komprimiert anschließend wieder zurück -- im Gegensatz zum klassischen ResNet-Bottleneck, der zuerst komprimiert. Die lineare (ReLU-freie) Bottleneck-Schicht verhindert Informationsverlust in der niedrigdimensionalen Projektion, und Skip-Connections überspringen die dünne Bottleneck-Schicht direkt. Im Projekt wurde der Backbone zunächst eingefroren, um generische Filter zu erhalten, und anschließend ab Layer 100 feingetunt, um sich an die spezifischen Reflexionen von Wertstoffen anzupassen. Die Fein-Tuning-Parameter umfassen den Adam-Optimierer mit Lernrate $\eta = 10^{-5}$, 15 Trainingsepochen und eine Batch-Größe von 32. Die ersten 100 Schichten des MobileNetV2-Backbones bleiben eingefroren; ab Schicht 100 werden insgesamt 1.866.564 Parameter feingetunt (von 2.263.108 gesamt).
 
 \subsection{Post-Training-Quantisierung (INT8)}
-Die Post-Training-Quantisierung (PTQ) konvertiert die Gewichte und Aktivierungen des fertig trainierten Modells von 32-Bit-Fließkommazahlen (FP32) in hocheffiziente 8-Bit-Ganzzahlen (INT8) \cite{deng2020model}. Die Abbildung erfolgt über einen Skalierungsfaktor $S$ und einen ganzzahligen Nullpunkt $Z$:
-
+Die Post-Training-Quantisierung (PTQ) reduziert Modellgröße und Rechenaufwand durch Umwandlung in INT8-Formate. Die Quantisierungsabbildung lautet kompakt
 \begin{equation}
-q = \text{round}\left( \frac{r}{S} \right) + Z
+q = \mathrm{round}\left(\frac{r}{S}\right) + Z
 \end{equation}
+mit kontinuierlichem Wert $r$, Skalierungsfaktor $S$ und Nullpunkt $Z$.
 
-Wobei $r$ der kontinuierliche FP32-Wert und $q$ der quantisierte Ganzzahlwert ist. Der Speicherbedarf schrumpft dadurch um ca. \SI{75}{\percent} \cite{deng2020model}. Moderne ARM-Prozessoren (wie der Cortex-A72 des Raspberry Pi) können dank NEON-Vektoreinheiten vier 8-Bit-Integer-Operationen im selben Taktzyklus berechnen, den eine einzige 32-Bit-Gleitkomma-Operation benötigt. Dies führt zu einer massiven Reduktion der Inferenzlatenz \cite{deng2020model}.
+Die Reduktion von FP32 auf INT8 funktioniert, weil die Gewichte und Aktivierungen eines neuralen Netzwerks typischerweise in einem engen Wertebereich konzentriert sind \cite{krishnamoorthi2018quantizing}. Ganzzahlarithmetik (INT8) ist auf ARM-Prozessoren mit NEON-SIMD-Einheit deutlich effizienter als Gleitkommaarithmetik (FP32), da die Integer-Alu höhere Durchsatzraten bei niedrigerer Leistungsaufnahme erreicht. Für MIRA wurde eine Kalibrierung mit 100 repräsentativen Trainingsbildern durchgeführt, deren Aktivierungsbereiche (min/max) die Skalierungsfaktoren $S$ und $Z$ bestimmen \cite{krishnamoorthi2018quantizing}. Ein potenzielles Risiko stellt die Sättigung (Clipping) dar: Werden Ausreißer-Aktivierungen abgeschnitten, kann dies zu systematischen Fehlern führen, weshalb die Kalibrierungsstichprobe repräsentativ sein muss.
 
-\subsection{Echtzeit-Objekterkennung mit YOLO11n}
+\subsection{Echtzeit-Objekterkennung mit You Only Look Once (YOLO11n)}
 Für den mechatronischen Sortierprozess reicht eine reine Klassifikation ("Was ist im Bild?") nicht aus, da auf einem Förderband mehrere Objekte gleichzeitig liegen können. Das System benötigt exakte Ortskoordinaten.
 
-MIRA nutzt hierfür das Single-Shot-Detektionsmodell YOLO11n \cite{ultralyticsyolov8}. YOLO-Architekturen \cite{redmon2016yolo} verzichten auf komplexe, zweistufige Vorschlagsnetzwerke wie Faster R-CNN \cite{ren2015faster} und berechnen stattdessen in einem einzigen Vorwärtspass (Single Pass) über ein neuronales Netz sowohl die Begrenzungsrahmen (Bounding Boxes) als auch die Klassenwahrscheinlichkeiten für jedes Objekt.
+MIRA nutzt hierfür das Single-Shot-Detektionsmodell YOLO11n \cite{ultralyticsyolov8}. YOLO-Architekturen \cite{redmon2016yolo} verzichten auf komplexe, zweistufige Vorschlagsnetzwerke wie Faster R-CNN \cite{ren2015faster} und berechnen stattdessen in einem einzigen Vorwärtspass (Single Pass) über ein neuronales Netz sowohl die Begrenzungsrahmen (Bounding Boxes) als auch die Klassenwahrscheinlichkeiten für jedes Objekt. Konkret unterteilt YOLO das Eingabebild in ein $S \times S$ Raster; jede Rasterzelle sagt Begrenzungsrahmen, einen Objektscore (Klassenwahrscheinlichkeit $\times$ Überlappungsgrad) und Klassenwahrscheinlichkeiten vorher. Nicht-maximale Unterdrückung (Non-Maximum Suppression, NMS) \cite{neubeck2006efficient} eliminiert dabei überlappende Vorhersagen desselben Objekts.
+
+In den frühen Experimenten (EXP-005 bis EXP-008) wurde YOLOv8-Nano als Ausgangsarchitektur verwendet. Ab EXP-013 wurde auf YOLO11n migriert, dessen aktualisierte Architektur eine effizientere Feature-Pyramide und verbesserte Loss-Funktionen bietet.
 
 \subsection{Temporale Signalstabilisierung (EMA-Filter)}
-In der Live-Inferenz führen wechselnde Helligkeitswerte und Sensorrauschen der Kamera zu stochastischem Flackern (Jitter) der Konfidenzwerte. Zur Dämpfung dieser Schwingungen wurde ein Exponential Moving Average (EMA) auf dem Wahrscheinlichkeitsvektor der Klassen implementiert:
-
+In der Live-Inferenz wurde ein EMA-Filter zur Dämpfung von Fluktuationen verwendet:
 \begin{equation}
-p_{\text{smooth}}(t) = \alpha \cdot p_{\text{raw}}(t) + (1 - \alpha) \cdot p_{\text{smooth}}(t-1)
+p_{\mathrm{smooth}}(t)=\alpha\,p_{\mathrm{raw}}(t)+(1-\alpha)\,p_{\mathrm{smooth}}(t-1)
 \end{equation}
-
-Der Dämpfungsfaktor $\alpha = 0,15$ wurde empirisch ermittelt, um ein optimales Gleichgewicht zwischen Rauschunterdrückung und Ansprechzeit (Latenz) zu erzielen \cite{neubeck2006efficient}. Ein kleinerer $\alpha$-Wert (z.\ B.\ $0,05$) führt zwar zu einer noch stärkeren Signalglättung, erzeugt jedoch eine spürbare mechanische Verzögerung von über \SI{500}{\milli\second} beim Anfahren eines Objekts. Ein größerer Wert (z.\ B.\ $0,40$) hingegen leitet das stochastische Rauschen der Klassensicherheiten nahezu ungefiltert an die Servosteuerung weiter, was ein mechanisch schädliches Vibrieren der Motoren (Servo Jitter) verursacht. Mit $\alpha = 0,15$ liegt der Signalverzug im Bereich von nur ca.\ \num{5} bis \num{7} Frames (ca.\ \SI{250}{\milli\second} bei \SI{20}{\text{FPS}}), was für die mechanischen Anforderungen des Sortierarms vernachlässigbar ist und gleichzeitig Fehltriggerungen vollständig eliminiert.
+Im Projekt wurde $\alpha=0{,}15$ gewählt (siehe Anhang für Parameterstudie).
