@@ -6,13 +6,13 @@ Das experimentelle Design wurde in sechs diskrete Phasen (EXP-001 bis EXP-006) s
 \subsection{Klassifikationsphase (EXP-001 bis EXP-004)}
 Die erste Phase verglich drei Architekturen auf demselben Validierungssplit: ein Scratch-CNN (EXP-001, Val.~Accuracy~\SI{61.00}{\percent}), MobileNetV2 mit gefrorenem Backbone (EXP-002, \SI{84.28}{\percent}) und MobileNetV2 mit Fine-Tuning (EXP-003, \SI{87.42}{\percent}). Ziel war zu prüfen, wie stark Transfer Learning den Sprung von einem kleinen, direkt trainierten Netz zu einem robusteren Modell verbessert \cite{yosinski2014transferable}.
 
-EXP-001 zeigte starkes Overfitting mit verrauschten Validierungskurven und systematischen Fehlklassifikationen (Papier und Metall wurden häufig als Plastik fehlinterpretiert). EXP-002 profitierte deutlich vom Transfer Learning (\SI{84.28}{\percent} Genauigkeit), erreichte aber noch kein zufriedenstellendes Niveau. EXP-003 lieferte mit \SI{87.42}{\percent} Genauigkeit das stabilste Modell und reduzierte die Fehlklassifikationen erheblich -- insbesondere für Glass (F1: 0,94).
+EXP-001 zeigte starkes Overfitting mit verrauschten Validierungskurven und systematischen Fehlklassifikationen (Papier und Metall wurden häufig als Plastik fehlinterpretiert). EXP-002 profitierte deutlich vom Transfer Learning (\SI{84.28}{\percent} Genauigkeit), erreichte aber noch kein zufriedenstellendes Niveau. EXP-003 lieferte mit \SI{87.42}{\percent} Genauigkeit das stabilste Modell und reduzierte die Fehlklassifikationen erheblich -- insbesondere für Glass (F1: 0,94). Der vollständige Vergleich aller vier Klassifikationsmodelle ist in Abbildung~\ref{fig:stagea-acc} dargestellt.
 
 \subsection{Quantisierung (EXP-004)}
-Das beste Keras-Modell (EXP-003) wurde per TensorFlow Lite exportiert. Dabei wurden ein FP32-Modell und anschließend ein voll quantisiertes INT8-Modell erzeugt. Für die Kalibrierung kam eine repräsentative Stichprobe von 100 Bildern zum Einsatz \cite{deng2020model}. Die Klassifikationsleistung blieb dabei nahezu identisch (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent} des FP32-Modells), während die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} sank.
+Das beste Keras-Modell (EXP-003) wurde per TensorFlow Lite exportiert. Dabei wurden ein FP32-Modell (volle 32-Bit-Gleitkommapräzision) und anschließend ein voll quantisiertes INT8-Modell erzeugt. Für die Kalibrierung kam eine repräsentative Stichprobe von 100 Bildern zum Einsatz \cite{deng2020model}. Die Klassifikationsleistung blieb dabei nahezu identisch (\SI{87.35}{\percent} vs.\ \SI{87.42}{\percent} des FP32-Modells), während die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} sank.
 
 \subsection{Detektionsphase YOLOv8 (EXP-005 bis EXP-009)}
-Die zweite Projektphase drehte sich um Objekterkennung. Zunächst wurde ein YOLOv8-Nano-Modell auf einem einfachen Benchmark trainiert (EXP-005). Dieses Modell erreichte zwar eine scheinbar hohe Validierungsgenauigkeit von \SI{82.3}{\percent} mAP50. Diese hohe Metrik erwies sich jedoch bei einer detaillierten Fehleranalyse als Artefakt eines extremen Hintergrund-Overfittings (Background Leakage): Da der Canny-Edge-Auto-Labeler die kontrastreichen Kanten und Helligkeitsgradienten des Schreibtischrahmens umschloss, lernte das Netzwerk nicht die Müllobjektspezifika selbst, sondern korrelierte die Geometrie der gesamten Arbeitsfläche mit der Zielklasse. Dies erklärt die hohe Genauigkeit auf dem monotonen Test-Set der Tischoberfläche, führte aber zu einem vollständigen Versagen (mAP50 nahe \SI{0}{\percent}) bei Tests auf abweichenden Hintergründen. Dieser GIGO-Effekt (Abschnitt~\ref{sec:method-gigo}) zwang zur Verfeinerung der Datengrundlage. Spätere Modelle (EXP-006, EXP-009) trainierten auf gemischten Wild-Datensätzen und dem bereinigten TrashNet-Datensatz \cite{yang2016classification}.
+Die zweite Projektphase drehte sich um Objekterkennung. Zunächst wurde ein YOLOv8-Nano-Modell auf einem einfachen Benchmark trainiert (EXP-005). Dieses Modell erreichte zwar eine scheinbar hohe Validierungsgenauigkeit von \SI{82.3}{\percent} mAP50 (mean Average Precision bei IoU-Schwelle 0,5). Diese hohe Metrik erwies sich jedoch bei einer detaillierten Fehleranalyse als Artefakt eines extremen Hintergrund-Overfittings (Background Leakage): Da der Canny-Edge-Auto-Labeler die kontrastreichen Kanten und Helligkeitsgradienten des Schreibtischrahmens umschloss, lernte das Netzwerk nicht die Müllobjektspezifika selbst, sondern korrelierte die Geometrie der gesamten Arbeitsfläche mit der Zielklasse. Dies erklärt die hohe Genauigkeit auf dem monotonen Test-Set der Tischoberfläche, führte aber zu einem vollständigen Versagen (mAP50 nahe \SI{0}{\percent}) bei Tests auf abweichenden Hintergründen. Dieser GIGO-Effekt (Abschnitt~\ref{sec:method-gigo}) zwang zur Verfeinerung der Datengrundlage. Spätere Modelle (EXP-006, EXP-009) trainierten auf gemischten Wild-Datensätzen und dem bereinigten TrashNet-Datensatz \cite{yang2016classification}.
 
 \subsection{Architekturmigration: YOLO11n (EXP-013 bis EXP-016)}
 \label{sec:exp-yolo11}
@@ -25,28 +25,9 @@ Im dritten Abschnitt der Detektionsphase wurde die Basisarchitektur von YOLOv8-N
     \item \textbf{EXP-016 (WaRP-only):} Ausschließlich WaRP $\rightarrow$ mAP50~\SI{58.8}{\percent} (jedoch ohne \textit{trash}-Klasse)
 \end{itemize}
 
-EXP-014 erzielt den besten Gesamtmittelwert (+5,6~pp über EXP-013), mit besonders starken Zuwächsen bei Trash (+11,3~pp) und Glass (+6,3~pp). Der WaRP-Datensatz (EXP-015) verbessert Glass signifikant (+24,8~pp), senkt aber Trash drastisch (-12,6~pp), da WaRP keine Trash-Klasse enthält. Der vollständige Modellvergleich ist in Abbildung~\ref{fig:heatmap-4datasets} als Heatmap dargestellt.
+EXP-014 erzielt den besten Gesamtmittelwert (+5,6~pp über EXP-013), mit dem stärksten Zuwachs bei Trash (+11,3~pp); Glass sinkt leicht (-6,3~pp, von \SI{56.5}{\percent} auf \SI{50.2}{\percent}). Der WaRP-Datensatz (EXP-015) verbessert Glass signifikant (+24,8~pp), senkt aber Trash drastisch (-12,6~pp), da WaRP keine Trash-Klasse enthält. Der vollständige Modellvergleich ist in Abbildung~\ref{fig:heatmap-4datasets} als Heatmap dargestellt. Die Trainingsmetriken des besten Modells (EXP-014) zeigt Abbildung~\ref{fig:yolo11n}.
 
 \subsection{Modellvergleich der Klassifikation (Stage A)}
-Kurzfassung der wichtigsten Werte:
-\begin{table}[h]
-    \centering
-    \caption{Kompakter Klassifikationsvergleich}
-    \label{tab:class-results-summary}
-    \begin{tabular}{lc}
-        \toprule
-        \textbf{Modell} & \textbf{Val. Accuracy} \\
-        \midrule
-        EXP-001 Baseline CNN & \SI{61.00}{\percent} \\
-        EXP-002 Frozen MobileNetV2 & \SI{84.28}{\percent} \\
-        EXP-003 Fine-Tuned MobileNetV2 & \SI{87.42}{\percent} \\
-        EXP-004 INT8 TFLite & \SI{87.35}{\percent} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-Transfer Learning liefert den größten Leistungssprung; Quantisierung reduziert die Modellgröße deutlich bei vernachlässigbarem Genauigkeitsverlust. Abbildung~\ref{fig:stagea-acc} visualisiert diesen Vergleich.
-
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.75\textwidth, keepaspectratio]{figures/stagea-acc-comparison.png}
@@ -74,24 +55,7 @@ Tabelle~\ref{tab:class-results} zeigt die vollständigen Metriken inklusive Loss
 \end{table}
 
 \subsection{Detektionsmetriken (Stage B)}
-Kompakte Detektionsübersicht (mAP50):
-\begin{table}[h]
-    \centering
-    \caption{Kompakte Detektionsübersicht}
-    \label{tab:yolo-results-summary}
-    \begin{tabular}{lc}
-        \toprule
-        \textbf{Experiment} & \textbf{mAP50} \\
-        \midrule
-        EXP-013 (TACO+TrashNet) & \SI{55.1}{\percent} \\
-        EXP-014 (+Roboflow) & \SI{60.7}{\percent} \\
-        EXP-015 (+WaRP) & \SI{56.0}{\percent} \\
-        EXP-016 (WaRP-only) & \SI{58.8}{\percent} \\
-        \bottomrule
-    \end{tabular}
-\end{table}
-
-EXP-014 liefert das beste Gleichgewicht aus Datenfusion und mAP50. Die vollständigen Metriken inklusive GPU/CPU-Latenz sind in Tabelle~\ref{tab:yolo-results} dokumentiert.
+Die vollständigen Metriken inklusive GPU/CPU-Latenz sind in Tabelle~\ref{tab:yolo-results} dokumentiert.
 
 \begin{table}[h]
     \centering
@@ -118,7 +82,7 @@ EXP-014 liefert das beste Gleichgewicht aus Datenfusion und mAP50. Die vollstän
 \end{figure}
 
 \subsection{Architekturvergleich und Fehlermatrix-Heatmap}
-Im Verlauf von Stage B wurde die Basisarchitektur von YOLOv8-Nano auf YOLO11n migriert \cite{ultralyticsyolov8}. Abbildung \ref{fig:heatmap-4datasets} vergleicht die klassenspezifische mAP50 der vier YOLO11n-Modelle als Heatmap. Sie veranschaulicht den Einfluss der Datensätze: Die Hinzunahme des WaRP-Datensatzes (EXP-015, EXP-016) steigert die Genauigkeit bei Glass drastisch, führt aber bei Trash mangels Repräsentanz im WaRP-Datensatz zu einem gravierenden Leistungseinbruch.
+Abbildung~\ref{fig:heatmap-4datasets} vergleicht die klassenspezifische mAP50 der vier YOLO11n-Modelle als Heatmap. Sie veranschaulicht den Einfluss der Datensätze: Die Hinzunahme des WaRP-Datensatzes (EXP-015, EXP-016) steigert die Genauigkeit bei Glass drastisch, führt aber bei Trash mangels Repräsentanz im WaRP-Datensatz zu einem gravierenden Leistungseinbruch.
 
 \begin{figure}[H]
     \centering
@@ -139,19 +103,19 @@ Tabelle~\ref{tab:exp014-class} zeigt die klassenspezifischen Validierungsergebni
         \toprule
         \textbf{Klasse} & \textbf{Precision} & \textbf{Recall} & \textbf{mAP50} & \textbf{mAP50-95} & \textbf{Instanzen} \\
         \midrule
-        Glass   & 0.580 & 0.521 & 0.502 & 0.400 & 336 \\
-        Metal   & 0.670 & 0.699 & 0.713 & 0.613 & 439 \\
-        Paper   & 0.820 & 0.772 & \textbf{0.829} & 0.745 & 474 \\
-        Plastic & 0.715 & 0.699 & 0.721 & 0.601 & 1316 \\
-        Trash   & 0.523 & 0.230 & 0.269 & 0.173 & 561 \\
+        Glass   & \num{0.580} & \num{0.521} & \num{0.502} & \num{0.400} & \num{336} \\
+        Metal   & \num{0.670} & \num{0.699} & \num{0.713} & \num{0.613} & \num{439} \\
+        Paper   & \num{0.820} & \num{0.772} & \textbf{\num{0.829}} & \num{0.745} & \num{474} \\
+        Plastic & \num{0.715} & \num{0.699} & \num{0.721} & \num{0.601} & \num{1316} \\
+        Trash   & \num{0.523} & \num{0.230} & \num{0.269} & \num{0.173} & \num{561} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-Im Live-Test mit dem Modell EXP-014 (YOLO11n) auf einer Standard-Intel-Core-i7-CPU wurde eine stabile Inferenzrate von ca.\ \SI{21.8}{\text{FPS}} (Latenz ca.\ \SI{46.0}{\milli\second}) gemessen, was für einen kontinuierlichen Sortierprozess ausreicht. Alle Latenzen der GPU-Spalte in Tabelle \ref{tab:yolo-results} wurden auf einer Nvidia T4 Cloud-GPU erfasst, um eine Vergleichbarkeit mit Standard-Benchmarks zu gewährleisten. Auf der geplanten Zielhardware (Raspberry Pi Zero 2W CPU) wird nach vorläufigen Compiler-Simulationen durch den LiteRT-INT8-Export eine Latenz von ca.\ \SI{90}{\milli\second} bis \SI{120}{\milli\second} (ca.\ \num{8} bis \num{11} FPS) erwartet. Dies macht die Kopplung mit einem schnellen Tracker wie ByteTrack zur Bewegungsprädiktion zwingend erforderlich.
+Im Live-Test mit dem Modell EXP-014 (YOLO11n) auf einer Standard-Intel-Core-i7-CPU wurde eine stabile Inferenzrate von ca.\ 21,7\,FPS (Frames per Second, Latenz ca.\ \SI{46.0}{\milli\second}) gemessen, was für einen kontinuierlichen Sortierprozess ausreicht. Alle Latenzen der GPU-Spalte in Tabelle \ref{tab:yolo-results} wurden auf einer Nvidia T4 Cloud-GPU erfasst, um eine Vergleichbarkeit mit Standard-Benchmarks zu gewährleisten. Auf der geplanten Zielhardware (Raspberry Pi Zero 2W bzw.\ Raspberry Pi 4) wird nach vorläufigen Compiler-Simulationen durch den LiteRT-INT8-Export eine Latenz von ca.\ \SI{90}{\milli\second} bis \SI{120}{\milli\second} (ca.\ \num{8} bis \num{11} FPS) erwartet. Dies macht die Kopplung mit einem schnellen Tracker wie ByteTrack~\cite{zhang2022bytetrack} zur Bewegungsprädiktion zwingend erforderlich.
 
-\subsection{Webcam-Praxistest (Field Benchmark)}
-Um die Generalisierungsfähigkeit der Modelle abseits von statischen Testdaten zu prüfen, wurde ein Field-Benchmark auf Live-Webcam-Streams durchgeführt. Tabelle~\ref{tab:field-bench} vergleicht die Praxisergebnisse aller Modelle.
+\subsection{Praxistest (Field Benchmark)}
+Um die Generalisierungsfähigkeit der Modelle zu prüfen, wurde ein Field-Benchmark auf dem mira\_v2-Validierungsset (\num{805}~Bilder, fünf Klassen, Konfidenzschwelle~\num{0.5}) durchgeführt. Tabelle~\ref{tab:field-bench} und Abbildung~\ref{fig:field-benchmark-f1} vergleichen die Praxisergebnisse aller Modelle. Das Modell \texttt{mira\_exp011\_int8.tflite} erzielte dabei \SI{0}{\percent} Precision und Recall: INT8-Quantisierung verschiebt die Konfidenzscores nach unten, sodass bei der Standardschwelle~\num{0.5} keine Detektionen übrig bleiben; bei einer niedrigeren Schwelle (ca.~\num{0.25}) arbeitet das Modell wieder normal.
 
 \begin{table}[h]
     \centering
@@ -177,7 +141,14 @@ Um die Generalisierungsfähigkeit der Modelle abseits von statischen Testdaten z
     \end{tabular}
 \end{table}
 
-Die klassenspezifischen F1-Scores des besten Modells (EXP-014) zeigt Tabelle~\ref{tab:exp014-field-class}. Im Live-Test wurde eine stabile Inferenzrate von ca.\ \SI{21.8}{\text{FPS}} (Latenz ca.\ \SI{46.0}{\milli\second}) auf einer Intel-Core-i7-CPU gemessen.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth, keepaspectratio]{figures/field-benchmark-f1.png}
+    \caption{F1-Score-Vergleich aller getesteten Detektionsmodelle im Praxistest (Field Benchmark). Das Modell \texttt{mira\_exp014.pt} (EXP-014, YOLO11n auf TACO+TrashNet+Roboflow) erreicht mit \SI{85.8}{\percent} F1 den höchsten Wert. INT8-quantisierte Varianten zeigen durchweg einen F1-Verlust von ca. 13~pp.}
+    \label{fig:field-benchmark-f1}
+\end{figure}
+
+Die klassenspezifischen F1-Scores des besten Modells (EXP-014) zeigt Tabelle~\ref{tab:exp014-field-class}.
 
 \begin{table}[h]
     \centering
@@ -193,6 +164,6 @@ Die klassenspezifischen F1-Scores des besten Modells (EXP-014) zeigt Tabelle~\re
         Paper   & \SI{94.6}{\percent} & \SI{87.2}{\percent} & \SI{90.7}{\percent} \\
         Plastic & \SI{96.8}{\percent} & \SI{82.3}{\percent} & \SI{88.9}{\percent} \\
         Trash   & \SI{75.5}{\percent} & \SI{42.0}{\percent} & \textbf{\SI{54.0}{\percent}} \\
-        \bottomrule
+\bottomrule
     \end{tabular}
 \end{table}

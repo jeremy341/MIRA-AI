@@ -65,3 +65,12 @@ runs/
 # --- Large archives ---
 *.zip
 *.tar.gz
+
+# --- Secrets / Environment ---
+.env
+.env.*
+*.key
+*.pem
+secrets.*
+credentials.*
+config.local.*

@@ -1,12 +1,12 @@
-\section{Zusammenfassung und Ausblick}
+\section{Fazit und Ausblick}
 
-\subsection{Zusammenfassung}
-Das Projekt \mira hat erfolgreich demonstriert, dass die Kombination aus Transfer Learning, gezielter Datensatz-Fusion und Post-Training-Quantisierung zu einem praxistauglichen, ressourceneffizienten KI-System für die automatische Wertstoffsortierung führt. Die vier zentralen Hypothesen wurden allesamt bestätigt:
+\subsection{Fazit}
+Das Projekt \mira hat erfolgreich demonstriert, dass die Kombination aus Transfer Learning, gezielter Datensatz-Fusion und Post-Training-Quantisierung zu einem potenziell praxistauglichen, ressourceneffizienten KI-System für die automatische Wertstoffsortierung führt. Die drei zentralen Hypothesen H1--H3 sowie das Entwurfsziel E1 wurden durch die Ergebnisse im Wesentlichen bestätigt:
 \begin{itemize}
     \item \textbf{H1:} Transfer Learning mit MobileNetV2 übertraf das Scratch-CNN um +26,42~pp (\SI{87.42}{\percent} vs.\ \SI{61.00}{\percent}).
     \item \textbf{H2:} INT8-Quantisierung reduzierte die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} bei vernachlässigbarem Genauigkeitsverlust ($-$0,07~pp) und 74,2\% Latenzsenkung.
-    \item \textbf{H3:} Das YOLO11n-Detektionsmodell erreicht eine CPU-Inferenzrate von \SI{21.8}{FPS} und erkennt simultan mehrere Objekte im Kamerabild.
-    \item \textbf{H4:} Der EMA-Filter ($\alpha=0{,}15$) eliminiert erfolgreich Signalflackern ohne kritischen mechanischen Verzug (ca.\ \SI{250}{\milli\second}).
+    \item \textbf{H3:} Der Übergang zur lokalisierten Objekterkennung (YOLO11n) ermöglicht die gleichzeitige Erkennung mehrerer Objekte im Kamerabild und erreicht eine mAP50 von 60,7\% auf dem vereinten Datensatz (TACO + TrashNet + Roboflow). Die Hypothese wird als teilweise validiert bewertet, da die Objekterkennung funktioniert, die Trash-Klasse jedoch mit 26,9\% mAP50 noch erheblichen Verbesserungsbedarf aufweist.
+    \item \textbf{E1 (Entwurfsziel):} Der EMA-Filter ($\alpha=0{,}15$) eliminiert erfolgreich Signalflackern ohne kritischen mechanischen Verzug (ca.\ \SI{250}{\milli\second}).
 \end{itemize}
 
 Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Datenqualität und -vielfalt die Modellleistung stärker beeinflussen als reine Architektur-Optimierungen \cite{zha2023datacentric}. Der GIGO-Effekt beim Auto-Labeling (EXP-005) zwang zur Adaption professioneller Datensätze, was die Generalisierungsfähigkeit dramatisch verbesserte. Der 4-Wege-Datensatzvergleich (EXP-013 bis EXP-016) belegt, dass die Kombination aus TACO, TrashNet und Roboflow das beste generalisierbare Ergebnis liefert (\SI{60.7}{\percent} mAP50, \SI{85.8}{\percent} F1 im Praxistest).
@@ -15,9 +15,9 @@ Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Datenqualität un
 Aus den Ergebnissen ergeben sich folgende nächste Schritte zur Fertigstellung des physischen Gesamtsystems:
 
 \begin{enumerate}
-    \item \textbf{Mechatronischer Aufbau:} Das System wird als 3-DOF-Roboterarm realisiert. Ein Raspberry Pi führt die Bildverarbeitung aus und sendet die Objektkoordinaten via Serial-Protokoll an einen ESP32-S3-Mikrocontroller, der die Servomotoren (MG996R) präzise ansteuert. Ein Time-of-Flight-Lasersensor (VL53L0X) am Greifer misst die Z-Achse für den Greifvorgang.
+    \item \textbf{Mechatronischer Aufbau:} Das System wird als 3-DOF-Roboterarm realisiert. Ein Raspberry Pi Zero 2W oder Raspberry Pi 4 führt die Bildverarbeitung aus und sendet die Objektkoordinaten via Serial-Protokoll an einen ESP32-S3-Mikrocontroller, der die Servomotoren (MG996R) präzise ansteuert. Ein Time-of-Flight-Lasersensor (VL53L0X) am Greifer misst die Z-Achse für den Greifvorgang.
     
-    \item \textbf{Modellkompression:} Durch Knowledge Distillation \cite{hinton2015distilling} könnte ein kleineres „Studenten"-Netzwerk das Verhalten des YOLO11n-Modells imitieren und die Inferenzlatenz weiter reduzieren. Ergänzend sollte Pruning die Modellstruktur verschlanken.
+    \item \textbf{Modellkompression:} Durch Knowledge Distillation \cite{hinton2015distilling} könnte ein kleineres Studenten-Netzwerk das Verhalten des YOLO11n-Modells imitieren und die Inferenzlatenz weiter reduzieren. Ergänzend sollte Pruning die Modellstruktur verschlanken.
     
     \item \textbf{Erweiterung der Klassifikation:} Das fünfklassige System sollte um Biomüll, Elektroschrott oder Textilien erweitert werden. Um das Klassenungleichgewicht bei \textit{Trash} zu lösen, ist eine Pipeline zur synthetischen Datengenerierung mittels Diffusionsmodellen vorgesehen.
     

@@ -105,3 +105,6 @@ zipp==4.1.0
 pytest>=8.0
 pytest-mock>=3.14
 ruff>=0.9.0
+flask>=3.0
+flask-socketio>=5.3
+eventlet>=0.36

@@ -1,9 +1,9 @@
 \section{Implementierung}
 
-Die funktionale \mira-Softwarearchitektur wurde vollständig modularisiert. Die wichtigsten Steuerungsskripte sind in Python geschrieben, während die mechatronische Aktorik auf C++ basiert.
+Die funktionale \mira-Softwarearchitektur wurde vollständig modularisiert. Die wichtigsten Steuerungsskripte sind in Python geschrieben, während die mechatronische Aktorik auf einer C++-Firmware basieren soll, die sich noch in Entwicklung befindet.
 
 \subsection{Systemarchitektur}
-Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf dem Host-Rechner mit der präzisen mechatronischen Steuerung des Roboterarms. Abbildung \ref{fig:sys-arch} visualisiert den Signalfluss und die geschlossene Handshake-Schleife der MIRA-Sortierpipeline.
+Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf dem Host-Rechner mit der präzisen mechatronischen Steuerung des Roboterarms. Abbildung~\ref{fig:sys-arch} visualisiert den Signalfluss und die geschlossene Handshake-Schleife der MIRA-Sortierpipeline.
 
 \begin{figure}[H]
     \centering
@@ -32,15 +32,13 @@ Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf d
 \end{figure}
 
 \subsection{Die fehlerbereinigte Live-Inferenz}
-Ein kritischer Moment der Echtzeit-Entwicklung war die Behebung des Farbkanal-Fehlers. OpenCV liest Videoframes im BGR-Format ein, während TensorFlow-Modelle RGB erwarten. Ohne Korrektur stürzte die Inferenzgenauigkeit im Live-Test auf unter \SI{40}{\percent} ab. Die kritische Farbraumkonvertierung von BGR zu RGB wurde implementiert, um die Inferenzgenauigkeit im Live-Betrieb zu gewährleisten.
+Während der Entwicklung der Live-Inferenz zeigte sich ein systematischer Fehler: Die mittels OpenCV erfassten Kamerabilder erreichten im Live-Betrieb eine deutlich niedrigere Klassifikationsgenauigkeit als im vortrainierten Modell unter Laborbedingungen. Die systematische Fehleranalyse -- beginnend mit der Überprüfung der Vorverarbeitungspipeline -- führte zur Entdeckung einer stillen Inkompatibilität zwischen OpenCV- und TensorFlow-Farbraumkonventionen. OpenCVs \texttt{imread()}-Funktion dekodiert Bilddaten standardmäßig im Blue-Green-Red-Farbraum (BGR) -- eine historisch bedingte Konvention aus frühen Kamera-APIs. TensorFlow beziehungsweise Keras hingegen erwarten Eingabedaten im Red-Green-Blue-Format (RGB). Diese Diskrepanz führte dazu, dass der Farbkanal, den das Modell als Rot interpretierte, tatsächlich die Blauwerte des Quellbildes enthielt, was die Erkennungsleistung drastisch beeinträchtigte. Die eigenständige Diagnose und Korrektur bestand in einer einzigen Zeile: \texttt{cv2.cvtColor(frame, cv2.COLOR\_BGR2RGB)}. Die anschließende Optimierung der asynchronen OpenCV-Inferenzschleifen (Threading, Frame-Skipping) wurde unterstützt durch den Einsatz eines KI-Sprachmodells zur Code-Review. Nach der Farbumstellung entsprach die Live-Genauigkeit wieder den Erwartungen aus der Modellvalidierung.
 
 \subsection{Objektverfolgung mit ByteTrack}
-Im Live-Betrieb führen kurze Verdeckungen oder Beleuchtungsschwankungen dazu, dass Detektionen temporär aussetzen. Um eine kontinuierliche Lokalisierung zu gewährleisten, wurde der ByteTrack-Tracking-Algorithmus integriert \cite{zhang2022bytetrack}. 
-
-Im Gegensatz zu klassischen Trackern, die Boxen mit niedriger Konfidenz verwerfen, nutzt ByteTrack nahezu jede Bounding Box. Es teilt die Detektionen in Boxen mit hoher und niedriger Konfidenz auf. Zunächst werden die Boxen mit hoher Konfidenz über Kalman-Filter und die Schnittmenge der Box-Flächen (Intersection over Union, IoU) den bestehenden Pfaden (Tracks) zugeordnet. Unzugeordnete Pfade werden in einem zweiten Schritt mit den Boxen niedriger Konfidenz abgeglichen. Dies ermöglicht es dem System, verdeckte oder verschwommene Objekte stabil über mehrere Frames hinweg weiterzuverfolgen, ohne die zeitaufwändige Modellinferenz blockieren zu müssen.
+Zur Stabilisierung kurzzeitig fehlender Detektionen wurde ByteTrack integriert; es verknüpft Detektionen über mehrere Frames und verbessert die Objektkohärenz ohne zusätzliche Modellinferenz.
 
 \subsection{Das MIRA-Control-Center (Dashboard)}
 Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Streamlit} implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
 
 \subsection{Mechatronische Ansteuerung und Handshake-Protokoll}
-Um die hohe Verarbeitungsgeschwindigkeit der KI (21.8 FPS) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen. Der ESP32-S3 empfängt Sortierbefehle über die serielle Schnittstelle, steuert die Pulsweitenmodulation (PWM) für die Servomotoren an und sendet nach Abschluss eine Fertigmeldung, woraufhin die nächste Inferenz freigegeben wird. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.
+Um die hohe Verarbeitungsgeschwindigkeit der KI (21,7\,Frames per Second (FPS)) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen. Der ESP32-S3 empfängt Sortierbefehle über die serielle Schnittstelle, steuert die Pulsweitenmodulation (PWM) für die Servomotoren an und sendet nach Abschluss eine Fertigmeldung, woraufhin die nächste Inferenz freigegeben wird. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.

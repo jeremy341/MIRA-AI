@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIRA Control Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mira: { black: '#000000', dark: '#111111', panel: '#0a0a0a', border: '#222222', mid: '#333333', muted: '#666666', dim: '#999999', light: '#cccccc', white: '#ffffff' }
+                    },
+                    fontFamily: {
+                        mono: ['"SF Mono"', '"Cascadia Code"', '"Fira Code"', 'Consolas', 'monospace'],
+                        sans: ['"Inter"', '"Helvetica Neue"', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; color: #fff; font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; overflow: hidden; height: 100vh; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+        input[type="range"] { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; width: 100%; height: 20px; }
+        input[type="range"]::-webkit-slider-track { height: 2px; background: #333; border-radius: 1px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #fff; margin-top: -6px; border: none; transition: transform 0.15s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+        input[type="range"]::-moz-range-track { height: 2px; background: #333; border-radius: 1px; border: none; }
+        input[type="range"]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: none; }
+
+        .toggle-track { width: 36px; height: 20px; background: #333; border-radius: 10px; position: relative; cursor: pointer; transition: background 0.2s; }
+        .toggle-track.active { background: #fff; }
+        .toggle-track .toggle-thumb { width: 16px; height: 16px; background: #000; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+        .toggle-track.active .toggle-thumb { transform: translateX(16px); background: #000; }
+
+        .metric-card { border: 1px solid #222; background: #0a0a0a; transition: border-color 0.3s; }
+        .metric-card:hover { border-color: #444; }
+
+        .toast { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        #videoCanvas { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+        select { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+        select option { background: #111; color: #fff; }
+
+        .btn-start { background: #fff; color: #000; border: 2px solid #fff; font-weight: 700; letter-spacing: 0.05em; transition: all 0.2s; }
+        .btn-start:hover { background: #ccc; border-color: #ccc; }
+        .btn-start:disabled { background: #333; color: #666; border-color: #333; cursor: not-allowed; }
+
+        .btn-stop { background: transparent; color: #fff; border: 2px solid #fff; font-weight: 700; letter-spacing: 0.05em; transition: all 0.2s; }
+        .btn-stop:hover { background: #fff; color: #000; }
+        .btn-stop:disabled { border-color: #333; color: #333; cursor: not-allowed; }
+        .btn-stop:hover:disabled { background: transparent; color: #333; }
+
+        .btn-secondary { background: transparent; color: #666; border: 1px solid #333; font-weight: 500; transition: all 0.2s; }
+        .btn-secondary:hover { color: #fff; border-color: #666; }
+
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; transition: background 0.3s; }
+        .status-dot.connected { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.4); }
+        .status-dot.disconnected { background: #333; }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- HEADER -->
+    <header class="flex items-center justify-between px-6 h-14 border-b border-mira-border bg-mira-black shrink-0">
+        <div class="flex items-center gap-4">
+            <h1 class="text-2xl font-black tracking-widest uppercase">MIRA</h1>
+            <span class="text-mira-dim text-xs tracking-widest uppercase hidden sm:inline">Machine Intelligence for Recycling Automation</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="connectionLabel" class="text-xs font-mono text-mira-muted uppercase tracking-wider">Disconnected</span>
+            <div id="statusDot" class="status-dot disconnected"></div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex min-h-0">
+
+        <!-- VIDEO AREA -->
+        <div class="flex-[2] flex items-center justify-center bg-mira-black border-r border-mira-border relative p-2">
+            <div class="relative w-full h-full flex items-center justify-center">
+                <canvas id="videoCanvas" width="640" height="360"></canvas>
+                <div id="standbyOverlay" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <div class="text-mira-mid text-5xl font-black tracking-[0.3em] uppercase mb-3">System Standby</div>
+                    <div class="text-mira-border text-sm tracking-[0.2em] uppercase">Warte auf Kamerastart</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIDEBAR -->
+        <aside class="w-80 xl:w-96 bg-mira-panel border-l border-mira-border flex flex-col overflow-y-auto shrink-0">
+            <div class="p-5 flex flex-col gap-5">
+
+                <!-- MODEL SELECTOR -->
+                <div>
+                    <label class="block text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-2">Modell</label>
+                    <select id="modelSelect" class="w-full bg-mira-black border border-mira-border text-sm text-white px-3 py-2.5 rounded outline-none focus:border-mira-dim transition-colors">
+                        <option value="">Laden...</option>
+                    </select>
+                    <div id="modelStatus" class="text-[10px] text-mira-muted mt-1.5 font-mono h-3"></div>
+                </div>
+
+                <div class="h-px bg-mira-border"></div>
+
+                <!-- CONFIDENCE -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">Konfidenz</label>
+                        <span id="confValue" class="text-xs font-mono text-mira-dim">0.50</span>
+                    </div>
+                    <input type="range" id="confSlider" min="0.05" max="1.0" step="0.05" value="0.50" class="w-full">
+                </div>
+
+                <!-- IoU -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">IoU Schwelle</label>
+                        <span id="iouValue" class="text-xs font-mono text-mira-dim">0.45</span>
+                    </div>
+                    <input type="range" id="iouSlider" min="0.10" max="1.0" step="0.05" value="0.45" class="w-full">
+                </div>
+
+                <!-- IMAGE SIZE -->
+                <div>
+                    <label class="block text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-2">Bildgroesse</label>
+                    <select id="imgszSelect" class="w-full bg-mira-black border border-mira-border text-sm text-white px-3 py-2.5 rounded outline-none focus:border-mira-dim transition-colors">
+                        <option value="160">160</option>
+                        <option value="224">224</option>
+                        <option value="320" selected>320</option>
+                        <option value="416">416</option>
+                        <option value="640">640</option>
+                    </select>
+                </div>
+
+                <!-- TRACKING -->
+                <div class="flex items-center justify-between">
+                    <label class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">Tracking</label>
+                    <div id="trackingToggle" class="toggle-track active" onclick="toggleTracking()">
+                        <div class="toggle-thumb"></div>
+                    </div>
+                </div>
+
+                <!-- CAMERA INDEX -->
+                <div>
+                    <label class="block text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-2">Kamera Index</label>
+                    <input type="number" id="cameraIndex" min="0" max="10" value="0" class="w-20 bg-mira-black border border-mira-border text-sm text-white px-3 py-2 rounded outline-none focus:border-mira-dim transition-colors font-mono">
+                </div>
+
+                <div class="h-px bg-mira-border"></div>
+
+                <!-- BUTTONS -->
+                <div class="flex gap-3">
+                    <button id="btnStart" class="btn-start flex-1 py-3 rounded text-xs uppercase tracking-widest" onclick="startCamera()">Start</button>
+                    <button id="btnStop" class="btn-stop flex-1 py-3 rounded text-xs uppercase tracking-widest" onclick="stopCamera()" disabled>Stop</button>
+                </div>
+
+                <button class="btn-secondary w-full py-2.5 rounded text-xs uppercase tracking-widest" onclick="resetInventory()">Inventar Zuruecksetzen</button>
+
+            </div>
+        </aside>
+    </main>
+
+    <!-- BOTTOM BAR -->
+    <footer class="shrink-0 border-t border-mira-border bg-mira-black">
+        <div class="flex h-36">
+
+            <!-- METRICS -->
+            <div class="flex-1 flex border-r border-mira-border">
+                <div class="metric-card flex-1 flex flex-col items-center justify-center border-r border-mira-border">
+                    <span class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-1">FPS</span>
+                    <span id="fpsValue" class="text-3xl font-mono font-bold text-white">--</span>
+                </div>
+                <div class="metric-card flex-1 flex flex-col items-center justify-center border-r border-mira-border">
+                    <span class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-1">Latenz</span>
+                    <span id="latencyValue" class="text-3xl font-mono font-bold text-white">--</span>
+                    <span class="text-[10px] font-mono text-mira-muted mt-0.5">ms</span>
+                </div>
+                <div class="metric-card flex-1 flex flex-col items-center justify-center">
+                    <span class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-1">Objekte</span>
+                    <span id="objectsValue" class="text-3xl font-mono font-bold text-white">--</span>
+                </div>
+            </div>
+
+            <!-- INVENTORY CHART -->
+            <div class="w-[420px] xl:w-[520px] p-4 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">Inventar</span>
+                    <div class="flex gap-3 text-[9px] font-mono text-mira-dim">
+                        <span>Glas</span><span>Metal</span><span>Papier</span><span>Plastik</span><span>Muell</span>
+                    </div>
+                </div>
+                <div class="flex-1 min-h-0">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT -->
+    <script>
+    (function () {
+        'use strict';
+
+        // ── State ──────────────────────────────────────────────────────
+        let socket = null;
+        let cameraRunning = false;
+        let trackingEnabled = true;
+        let inventoryChart = null;
+        let toastCounter = 0;
+
+        // ── DOM refs ───────────────────────────────────────────────────
+        const $ = (id) => document.getElementById(id);
+        const canvas = $('videoCanvas');
+        const ctx = canvas.getContext('2d');
+        const standbyOverlay = $('standbyOverlay');
+        const modelSelect = $('modelSelect');
+        const modelStatus = $('modelStatus');
+        const confSlider = $('confSlider');
+        const confValue = $('confValue');
+        const iouSlider = $('iouSlider');
+        const iouValue = $('iouValue');
+        const imgszSelect = $('imgszSelect');
+        const trackingToggle = $('trackingToggle');
+        const cameraIndex = $('cameraIndex');
+        const btnStart = $('btnStart');
+        const btnStop = $('btnStop');
+        const fpsValue = $('fpsValue');
+        const latencyValue = $('latencyValue');
+        const objectsValue = $('objectsValue');
+        const toastContainer = $('toastContainer');
+
+        // ── Socket connection ──────────────────────────────────────────
+        function connectSocket() {
+            socket = io({ transports: ['websocket', 'polling'] });
+
+            socket.on('connect', function () {
+                setConnectionStatus(true);
+            });
+
+            socket.on('disconnect', function () {
+                setConnectionStatus(false);
+            });
+
+            socket.on('init', handleInit);
+            socket.on('frame', handleFrame);
+            socket.on('metrics', handleMetrics);
+            socket.on('inventory', handleInventory);
+            socket.on('model_loaded', handleModelLoaded);
+            socket.on('camera_stopped', handleCameraStopped);
+            socket.on('error', handleError);
+        }
+
+        // ── Connection status ─────────────────────────────────────────
+        function setConnectionStatus(connected) {
+            const dot = $('statusDot');
+            const label = $('connectionLabel');
+            if (connected) {
+                dot.className = 'status-dot connected';
+                label.textContent = 'Verbunden';
+                label.className = 'text-xs font-mono text-white uppercase tracking-wider';
+            } else {
+                dot.className = 'status-dot disconnected';
+                label.textContent = 'Getrennt';
+                label.className = 'text-xs font-mono text-mira-muted uppercase tracking-wider';
+            }
+        }
+
+        // ── Event handlers ────────────────────────────────────────────
+        function handleInit(data) {
+            // Populate models
+            modelSelect.innerHTML = '';
+            if (data.models && data.models.length > 0) {
+                data.models.forEach(function (m) {
+                    const opt = document.createElement('option');
+                    opt.value = m.file;
+                    opt.textContent = m.label || m.file;
+                    modelSelect.appendChild(opt);
+                });
+                // Auto-load first model
+                loadModel(data.models[0].file);
+            }
+
+            // Apply config
+            if (data.config) {
+                confSlider.value = data.config.conf;
+                confValue.textContent = parseFloat(data.config.conf).toFixed(2);
+                iouSlider.value = data.config.iou;
+                iouValue.textContent = parseFloat(data.config.iou).toFixed(2);
+                imgszSelect.value = data.config.imgsz;
+                trackingEnabled = data.config.tracking;
+                updateTrackingUI();
+                cameraIndex.value = data.config.camera_index;
+            }
+
+            // Initial inventory
+            if (data.inventory) {
+                updateInventoryChart(data.inventory);
+            }
+        }
+
+        function handleFrame(data) {
+            if (!data.image) return;
+            const img = new Image();
+            img.onload = function () {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = 'data:image/jpeg;base64,' + data.image;
+        }
+
+        function handleMetrics(data) {
+            fpsValue.textContent = data.fps !== undefined ? data.fps.toFixed(1) : '--';
+            latencyValue.textContent = data.latency !== undefined ? data.latency.toFixed(0) : '--';
+            objectsValue.textContent = data.objects !== undefined ? data.objects : '--';
+        }
+
+        function handleInventory(data) {
+            updateInventoryChart(data);
+        }
+
+        function handleModelLoaded(data) {
+            modelStatus.textContent = 'Geladen: ' + data.model;
+            modelStatus.className = 'text-[10px] text-white mt-1.5 font-mono h-3';
+            showToast('Modell geladen: ' + data.model);
+        }
+
+        function handleCameraStopped() {
+            cameraRunning = false;
+            updateButtonStates();
+            standbyOverlay.classList.remove('hidden');
+            standbyOverlay.style.display = '';
+            fpsValue.textContent = '--';
+            latencyValue.textContent = '--';
+            objectsValue.textContent = '--';
+            showToast('Kamera gestoppt');
+        }
+
+        function handleError(data) {
+            showToast(data.message || 'Unbekannter Fehler');
+        }
+
+        // ── Actions ───────────────────────────────────────────────────
+        window.startCamera = function () {
+            if (cameraRunning) return;
+            standbyOverlay.style.display = 'none';
+            cameraRunning = true;
+            updateButtonStates();
+            socket.emit('start_camera', {
+                conf: parseFloat(confSlider.value),
+                iou: parseFloat(iouSlider.value),
+                imgsz: parseInt(imgszSelect.value),
+                tracking: trackingEnabled,
+                camera_index: parseInt(cameraIndex.value) || 0
+            });
+        };
+
+        window.stopCamera = function () {
+            if (!cameraRunning) return;
+            socket.emit('stop_camera');
+        };
+
+        function loadModel(filename) {
+            if (!filename) return;
+            modelStatus.textContent = 'Laden...';
+            modelStatus.className = 'text-[10px] text-mira-dim mt-1.5 font-mono h-3';
+            socket.emit('load_model', { model: filename });
+        }
+
+        window.resetInventory = function () {
+            socket.emit('reset_inventory');
+            showToast('Inventar zurueckgesetzt');
+        };
+
+        window.toggleTracking = function () {
+            trackingEnabled = !trackingEnabled;
+            updateTrackingUI();
+            sendConfig();
+        };
+
+        function updateTrackingUI() {
+            if (trackingEnabled) {
+                trackingToggle.classList.add('active');
+            } else {
+                trackingToggle.classList.remove('active');
+            }
+        }
+
+        function sendConfig() {
+            socket.emit('update_config', {
+                conf: parseFloat(confSlider.value),
+                iou: parseFloat(iouSlider.value),
+                imgsz: parseInt(imgszSelect.value),
+                tracking: trackingEnabled
+            });
+        }
+
+        function updateButtonStates() {
+            btnStart.disabled = cameraRunning;
+            btnStop.disabled = !cameraRunning;
+        }
+
+        // ── Chart.js ──────────────────────────────────────────────────
+        function initInventoryChart() {
+            const chartCanvas = $('inventoryChart');
+            inventoryChart = new Chart(chartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: ['Glas', 'Metal', 'Papier', 'Plastik', 'Muell'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: ['#ffffff', '#bbbbbb', '#888888', '#555555', '#333333'],
+                        borderColor: ['#ffffff', '#bbbbbb', '#888888', '#555555', '#333333'],
+                        borderWidth: 1,
+                        borderRadius: 2,
+                        barThickness: 18
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            ticks: { color: '#666', font: { family: 'Consolas, monospace', size: 10 }, stepSize: 1 },
+                            grid: { color: '#1a1a1a', drawBorder: false },
+                            border: { display: false }
+                        },
+                        y: {
+                            ticks: { color: '#999', font: { family: 'Consolas, monospace', size: 10 } },
+                            grid: { display: false },
+                            border: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateInventoryChart(data) {
+            if (!inventoryChart) return;
+            inventoryChart.data.datasets[0].data = [
+                data.glass || 0,
+                data.metal || 0,
+                data.paper || 0,
+                data.plastic || 0,
+                data.trash || 0
+            ];
+            inventoryChart.update('none');
+        }
+
+        // ── Toast notifications ────────────────────────────────────────
+        function showToast(message) {
+            toastCounter++;
+            const id = 'toast-' + toastCounter;
+            const el = document.createElement('div');
+            el.id = id;
+            el.className = 'toast pointer-events-auto bg-mira-black border border-mira-border px-4 py-3 rounded max-w-sm';
+            el.innerHTML = '<div class="flex items-center gap-3">' +
+                '<div class="w-1.5 h-1.5 rounded-full bg-white shrink-0"></div>' +
+                '<span class="text-xs font-mono text-mira-light">' + escapeHtml(message) + '</span>' +
+                '</div>';
+            toastContainer.appendChild(el);
+            setTimeout(function () {
+                el.style.animation = 'fadeOut 0.3s ease-in forwards';
+                setTimeout(function () { el.remove(); }, 300);
+            }, 4000);
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ── Event listeners ───────────────────────────────────────────
+        modelSelect.addEventListener('change', function () {
+            loadModel(this.value);
+        });
+
+        confSlider.addEventListener('input', function () {
+            confValue.textContent = parseFloat(this.value).toFixed(2);
+        });
+        confSlider.addEventListener('change', function () {
+            sendConfig();
+        });
+
+        iouSlider.addEventListener('input', function () {
+            iouValue.textContent = parseFloat(this.value).toFixed(2);
+        });
+        iouSlider.addEventListener('change', function () {
+            sendConfig();
+        });
+
+        imgszSelect.addEventListener('change', function () {
+            sendConfig();
+        });
+
+        cameraIndex.addEventListener('change', function () {
+            var val = parseInt(this.value);
+            if (isNaN(val) || val < 0) val = 0;
+            if (val > 10) val = 10;
+            this.value = val;
+        });
+
+        // ── Init ──────────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            initInventoryChart();
+            connectSocket();
+        });
+
+    })();
+    </script>
+</body>
+</html>
