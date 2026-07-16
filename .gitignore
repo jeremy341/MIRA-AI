@@ -35,6 +35,8 @@ results/**/*.tflite
 
 # --- Latex build artifacts ---
 latex/*.aux
+latex/*.bbl
+latex/*.blg
 latex/*.bcf
 latex/*.fdb_latexmk
 latex/*.fls
@@ -42,6 +44,7 @@ latex/*.log
 latex/*.run.xml
 latex/*.synctex.gz
 latex/*.toc
+latex/main.bbl-SAVE-ERROR
 
 # --- CLAUDE AI context (private) ---
 CLAUDE/
