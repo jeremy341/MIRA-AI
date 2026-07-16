@@ -1,6 +1,5 @@
 """MIRA Control Center — Flask + SocketIO real-time dashboard."""
 import base64
-import json
 import os
 import sys
 import time
@@ -16,7 +15,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from config import (
     DETECTION_DIR,
     DETECTION_MODEL_LABELS as MODEL_LABELS,
-    BYTE_TRACK_CONFIG_PATH,
     setup_camera_properties,
 )
 from visualize import draw_boxes
@@ -125,7 +123,6 @@ def _camera_loop():
                     results = model.track(
                         frame, persist=True, imgsz=live_config["imgsz"],
                         conf=conf, iou=live_config["iou"], verbose=False,
-                        tracker=str(BYTE_TRACK_CONFIG_PATH),
                     )
                 else:
                     results = model.predict(
