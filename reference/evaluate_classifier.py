@@ -58,7 +58,7 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     image_size=img_size,
     batch_size=32,
     crop_to_aspect_ratio=True,
-    shuffle=True
+    shuffle=False
 )
 
 class_names = val_ds.class_names

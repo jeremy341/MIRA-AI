@@ -7,8 +7,9 @@ from collections import deque
 from pathlib import Path
 from ultralytics import YOLO
 
-from config import DETECTION_DIR, get_tflite_imgsz
+from config import DETECTION_DIR, get_tflite_imgsz, setup_camera_properties, BYTE_TRACK_CONFIG_PATH
 from visualize import draw_boxes
+from logger import logger
 
 
 class CameraStream:
@@ -22,17 +23,12 @@ class CameraStream:
     def __init__(self, index: int, width: int, height: int):
         self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
         if not self.cap.isOpened():
+            logger.error(f"Failed to open camera index {index}.")
             raise RuntimeError(f"Failed to open camera index {index}.")
 
-        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+        setup_camera_properties(self.cap, width, height)
 
-        print(f"Warming up camera {index} ({self.WARMUP_FRAMES} frames)...")
+        logger.info(f"Warming up camera {index} ({self.WARMUP_FRAMES} frames)...")
         for _ in range(self.WARMUP_FRAMES):
             self.cap.read()
 
@@ -51,7 +47,7 @@ class CameraStream:
 
     def read(self):
         with self._lock:
-            return self.ret, self.frame.copy() if self.ret else (False, None)
+            return (self.ret, self.frame.copy()) if self.ret else (False, None)
 
     def release(self):
         self._running = False
@@ -107,22 +103,26 @@ class InferenceEngine:
             if p.suffix in (".pt", ".tflite", ".keras")
         )
 
-        print("\nAvailable models in models/:")
+        logger.info("\nAvailable models in models/:")
         for name in available:
             marker = "  <-- selected" if name == self.model_name else ""
             int8_marker = " [INT8 - Recommended for speed]" if "int8" in name.lower() else ""
-            print(f"  {name}{marker}{int8_marker}")
-        print()
+            logger.info(f"  {name}{marker}{int8_marker}")
+        logger.info("")
 
         if not self.model_path.exists():
+            logger.error(
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
+                f"Available models: {', '.join(available)}"
+            )
             raise FileNotFoundError(
                 f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
                 f"Available models: {', '.join(available)}"
             )
 
         if "classifier" in self.model_name.lower():
-            print(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
-            print("Live detection requires a detection model (.pt or detection .tflite).")
+            logger.error(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
+            logger.error("Live detection requires a detection model (.pt or detection .tflite).")
             sys.exit(1)
 
         task_type = "detect" if self.model_path.suffix == ".tflite" else None
@@ -136,20 +136,20 @@ class InferenceEngine:
         if self.model_path.suffix == ".tflite":
             self.img_size = imgsz or get_tflite_imgsz(self.model_path)
             if self.is_tflite_int8:
-                print(f"TFLite INT8 model: input {self.img_size}x{self.img_size}, auto-setting conf=0.25")
+                logger.info(f"TFLite INT8 model: input {self.img_size}x{self.img_size}, auto-setting conf=0.25")
             else:
-                print(f"TFLite model: input {self.img_size}x{self.img_size}")
+                logger.info(f"TFLite model: input {self.img_size}x{self.img_size}")
         else:
             self.img_size = imgsz or 640
-            print(f"PyTorch model: input {self.img_size}x{self.img_size}")
+            logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
         if self.is_tflite_int8:
             self.conf_threshold = 0.25
-            print(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
+            logger.info(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
 
     def run(self):
         """Start the real-time inference loop."""
-        print(
+        logger.info(
             f"MIRA Live Detection active (camera {self.camera_index}, "
             f"{self.cam_width}x{self.cam_height}, "
             f"target latency: {self.target_latency_ms}ms). "
@@ -195,7 +195,7 @@ class InferenceEngine:
                 iou=self.iou_threshold,
                 persist=True,
                 verbose=False,
-                tracker="bytetrack.yaml",
+                tracker=str(BYTE_TRACK_CONFIG_PATH),
             )
         else:
             return self.model.predict(
@@ -234,3 +234,4 @@ class InferenceEngine:
             frame, status_text, (20, 40),
             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2,
         )
+

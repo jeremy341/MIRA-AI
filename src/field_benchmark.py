@@ -58,11 +58,9 @@ def load_dataset(dataset_path):
 
 
 def get_detection_models():
-    models = []
-    for p in sorted(DETECTION_DIR.glob("*")):
-        if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower():
-            models.append((p.name, p))
-    return models
+    """Return list of (name, path) tuples for detection models."""
+    from config import get_detection_models as _get_names
+    return [(name, DETECTION_DIR / name) for name in _get_names()]
 
 
 def run_models(models, annotations, img_dir, conf=0.5):

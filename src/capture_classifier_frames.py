@@ -3,6 +3,8 @@ import cv2
 import datetime
 
 from config import DATA_CLASSES_DIR as DATA_DIR
+from config import setup_camera_properties
+from logger import logger
 
 # ---------------------------------------------------------------------------
 # 1. ARGUMENT PARSING
@@ -24,22 +26,17 @@ CAM_W, CAM_H = (int(v) for v in args.resolution.split("x"))
 # ---------------------------------------------------------------------------
 # 3. CAMERA SETUP
 # ---------------------------------------------------------------------------
-print(f"Opening camera {args.camera} at {CAM_W}x{CAM_H}...")
+logger.info(f"Opening camera {args.camera} at {CAM_W}x{CAM_H}...")
 cap = cv2.VideoCapture(args.camera, cv2.CAP_DSHOW)  # DirectShow: lower latency on Windows
 if not cap.isOpened():
     raise RuntimeError(f"Failed to open webcam index {args.camera}.")
 
 # MJPG decodes ~3-5x faster than YUY2 and unlocks higher frame-rates
-cap.set(cv2.CAP_PROP_FOURCC,       cv2.VideoWriter_fourcc(*"MJPG"))
-cap.set(cv2.CAP_PROP_FRAME_WIDTH,  CAM_W)
-cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_H)
-cap.set(cv2.CAP_PROP_FPS,          30)
-cap.set(cv2.CAP_PROP_BUFFERSIZE,   1)   # always get the freshest frame
-cap.set(cv2.CAP_PROP_AUTOFOCUS,    0)
+setup_camera_properties(cap, CAM_W, CAM_H)
 
 # Warmup: let auto-exposure settle so the first saved frames aren't washed out
 WARMUP = 10
-print(f"Warming up camera ({WARMUP} frames)...")
+logger.info(f"Warming up camera ({WARMUP} frames)...")
 for _ in range(WARMUP):
     cap.read()
 
@@ -57,9 +54,9 @@ CLASSES = {
 for _, folder in CLASSES.values():
     folder.mkdir(parents=True, exist_ok=True)
 
-print("MIRA Camera Frame Capture Active.")
-print("Press 1 (Glass), 2 (Metal), 3 (Paper), 4 (Plastic), or 5 (Trash) to save a frame.")
-print("Press 'q' to quit.")
+logger.info("MIRA Camera Frame Capture Active.")
+logger.info("Press 1 (Glass), 2 (Metal), 3 (Paper), 4 (Plastic), or 5 (Trash) to save a frame.")
+logger.info("Press 'q' to quit.")
 
 # ---------------------------------------------------------------------------
 # 5. CAPTURE LOOP
@@ -92,9 +89,10 @@ try:
                 filename  = f"{label}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
                 filepath  = folder / filename
                 cv2.imwrite(str(filepath), frame)
-                print(f"Saved: {filepath}")
+                logger.info(f"Saved: {filepath}")
         except ValueError:
             pass  # ignore non-ASCII key codes
 finally:
     cap.release()
     cv2.destroyAllWindows()
+

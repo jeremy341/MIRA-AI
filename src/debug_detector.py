@@ -2,8 +2,14 @@
 import argparse
 import cv2
 import time
+import logging # Added for logging
+
 from inference_engine import InferenceEngine
 from visualize import draw_boxes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser(description="MIRA Live Diagnostic & Testing Suite (Optimized)")
 parser.add_argument(
@@ -23,16 +29,28 @@ parser.add_argument(
     help="Intersection over Union threshold for Non-Maximum Suppression"
 )
 parser.add_argument(
-    "--track", action="store_true", default=True,
+    "--track", action="store_true", default=False, # Changed default to False
     help="Enable persistent ByteTrack object tracking"
 )
+parser.add_argument( # Added --resolution argument
+    "--resolution", type=str, default="1280x720",
+    choices=['640x360', '1280x720', '1920x1080'],
+    help="Camera resolution (widthxheight)"
+)
 args = parser.parse_args()
+
+# Parse resolution string
+try:
+    cam_width, cam_height = map(int, args.resolution.split('x'))
+except ValueError:
+    logger.error(f"Invalid resolution format: {args.resolution}. Expected 'WIDTHxHEIGHT'.")
+    exit(1)
 
 engine = InferenceEngine(
     model_name=args.model,
     camera_index=0,
-    cam_width=1280,
-    cam_height=720,
+    cam_width=cam_width, # Use parsed cam_width
+    cam_height=cam_height, # Use parsed cam_height
     target_latency_ms=100,
     conf_threshold=args.conf,
     imgsz=args.imgsz,
@@ -40,8 +58,8 @@ engine = InferenceEngine(
     iou_threshold=args.iou,
 )
 
-print(f"Diagnostics active. Using {args.model} | imgsz={args.imgsz or engine.img_size} | conf={args.conf} | track={args.track}")
-print("Press 'q' in the window to exit.")
+logger.info(f"Diagnostics active. Using {args.model} | imgsz={args.imgsz or engine.img_size} | conf={args.conf} | track={args.track}")
+logger.info("Press 'q' in the window to exit.")
 
 # Custom diagnostic loop with per-frame benchmark metrics
 try:
@@ -50,7 +68,7 @@ try:
     while True:
         ret, frame = engine.stream.read()
         if not ret:
-            print("Error: Camera frame capture failed.")
+            logger.error("Error: Camera frame capture failed.") # Replaced print with logger.error
             break
 
         frame_count += 1
@@ -84,3 +102,4 @@ try:
 finally:
     engine.stream.release()
     cv2.destroyAllWindows()
+

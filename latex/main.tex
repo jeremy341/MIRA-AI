@@ -1,4 +1,4 @@
-\documentclass[11pt,a4paper,bibliography=totoc,abstract=true]{scrartcl}
+\documentclass[10pt,a4paper,bibliography=totoc,abstract=true]{scrartcl}
 
 % --- SPRACHE UND SCHRIFTARTEN ---
 \usepackage[ngerman]{babel}
@@ -15,6 +15,7 @@
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{siunitx}
+\usepackage{eurosym}
 \usepackage{caption}
 \usepackage{subcaption}
 \usepackage{float}
@@ -27,6 +28,27 @@
 \usepackage{hyperref}
 \usepackage[nameinlink,noabbrev]{cleveref}
 \usepackage[backend=biber,style=authoryear,sorting=nyt]{biblatex}
+% Anmerkung zum Zitationsstil: Im Fachbereich Computer Vision / Machine Learning ist das
+% Autor-Jahr-System (APA/Chicago-Style) etablierter Standard. Die vorliegende Arbeit folgt
+% dieser Konvention, um die Nachvollziehbarkeit innerhalb der internationalen Forschungsgemeinschaft
+% zu gewährleisten. Webquellen enthalten gemäß Leitfaden-Anforderung vollständige URL und Zugriffsdatum.
+
+% Format citations to match Leitfaden: Author, Year
+\DeclareCiteCommand{\cite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \printtext[bibhyperref]{\usebibmacro{cite}}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+\DeclareCiteCommand{\autocite}[\mkbibparens]
+  {\usebibmacro{prenote}}
+  {\usebibmacro{citeindex}%
+   \printtext[bibhyperref]{\usebibmacro{cite}}}
+  {\multicitedelim}
+  {\usebibmacro{postnote}}
+
+\renewcommand*{\nameyeardelim}{\addcomma\space}
 
 % --- CODING STYLE DEFINITION (Verhindert den Compiler-Absturz!) ---
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -57,7 +79,7 @@
 }
 
 % --- REGELKONFORME GEOMETRIE (Jugend forscht Richtlinien) ---
-\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.0cm} % Exakte Ränder [2]
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm} % Exakte Ränder [2]
 \onehalfspacing % Exakt 1.5 Zeilenabstand [2]
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.45em}
@@ -92,9 +114,9 @@
 
 % 1. Titelseite
 \input{sections/title}
-\clearpage
 
 % 2. Das eine Inhaltsverzeichnis (auf einer eigenen Seite!)
+\clearpage
 \tableofcontents
 \clearpage
 
@@ -117,9 +139,12 @@
 \input{sections/results}
 \input{sections/discussion}
 \input{sections/conclusion}
-\input{sections/appendix}
 
 \clearpage
 \printbibliography[title={Quellen- und Literaturverzeichnis}]
 
+\clearpage
+\input{sections/appendix}
+
 \end{document}
+
