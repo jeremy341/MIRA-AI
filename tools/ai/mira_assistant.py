@@ -2,6 +2,9 @@ import os
 import re
 from pathlib import Path
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 # 1. KONFIGURATION
 API_KEY = os.environ.get("HACK_CLUB_API_KEY", "")
