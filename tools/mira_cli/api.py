@@ -1,7 +1,11 @@
 """Hack Club AI API client — OpenAI-compatible proxy."""
 import os
+from pathlib import Path
 import requests
+from dotenv import load_dotenv
 from typing import Generator
+
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
 
 BASE_URL = "https://ai.hackclub.com/proxy/v1"
 DEFAULT_MODEL = "google/gemini-3.1-flash-lite-preview"
