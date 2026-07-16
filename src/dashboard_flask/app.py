@@ -40,9 +40,9 @@ inventory_lock = threading.Lock()
 
 # Live config (updated by frontend via SocketIO)
 live_config = {
-    "conf": 0.5,
+    "conf": 0.25,
     "iou": 0.45,
-    "imgsz": 320,
+    "imgsz": 640,
     "tracking": True,
     "camera_index": 0,
 }
@@ -162,7 +162,8 @@ def _camera_loop():
                 inventory.update(counts_local)
 
             annotated = draw_boxes(frame, results, conf)
-            _, jpeg = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+            _, jpeg = cv2.imencode(".jpg", annotated_rgb, [cv2.IMWRITE_JPEG_QUALITY, 80])
             frame_b64 = base64.b64encode(jpeg).decode("utf-8")
 
             socketio.emit("frame", {"image": frame_b64})

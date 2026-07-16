@@ -120,9 +120,9 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">Konfidenz</label>
-                        <span id="confValue" class="text-xs font-mono text-mira-dim">0.50</span>
+                        <span id="confValue" class="text-xs font-mono text-mira-dim">0.25</span>
                     </div>
-                    <input type="range" id="confSlider" min="0.05" max="1.0" step="0.05" value="0.50" class="w-full">
+                    <input type="range" id="confSlider" min="0.05" max="1.0" step="0.05" value="0.25" class="w-full">
                 </div>
 
                 <!-- IoU -->
@@ -138,11 +138,9 @@
                 <div>
                     <label class="block text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em] mb-2">Bildgroesse</label>
                     <select id="imgszSelect" class="w-full bg-mira-black border border-mira-border text-sm text-white px-3 py-2.5 rounded outline-none focus:border-mira-dim transition-colors">
-                        <option value="160">160</option>
-                        <option value="224">224</option>
-                        <option value="320" selected>320</option>
+                        <option value="320">320</option>
                         <option value="416">416</option>
-                        <option value="640">640</option>
+                        <option value="640" selected>640</option>
                     </select>
                 </div>
 
@@ -291,8 +289,11 @@
                     opt.textContent = m.label || m.file;
                     modelSelect.appendChild(opt);
                 });
-                // Auto-load first model
-                loadModel(data.models[0].file);
+                // Auto-load best model (EXP-014) if available, otherwise first
+                var bestModel = data.models.find(function(m) { return m.file.indexOf('exp014') !== -1 && m.file.indexOf('int8') === -1; });
+                if (!bestModel) bestModel = data.models[0];
+                modelSelect.value = bestModel.file;
+                loadModel(bestModel.file);
             }
 
             // Apply config
