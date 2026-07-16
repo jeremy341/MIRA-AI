@@ -13,3 +13,6 @@ def get_logger(name: str, level: str = "INFO") -> logging.Logger:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
     return logger
+
+
+logger = get_logger("mira")

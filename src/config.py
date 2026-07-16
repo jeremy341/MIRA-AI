@@ -1,5 +1,6 @@
 """Shared configuration, constants, and utility functions for MIRA."""
 import pathlib
+import cv2
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
@@ -8,6 +9,7 @@ MODELS_DIR = ROOT_DIR / "models"
 CLASSIFIER_DIR = MODELS_DIR / "classifier"
 DETECTION_DIR = MODELS_DIR / "detection"
 DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
+BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
 
 CLASS_NAMES: list[str] = ["glass", "metal", "paper", "plastic", "trash"]
 
@@ -49,3 +51,15 @@ def get_tflite_imgsz(model_path: pathlib.Path) -> int:
     shape = tmp.get_input_details()[0]["shape"]
     del tmp
     return int(max(shape))
+
+
+def setup_camera_properties(cap: cv2.VideoCapture, width: int, height: int, fps: int = 30):
+    if not cap.isOpened():
+        raise RuntimeError('Camera is not opened before setting properties.')
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    cap.set(cv2.CAP_PROP_FPS, fps)
+    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
+    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)

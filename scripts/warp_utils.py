@@ -4,10 +4,13 @@ Handles the 28->5 class remapping, valid split creation, and stats printing.
 """
 import shutil
 import random
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATASETS = ROOT / "datasets"
+sys.path.insert(0, str(ROOT / "src"))
+from config import CLASS_NAMES as _CLASS_LIST
 
 # WaRP 28 classes (0-indexed) -> 5 MIRA classes
 # Based on datasets/WaRP/Warp-D/classes.txt
@@ -26,7 +29,7 @@ WARP_MAPPING = {
 }
 
 WARP_DIR = DATASETS / "mira_warp" / "Warp-D"
-CLASS_NAMES = {0: "glass", 1: "metal", 2: "paper", 3: "plastic", 4: "trash"}
+CLASS_NAMES = {i: name for i, name in enumerate(_CLASS_LIST)}
 
 
 def create_warp_split():

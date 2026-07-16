@@ -11,7 +11,9 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO
 from ultralytics import YOLO
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+_src_dir = str(Path(__file__).resolve().parent.parent)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
 from config import (
     DETECTION_DIR,
     DETECTION_MODEL_LABELS as MODEL_LABELS,
@@ -21,7 +23,7 @@ from visualize import draw_boxes
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", os.urandom(24).hex())
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+socketio = SocketIO(app, cors_allowed_origins=["http://localhost:5000", "http://127.0.0.1:5000"], async_mode="threading")
 
 # ---------------------------------------------------------------------------
 # Global state
@@ -35,8 +37,8 @@ model_name: str = ""
 model_lock = threading.Lock()
 
 inventory: dict[str, int] = {c: 0 for c in ["glass", "metal", "paper", "plastic", "trash"]}
-seen_ids: set[int] = set()
 inventory_lock = threading.Lock()
+config_lock = threading.Lock()
 
 # Live config (updated by frontend via SocketIO)
 live_config = {
@@ -88,6 +90,7 @@ def _camera_loop():
     fps_counter: list[float] = []
     seen_local: set[int] = set()
     counts_local = {c: 0 for c in inventory}
+    last_emitted_inventory = {c: 0 for c in ["glass", "metal", "paper", "plastic", "trash"]}
 
     try:
         while camera_running:
@@ -109,25 +112,31 @@ def _camera_loop():
                 time.sleep(0.05)
                 continue
 
-            conf = live_config["conf"]
+            with config_lock:
+                cfg_conf = live_config["conf"]
+                cfg_iou = live_config["iou"]
+                cfg_imgsz = live_config["imgsz"]
+                cfg_tracking = live_config["tracking"]
+
+            conf = cfg_conf
             if is_tflite:
                 conf = min(conf, 0.25)
 
             try:
                 if is_tflite:
                     results = model.predict(
-                        frame, imgsz=live_config["imgsz"],
-                        conf=conf, iou=live_config["iou"], verbose=False,
+                        frame, imgsz=cfg_imgsz,
+                        conf=conf, iou=cfg_iou, verbose=False,
                     )
-                elif live_config["tracking"]:
+                elif cfg_tracking:
                     results = model.track(
-                        frame, persist=True, imgsz=live_config["imgsz"],
-                        conf=conf, iou=live_config["iou"], verbose=False,
+                        frame, persist=True, imgsz=cfg_imgsz,
+                        conf=conf, iou=cfg_iou, verbose=False,
                     )
                 else:
                     results = model.predict(
-                        frame, imgsz=live_config["imgsz"],
-                        conf=conf, iou=live_config["iou"], verbose=False,
+                        frame, imgsz=cfg_imgsz,
+                        conf=conf, iou=cfg_iou, verbose=False,
                     )
             except Exception as e:
                 consecutive_errors += 1
@@ -162,8 +171,7 @@ def _camera_loop():
                 inventory.update(counts_local)
 
             annotated = draw_boxes(frame, results, conf)
-            annotated_rgb = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-            _, jpeg = cv2.imencode(".jpg", annotated_rgb, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            _, jpeg = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
             frame_b64 = base64.b64encode(jpeg).decode("utf-8")
 
             socketio.emit("frame", {"image": frame_b64})
@@ -172,7 +180,9 @@ def _camera_loop():
                 "latency": round(latency_ms, 1),
                 "objects": len(results[0].boxes) if results[0].boxes is not None else 0,
             })
-            socketio.emit("inventory", dict(counts_local))
+            if counts_local != last_emitted_inventory:
+                socketio.emit("inventory", dict(counts_local))
+                last_emitted_inventory = dict(counts_local)
 
             # Target ~20 FPS
             elapsed = time.perf_counter() - t0
@@ -248,9 +258,10 @@ def handle_load_model(data):
 
 @socketio.on("update_config")
 def handle_update_config(data):
-    for key in ("conf", "iou", "imgsz", "tracking", "camera_index"):
-        if key in data:
-            live_config[key] = data[key]
+    with config_lock:
+        for key in ("conf", "iou", "imgsz", "tracking", "camera_index"):
+            if key in data:
+                live_config[key] = data[key]
 
 
 @socketio.on("reset_inventory")
@@ -275,8 +286,8 @@ def index():
 def run_dashboard(host="0.0.0.0", port=5000, debug=False):
     print(f"\n  MIRA Control Center")
     print(f"  http://localhost:{port}\n")
-    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=debug)
 
 
 if __name__ == "__main__":
-    run_dashboard(debug=True)
+    run_dashboard(debug=False)

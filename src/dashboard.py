@@ -5,11 +5,13 @@ import time
 import pandas as pd
 import numpy as np
 
-from config import DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS
+from config import DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS, setup_camera_properties, BYTE_TRACK_CONFIG_PATH
 from visualize import draw_boxes
+from logger import logger
 
 if not DETECTION_DIR.exists():
     st.error(f"Models directory not found at: {DETECTION_DIR}")
+    logger.error(f"Models directory not found at: {DETECTION_DIR}")
     st.stop()
 
 available_models = [
@@ -24,6 +26,7 @@ available_models_display = [
 
 if not available_models:
     st.error("No compatible detection models found inside the /models folder.")
+    logger.error("No compatible detection models found inside the /models folder.")
     st.stop()
 
 # 2. STREAMLIT PAGE CONFIGURATION
@@ -59,8 +62,10 @@ def load_selected_model(model_name):
     path = DETECTION_DIR / model_name
     if "classifier" in model_name.lower():
         st.error(f"'{model_name}' is a classifier model. Use 'mira eval-class' instead.")
+        logger.error(f"Attempted to load classifier model '{model_name}' in detection dashboard.")
         st.stop()
     task_type = "detect" if path.suffix == ".tflite" else None
+    logger.info(f"Loading model: {path} with task_type: {task_type}")
     return YOLO(str(path), task=task_type), "int8" in model_name.lower() and path.suffix == ".tflite"
 
 
@@ -69,6 +74,7 @@ model, is_tflite_int8 = load_selected_model(selected_model)
 if is_tflite_int8:
     conf = min(conf, 0.25)
     st.sidebar.warning(f"INT8 model detected — conf capped at {conf:.2f}")
+    logger.info(f"INT8 model detected, confidence threshold capped at {conf:.2f}")
 
 # 5. LAYOUT
 col1, col2 = st.columns([2, 1])
@@ -77,31 +83,30 @@ chart_placeholder = col2.empty()
 
 if "seen_ids" not in st.session_state:
     st.session_state.seen_ids = set()
+    logger.info("Initialized st.session_state.seen_ids")
 
 if "counts" not in st.session_state:
     st.session_state.counts = {"glass": 0, "metal": 0, "paper": 0, "plastic": 0, "trash": 0}
+    logger.info("Initialized st.session_state.counts")
 
 # 6. LIVE INFERENCE LOOP
 if run_camera:
     cap = cv2.VideoCapture(int(camera_index), cv2.CAP_DSHOW)
     if not cap.isOpened():
         st.error(f"Failed to open video capture device {int(camera_index)}.")
+        logger.error(f"Failed to open video capture device {int(camera_index)}.")
         st.session_state.run_camera = False
         st.stop()
 
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
-    cap.set(cv2.CAP_PROP_FPS, 30)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-    cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
-    cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+    setup_camera_properties(cap, 640, 360)
+    logger.info(f"Camera {int(camera_index)} opened and properties set.")
 
     try:
         while st.session_state.get("run_camera", False):
             ret, frame = cap.read()
             if not ret:
                 st.error("Failed to capture video.")
+                logger.error("Failed to capture video frame.")
                 st.session_state.run_camera = False
                 break
 
@@ -110,7 +115,7 @@ if run_camera:
             if is_tflite_int8:
                 results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
             elif enable_tracking:
-                results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False, tracker="bytetrack.yaml")
+                results = model.track(frame, persist=True, imgsz=imgsz, conf=conf, iou=iou, verbose=False, tracker=str(BYTE_TRACK_CONFIG_PATH))
             else:
                 results = model.predict(frame, imgsz=imgsz, conf=conf, iou=iou, verbose=False)
 
@@ -132,6 +137,7 @@ if run_camera:
                         class_name = model.names[class_id]
                         if class_name in st.session_state.counts:
                             st.session_state.counts[class_name] += 1
+                            logger.info(f"Detected new object: {class_name} (ID: {track_id}). Total {class_name} count: {st.session_state.counts[class_name]}")
 
             annotated_frame = draw_boxes(frame, results, conf)
 
@@ -144,5 +150,8 @@ if run_camera:
             time.sleep(0.01)
     finally:
         cap.release()
+        logger.info("Camera released.")
 else:
     image_placeholder.info("System standby. Activate 'Start Live Feed' in the sidebar.")
+    logger.info("System in standby mode.")
+

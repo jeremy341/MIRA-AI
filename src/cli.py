@@ -78,6 +78,7 @@ def main():
     live_parser.add_argument("--conf", type=float, default=0.5, help="Confidence threshold (default: 0.5).")
     subparsers.add_parser("dashboard", help="Launch Streamlit web control center")
     subparsers.add_parser("dashboard-new", help="Launch Flask+SocketIO web control center (B&W theme)")
+    subparsers.add_parser("ai", help="Launch MIRA-AI interactive assistant")
 
     args = parser.parse_args()
 
@@ -138,6 +139,12 @@ def main():
         model = YOLO(str(model_path), task=task_type)
         val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix == ".tflite" else 640
         model.val(data=str(data_path), imgsz=val_imgsz)
+    elif args.command == "ai":
+        from pathlib import Path
+        tools_dir = str(Path(__file__).resolve().parent.parent / "tools")
+        sys.path.insert(0, tools_dir)
+        from mira_cli.main import main
+        main()
     else:
         parser.print_help()
 
