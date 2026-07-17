@@ -1,5 +1,4 @@
 import json
-import os
 import shutil
 import random
 from pathlib import Path
@@ -88,7 +87,6 @@ print("Loading TACO annotations...")
 with open(ANNOTATIONS_PATH) as f:
     data = json.load(f)
 
-cat_name_to_id = {c["name"]: c["id"] for c in data["categories"]}
 img_id_to_file = {img["id"]: img["file_name"] for img in data["images"]}
 
 image_annotations = {}

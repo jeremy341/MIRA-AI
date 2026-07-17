@@ -1,4 +1,3 @@
-#!/usr/bin/env py
 """Create a WaRP-only YOLO dataset (28 WaRP classes remapped to 5 MIRA classes).
 
 Usage:

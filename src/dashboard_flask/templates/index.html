@@ -125,6 +125,15 @@
                     <input type="range" id="confSlider" min="0.05" max="1.0" step="0.05" value="0.25" class="w-full">
                 </div>
 
+                <!-- REJECT THRESHOLD -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[10px] font-mono text-mira-muted uppercase tracking-[0.15em]">Ablehnen unter</label>
+                        <span id="rejectValue" class="text-xs font-mono text-mira-dim">0.55</span>
+                    </div>
+                    <input type="range" id="rejectSlider" min="0.10" max="1.0" step="0.05" value="0.55" class="w-full">
+                </div>
+
                 <!-- IoU -->
                 <div>
                     <div class="flex items-center justify-between mb-2">
@@ -230,6 +239,8 @@
         const modelStatus = $('modelStatus');
         const confSlider = $('confSlider');
         const confValue = $('confValue');
+        const rejectSlider = $('rejectSlider');
+        const rejectValue = $('rejectValue');
         const iouSlider = $('iouSlider');
         const iouValue = $('iouValue');
         const imgszSelect = $('imgszSelect');
@@ -300,6 +311,10 @@
             if (data.config) {
                 confSlider.value = data.config.conf;
                 confValue.textContent = parseFloat(data.config.conf).toFixed(2);
+                if (data.config.reject !== undefined) {
+                    rejectSlider.value = data.config.reject;
+                    rejectValue.textContent = parseFloat(data.config.reject).toFixed(2);
+                }
                 iouSlider.value = data.config.iou;
                 iouValue.textContent = parseFloat(data.config.iou).toFixed(2);
                 imgszSelect.value = data.config.imgsz;
@@ -364,6 +379,7 @@
             updateButtonStates();
             socket.emit('start_camera', {
                 conf: parseFloat(confSlider.value),
+                reject: parseFloat(rejectSlider.value),
                 iou: parseFloat(iouSlider.value),
                 imgsz: parseInt(imgszSelect.value),
                 tracking: trackingEnabled,
@@ -405,6 +421,7 @@
         function sendConfig() {
             socket.emit('update_config', {
                 conf: parseFloat(confSlider.value),
+                reject: parseFloat(rejectSlider.value),
                 iou: parseFloat(iouSlider.value),
                 imgsz: parseInt(imgszSelect.value),
                 tracking: trackingEnabled
@@ -503,6 +520,13 @@
             confValue.textContent = parseFloat(this.value).toFixed(2);
         });
         confSlider.addEventListener('change', function () {
+            sendConfig();
+        });
+
+        rejectSlider.addEventListener('input', function () {
+            rejectValue.textContent = parseFloat(this.value).toFixed(2);
+        });
+        rejectSlider.addEventListener('change', function () {
             sendConfig();
         });
 

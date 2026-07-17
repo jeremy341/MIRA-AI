@@ -1,4 +1,3 @@
-#!/usr/bin/env py
 """YOLO11n Training Script for Kaggle GPU.
 
 Usage (on Kaggle):

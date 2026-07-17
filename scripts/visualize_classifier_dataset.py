@@ -1,7 +1,10 @@
+import sys
+from pathlib import Path
 import random
 import cv2
 import matplotlib.pyplot as plt
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from config import DATA_CLASSES_DIR as DATA_DIR, CLASS_NAMES as CLASSES
 
 total_files = 0

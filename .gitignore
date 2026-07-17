@@ -11,6 +11,7 @@ Thumbs.db
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .pytest_cache/
 .hypothesis/
 *.cache
@@ -26,6 +27,12 @@ datasets/
 results/**/train_batch*.jpg
 results/**/val_batch*.jpg
 results/**/labels.jpg
+
+# --- Model weights ---
+models/
+*.pt
+*.onnx
+*.tflite
 
 # --- YOLO weights and large model files in results ---
 results/**/weights/

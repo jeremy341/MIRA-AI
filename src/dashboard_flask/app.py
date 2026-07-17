@@ -17,6 +17,7 @@ if _src_dir not in sys.path:
 from config import (
     DETECTION_DIR,
     DETECTION_MODEL_LABELS as MODEL_LABELS,
+    REJECT_THRESHOLD,
     setup_camera_properties,
 )
 from visualize import draw_boxes
@@ -43,6 +44,7 @@ config_lock = threading.Lock()
 # Live config (updated by frontend via SocketIO)
 live_config = {
     "conf": 0.25,
+    "reject": REJECT_THRESHOLD,
     "iou": 0.45,
     "imgsz": 640,
     "tracking": True,
@@ -114,6 +116,7 @@ def _camera_loop():
 
             with config_lock:
                 cfg_conf = live_config["conf"]
+                cfg_reject = live_config["reject"]
                 cfg_iou = live_config["iou"]
                 cfg_imgsz = live_config["imgsz"]
                 cfg_tracking = live_config["tracking"]
@@ -155,12 +158,13 @@ def _camera_loop():
                 fps_counter.pop(0)
             avg_fps = 1.0 / (sum(fps_counter) / len(fps_counter)) if fps_counter else 0
 
-            # Tracking counts
+            # Tracking counts (only count confident detections)
             if results[0].boxes is not None and results[0].boxes.id is not None:
                 track_ids = results[0].boxes.id.cpu().numpy().astype(int)
                 class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
-                for tid, cid in zip(track_ids, class_ids):
-                    if tid not in seen_local:
+                confs = results[0].boxes.conf.cpu().numpy()
+                for tid, cid, cconf in zip(track_ids, class_ids, confs):
+                    if tid not in seen_local and cconf >= cfg_reject:
                         seen_local.add(tid)
                         cname = results[0].names[cid]
                         if cname in counts_local:
@@ -170,7 +174,7 @@ def _camera_loop():
             with inventory_lock:
                 inventory.update(counts_local)
 
-            annotated = draw_boxes(frame, results, conf)
+            annotated = draw_boxes(frame, results, conf, cfg_reject)
             _, jpeg = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
             frame_b64 = base64.b64encode(jpeg).decode("utf-8")
 
@@ -216,13 +220,15 @@ def handle_start_camera(data=None):
             return
 
     if data:
-        live_config.update({
-            "conf": data.get("conf", live_config["conf"]),
-            "iou": data.get("iou", live_config["iou"]),
-            "imgsz": data.get("imgsz", live_config["imgsz"]),
-            "tracking": data.get("tracking", live_config["tracking"]),
-            "camera_index": data.get("camera_index", live_config["camera_index"]),
-        })
+        with config_lock:
+            live_config.update({
+                "conf": data.get("conf", live_config["conf"]),
+                "reject": data.get("reject", live_config["reject"]),
+                "iou": data.get("iou", live_config["iou"]),
+                "imgsz": data.get("imgsz", live_config["imgsz"]),
+                "tracking": data.get("tracking", live_config["tracking"]),
+                "camera_index": data.get("camera_index", live_config["camera_index"]),
+            })
 
     with camera_lock:
         if camera_running:
@@ -235,9 +241,11 @@ def handle_start_camera(data=None):
 @socketio.on("stop_camera")
 def handle_stop_camera():
     global camera_running, camera_thread
-    camera_running = False
-    if camera_thread and camera_thread.is_alive():
-        camera_thread.join(timeout=3)
+    with camera_lock:
+        camera_running = False
+        if camera_thread and camera_thread.is_alive():
+            camera_thread.join(timeout=3)
+        camera_thread = None
 
 
 @socketio.on("load_model")
@@ -259,7 +267,7 @@ def handle_load_model(data):
 @socketio.on("update_config")
 def handle_update_config(data):
     with config_lock:
-        for key in ("conf", "iou", "imgsz", "tracking", "camera_index"):
+        for key in ("conf", "reject", "iou", "imgsz", "tracking", "camera_index"):
             if key in data:
                 live_config[key] = data[key]
 
