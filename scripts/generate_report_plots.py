@@ -262,11 +262,11 @@ def plot_ema_filter_simulation():
                 fontsize=9, ha='center')
                 
     ax.annotate('Ausgleich stochastischen\nKamerarauschens', xy=(35, 0.85), xytext=(35, 0.5),
-                arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=HeadWidth_Placeholder),
+                arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=6),
                 fontsize=9, ha='center')
                 
     ax.annotate('Geringer Latenzverzug\n(~5 Frames)', xy=(18, 0.5), xytext=(25, 0.25),
-                arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=HeadWidth_Placeholder),
+                arrowprops=dict(facecolor='black', shrink=0.08, width=1, headwidth=6),
                 fontsize=9, ha='center')
                 
     ax.set_xlabel('Zeitschritte (Frames)', fontsize=10, fontweight='bold')
@@ -282,8 +282,6 @@ def plot_ema_filter_simulation():
     print("Generated ema-filter-effect.png")
 
 if __name__ == '__main__':
-    # Fix the HeadWidth placeholder
-    HeadWidth_Placeholder = 6
     plot_stagea_acc()
     plot_det_map()
     plot_heatmap()

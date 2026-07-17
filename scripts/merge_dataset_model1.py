@@ -1,4 +1,3 @@
-#!/usr/bin/env py
 """Merge TACO + TrashNet + Roboflow Trash Detection into one YOLO dataset.
 
 Usage:

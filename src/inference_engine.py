@@ -1,6 +1,5 @@
 """Shared inference engine: camera setup, model loading, inference loop."""
 import cv2
-import sys
 import threading
 import time
 from collections import deque
@@ -70,6 +69,7 @@ class InferenceEngine:
         cam_height: int = 360,
         target_latency_ms: int = 50,
         conf_threshold: float = 0.5,
+        reject_threshold: float = 0.55,
         imgsz: int | None = None,
         enable_tracking: bool = True,
         iou_threshold: float = 0.45,
@@ -80,6 +80,7 @@ class InferenceEngine:
         self.cam_height = cam_height
         self.target_latency_ms = target_latency_ms
         self.conf_threshold = conf_threshold
+        self.reject_threshold = reject_threshold
         self.enable_tracking = enable_tracking
         self.iou_threshold = iou_threshold
 
@@ -123,7 +124,10 @@ class InferenceEngine:
         if "classifier" in self.model_name.lower():
             logger.error(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
             logger.error("Live detection requires a detection model (.pt or detection .tflite).")
-            sys.exit(1)
+            raise ValueError(
+                f"Model '{self.model_name}' is a classifier, not a detector. "
+                "Use a detection model for live detection."
+            )
 
         task_type = "detect" if self.model_path.suffix == ".tflite" else None
         self.model = YOLO(str(self.model_path), task=task_type)
@@ -167,7 +171,7 @@ class InferenceEngine:
                     continue
 
                 results = self._infer(frame)
-                annotated = draw_boxes(frame, results, conf_threshold=self.conf_threshold)
+                annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold)
                 self._update_metrics(results)
                 self._draw_status(annotated, results)
                 cv2.imshow("MIRA Real-Time Multi-Object Detection", annotated)

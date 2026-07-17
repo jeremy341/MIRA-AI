@@ -97,7 +97,7 @@ def compute_metrics(results):
     model_metrics = {}
     for model_name, images in results.items():
         per_class = {}
-        for cls_id in range(5):
+        for cls_id in range(len(CLASS_NAMES)):
             tp = fp = fn = 0
             for img_data in images.values():
                 if cls_id in img_data["true"] and cls_id in img_data["pred"]:
@@ -147,6 +147,8 @@ def print_results(model_metrics, dataset_name):
 def find_datasets():
     datasets_dir = ROOT_DIR / "datasets"
     candidates = []
+    if not datasets_dir.exists():
+        return candidates
     for d in sorted(datasets_dir.iterdir()):
         if d.is_dir() and (d / "images" / "val").exists():
             candidates.append(d)

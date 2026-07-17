@@ -1,4 +1,3 @@
-#!/usr/bin/env py
 """Merge TACO + TrashNet + WaRP into one YOLO dataset.
 
 Usage:

@@ -4,7 +4,7 @@ import subprocess
 import sys
 from model_picker import pick_model
 
-from config import ROOT_DIR, SCRIPT_DIR, REF_DIR, DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS, get_detection_models, get_tflite_imgsz
+from config import ROOT_DIR, SCRIPT_DIR, REF_DIR, DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS, REJECT_THRESHOLD, get_detection_models, get_tflite_imgsz
 
 
 def run_script(script_path, args_list=None):
@@ -76,16 +76,17 @@ def main():
                              help="Camera capture resolution (default: 640x360).")
     live_parser.add_argument("--target-latency", type=int, default=50, help="Target latency in ms (default: 50).")
     live_parser.add_argument("--conf", type=float, default=0.5, help="Confidence threshold (default: 0.5).")
-    subparsers.add_parser("dashboard", help="Launch Streamlit web control center")
-    subparsers.add_parser("dashboard-new", help="Launch Flask+SocketIO web control center (B&W theme)")
-    subparsers.add_parser("ai", help="Launch MIRA-AI interactive assistant")
+    live_parser.add_argument("--reject", type=float, default=REJECT_THRESHOLD, help="Reject threshold: uncertain detections below this are labeled 'unsicher' (default: 0.55).")
+    dash_parser = subparsers.add_parser("dashboard", help="Launch Flask+SocketIO web control center (B&W theme)")
+    dash_parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0).")
+    dash_parser.add_argument("--port", type=int, default=5000, help="Port number (default: 5000).")
 
     args = parser.parse_args()
 
     if args.command == "data-build":
         run_script(REF_DIR / "build_detector_dataset.py")
     elif args.command == "data-viz":
-        run_script(SCRIPT_DIR / "visualize_classifier_dataset.py")
+        run_script(ROOT_DIR / "scripts" / "visualize_classifier_dataset.py")
     elif args.command == "train-baseline":
         run_script(REF_DIR / "train_classifier_baseline.py")
     elif args.command == "train-transfer":
@@ -109,19 +110,21 @@ def main():
         if "classifier" in model.lower():
             print(f"ERROR: '{model}' is a classifier model, not a detector.")
             sys.exit(1)
-        run_script(SCRIPT_DIR / "live_detector.py", [
-            "--model", model,
-            "--camera", str(args.camera),
-            "--resolution", args.resolution,
-            "--target-latency", str(args.target_latency),
-            "--conf", str(args.conf),
-        ])
+        from inference_engine import InferenceEngine
+        w, h = map(int, args.resolution.split("x"))
+        engine = InferenceEngine(
+            model_name=model,
+            camera_index=args.camera,
+            cam_width=w,
+            cam_height=h,
+            target_latency_ms=args.target_latency,
+            conf_threshold=args.conf,
+            reject_threshold=args.reject,
+        )
+        engine.run()
     elif args.command == "dashboard":
-        print("Launching Streamlit web server...")
-        subprocess.run(["streamlit", "run", str(SCRIPT_DIR / "dashboard.py")], check=True)
-    elif args.command == "dashboard-new":
         from dashboard_flask.app import run_dashboard
-        run_dashboard()
+        run_dashboard(host=args.host, port=args.port)
     elif args.command == "eval-class":
         run_script(REF_DIR / "evaluate_classifier.py", ["--model", args.model, "--exp", args.exp])
     elif args.command == "eval-yolo":
@@ -139,12 +142,6 @@ def main():
         model = YOLO(str(model_path), task=task_type)
         val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix == ".tflite" else 640
         model.val(data=str(data_path), imgsz=val_imgsz)
-    elif args.command == "ai":
-        from pathlib import Path
-        tools_dir = str(Path(__file__).resolve().parent.parent / "tools")
-        sys.path.insert(0, tools_dir)
-        from mira_cli.main import main
-        main()
     else:
         parser.print_help()
 

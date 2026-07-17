@@ -19,13 +19,20 @@ def _make_mock_box(conf, xyxy, cls_id):
     box = MagicMock()
     box.conf = np.array([conf])
 
-    # box.xyxy[0] should index first row, then .cpu().numpy().astype(int)
     xyxy_array = np.array(xyxy)
-    box.xyxy.__getitem__ = lambda self, idx: MagicMock(
-        cpu=lambda: MagicMock(
-            numpy=lambda: xyxy_array
-        )
-    )
+
+    class _XYXYProxy(list):
+        """List-like proxy so box.xyxy[0] returns a cpu()-chainable mock."""
+        def __init__(self, arr):
+            super().__init__([arr])
+
+        def __getitem__(self, idx):
+            val = super().__getitem__(idx)
+            m = MagicMock()
+            m.cpu.return_value.numpy.return_value = val
+            return m
+
+    box.xyxy = _XYXYProxy(xyxy_array)
 
     box.cls = np.array([cls_id])
     return box
@@ -38,6 +45,7 @@ def _make_mock_results(boxes_list, names=None):
     if names is None:
         names = {0: "glass", 1: "metal", 2: "paper", 3: "plastic", 4: "trash"}
 
+    results.__len__ = lambda self: 1
     results[0].names = names
 
     if not boxes_list:

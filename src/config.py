@@ -13,6 +13,8 @@ BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
 
 CLASS_NAMES: list[str] = ["glass", "metal", "paper", "plastic", "trash"]
 
+REJECT_THRESHOLD: float = 0.55
+
 CLASSIFIER_MODELS: list[str] = [
     "mira_classifier_baseline.keras",
     "mira_classifier_transfer.keras",

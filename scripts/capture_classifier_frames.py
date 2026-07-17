@@ -1,7 +1,10 @@
 import argparse
+import sys
+from pathlib import Path
 import cv2
 import datetime
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from config import DATA_CLASSES_DIR as DATA_DIR
 from config import setup_camera_properties
 from logger import logger
