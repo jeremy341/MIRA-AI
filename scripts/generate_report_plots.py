@@ -13,7 +13,7 @@ plt.rcParams['grid.color'] = '#eeeeee'
 plt.rcParams['grid.linewidth'] = 0.5
 
 # Define target figures directory
-FIGURES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "doc", "latex", "figures"))
+FIGURES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "latex", "figures"))
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
 # 1. Stage A Accuracy Comparison

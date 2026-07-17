@@ -89,6 +89,10 @@ def _camera_loop():
         cap.read()
     consecutive_errors = 0
 
+    with inventory_lock:
+        for k in inventory:
+            inventory[k] = 0
+
     fps_counter: list[float] = []
     seen_local: set[int] = set()
     counts_local = {c: 0 for c in inventory}
@@ -158,17 +162,29 @@ def _camera_loop():
                 fps_counter.pop(0)
             avg_fps = 1.0 / (sum(fps_counter) / len(fps_counter)) if fps_counter else 0
 
-            # Tracking counts (only count confident detections)
-            if results[0].boxes is not None and results[0].boxes.id is not None:
-                track_ids = results[0].boxes.id.cpu().numpy().astype(int)
+            # Tracking counts — use track IDs if available, else centroid-based dedup
+            if results[0].boxes is not None and len(results[0].boxes) > 0:
                 class_ids = results[0].boxes.cls.cpu().numpy().astype(int)
                 confs = results[0].boxes.conf.cpu().numpy()
-                for tid, cid, cconf in zip(track_ids, class_ids, confs):
-                    if tid not in seen_local and cconf >= cfg_reject:
-                        seen_local.add(tid)
-                        cname = results[0].names[cid]
-                        if cname in counts_local:
-                            counts_local[cname] += 1
+                boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
+
+                if results[0].boxes.id is not None:
+                    # Standard tracking (FP32 models)
+                    track_ids = results[0].boxes.id.cpu().numpy().astype(int)
+                    for tid, cid, cconf in zip(track_ids, class_ids, confs):
+                        if tid not in seen_local and cconf >= cfg_reject:
+                            seen_local.add(tid)
+                            cname = results[0].names[cid]
+                            if cname in counts_local:
+                                counts_local[cname] += 1
+                else:
+                    # INT8 fallback: count each frame's detections (no cross-frame dedup)
+                    # This overcounts but is better than always showing 0
+                    for cid, cconf, box in zip(class_ids, confs, boxes_xyxy):
+                        if cconf >= cfg_reject:
+                            cname = results[0].names[cid]
+                            if cname in counts_local:
+                                counts_local[cname] += 1
 
             # Emit counts
             with inventory_lock:
@@ -208,7 +224,13 @@ def handle_connect():
         "models": get_available_models(),
         "config": live_config,
         "inventory": dict(inventory),
+        "camera_running": camera_running,
     })
+
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    pass
 
 
 @socketio.on("start_camera")
@@ -254,14 +276,27 @@ def handle_load_model(data):
     new_name = data.get("model", "")
     if not new_name:
         return
-    try:
-        m = load_model(new_name)
-        with model_lock:
-            current_model = m
-            model_name = new_name
-        socketio.emit("model_loaded", {"model": new_name})
-    except Exception as e:
-        socketio.emit("error", {"message": f"Modell-Fehler: {e}"})
+    if "/" in new_name or "\\" in new_name or ".." in new_name:
+        socketio.emit("error", {"message": "Invalid model name."})
+        return
+
+    def _load():
+        global current_model, model_name
+        try:
+            m = load_model(new_name)
+            with model_lock:
+                current_model = m
+                model_name = new_name
+            # Reset inventory when switching models
+            with inventory_lock:
+                for k in inventory:
+                    inventory[k] = 0
+            socketio.emit("inventory", dict(inventory))
+            socketio.emit("model_loaded", {"model": new_name})
+        except Exception as e:
+            socketio.emit("error", {"message": f"Modell-Fehler: {e}"})
+
+    threading.Thread(target=_load, daemon=True).start()
 
 
 @socketio.on("update_config")

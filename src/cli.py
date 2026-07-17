@@ -2,8 +2,14 @@ import argparse
 import pathlib
 import subprocess
 import sys
-from model_picker import pick_model
+from pathlib import Path
 
+# Ensure src/ is on sys.path for sibling imports (config, model_picker, etc.)
+_src_dir = str(Path(__file__).resolve().parent)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
+from model_picker import pick_model
 from config import ROOT_DIR, SCRIPT_DIR, REF_DIR, DETECTION_DIR, DETECTION_MODEL_LABELS as MODEL_LABELS, REJECT_THRESHOLD, get_detection_models, get_tflite_imgsz
 
 
@@ -25,14 +31,12 @@ def resolve_detection_data_yaml(explicit_path=None):
         candidates.append(candidate)
     candidates.extend([
         ROOT_DIR / "datasets" / "mira_v2" / "dataset.yaml",
-        ROOT_DIR / "datasets" / "mira_v1" / "dataset.yaml",
     ])
     for candidate in candidates:
         if candidate.exists():
             return candidate
     raise FileNotFoundError(
-        "Could not find a YOLO dataset YAML. Looked for datasets/mira_v2/dataset.yaml "
-        "and datasets/mira_v1/dataset.yaml."
+        "Could not find a YOLO dataset YAML. Looked for datasets/mira_v2/dataset.yaml."
     )
 
 
@@ -48,7 +52,7 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
-    subparsers.add_parser("data-build", help="Build YOLO detection dataset from classification folder")
+    subparsers.add_parser("data-build", help="[DEPRECATED] Canny auto-labeler — produces invalid labels, see docs")
     subparsers.add_parser("data-viz", help="Visualize dataset distribution and sample grids")
 
     subparsers.add_parser("train-baseline", help="Train baseline CNN classification model (EXP-001)")
@@ -84,6 +88,9 @@ def main():
     args = parser.parse_args()
 
     if args.command == "data-build":
+        print("[DEPRECATED] This command uses Canny edge auto-labeling which was found to produce")
+        print("invalid labels (see GIGO analysis in experiments_log.md). Use the merge_dataset scripts instead.")
+        print("Continuing anyway...\n")
         run_script(REF_DIR / "build_detector_dataset.py")
     elif args.command == "data-viz":
         run_script(ROOT_DIR / "scripts" / "visualize_classifier_dataset.py")

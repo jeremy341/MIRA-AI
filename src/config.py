@@ -1,6 +1,5 @@
 """Shared configuration, constants, and utility functions for MIRA."""
 import pathlib
-import cv2
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
@@ -33,8 +32,10 @@ DETECTION_MODEL_LABELS: dict[str, str] = {
     "mira_exp013_int8.tflite": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
     "mira_exp014.pt": "EXP-014 (YOLO11n, +Roboflow)",
     "mira_exp014_int8.tflite": "EXP-014 INT8 (YOLO11n, +Roboflow)",
-    "mira_exp015.pt": "EXP-015 (YOLO11n, +WaRP)",
-    "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP)",
+    "mira_exp015.pt": "EXP-015 (YOLO11n, +WaRP+TrashNet)",
+    "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
+    "mira_exp016.pt": "EXP-016 (YOLO11n, +WaRP)",
+    "mira_exp016_int8.tflite": "EXP-016 INT8 (YOLO11n, +WaRP)",
 }
 
 
@@ -55,7 +56,8 @@ def get_tflite_imgsz(model_path: pathlib.Path) -> int:
     return int(max(shape))
 
 
-def setup_camera_properties(cap: cv2.VideoCapture, width: int, height: int, fps: int = 30):
+def setup_camera_properties(cap, width: int, height: int, fps: int = 30):
+    import cv2
     if not cap.isOpened():
         raise RuntimeError('Camera is not opened before setting properties.')
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))

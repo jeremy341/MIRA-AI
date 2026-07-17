@@ -105,3 +105,47 @@ def test_draw_boxes_multiple_detections(sample_frame):
 
     result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.3)
     assert not np.array_equal(result, sample_frame)
+
+
+def test_draw_boxes_reject_tier_unsicher(sample_frame):
+    """Detection between conf_threshold and reject_threshold draws yellow 'unsicher'."""
+    from src.visualize import draw_boxes
+
+    box = _make_mock_box(0.40, [10.0, 10.0, 50.0, 50.0], 0)
+    results = _make_mock_results([box], names={0: "glass"})
+
+    result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.25, reject_threshold=0.55)
+    assert not np.array_equal(result, sample_frame)
+
+
+def test_draw_boxes_reject_tier_confident(sample_frame):
+    """Detection above reject_threshold draws green labeled box."""
+    from src.visualize import draw_boxes
+
+    box = _make_mock_box(0.90, [10.0, 10.0, 50.0, 50.0], 2)
+    results = _make_mock_results([box], names={2: "paper"})
+
+    result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.25, reject_threshold=0.55)
+    assert not np.array_equal(result, sample_frame)
+
+
+def test_draw_boxes_below_conf_threshold_not_drawn(sample_frame):
+    """Detection below conf_threshold is not drawn at all."""
+    from src.visualize import draw_boxes
+
+    box = _make_mock_box(0.10, [10.0, 10.0, 50.0, 50.0], 4)
+    results = _make_mock_results([box], names={4: "trash"})
+
+    result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.25, reject_threshold=0.55)
+    np.testing.assert_array_equal(result, sample_frame)
+
+
+def test_draw_boxes_empty_results(sample_frame):
+    """Empty results list returns frame unchanged."""
+    from src.visualize import draw_boxes
+
+    results = MagicMock()
+    results.__len__ = lambda self: 0
+
+    result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.3, reject_threshold=0.55)
+    np.testing.assert_array_equal(result, sample_frame)

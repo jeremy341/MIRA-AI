@@ -327,14 +327,23 @@
             if (data.inventory) {
                 updateInventoryChart(data.inventory);
             }
+
+            // Restore camera state on reconnect
+            if (data.camera_running) {
+                cameraRunning = true;
+                updateButtonStates();
+                standbyOverlay.style.display = 'none';
+            }
         }
 
         function handleFrame(data) {
             if (!data.image) return;
             const img = new Image();
             img.onload = function () {
-                canvas.width = img.width;
-                canvas.height = img.height;
+                if (canvas.width !== img.width || canvas.height !== img.height) {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                }
                 ctx.drawImage(img, 0, 0);
             };
             img.src = 'data:image/jpeg;base64,' + data.image;
@@ -546,6 +555,7 @@
             if (isNaN(val) || val < 0) val = 0;
             if (val > 10) val = 10;
             this.value = val;
+            sendConfig();
         });
 
         // ── Init ──────────────────────────────────────────────────────
