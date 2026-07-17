@@ -57,7 +57,7 @@ def merge(args):
 
     # --- Step 2: Add Roboflow (64->5 remap) ---
     print("\nAdding Roboflow Trash Detection (64 to 5 remap)...")
-    roboflow_map = {"train": "train", "valid": "val", "test": "val"}
+    roboflow_map = {"train": "train", "valid": "val", "test": "train"}
     added_robo = 0
     skipped_robo = 0
 

@@ -1,13 +1,16 @@
-# Field Benchmark Results
+# Field Benchmark Results — Image-Level Class-Presence F1
 
 **Date:** July 13, 2026  
 **Dataset:** mira_v2 (TACO + TrashNet, 805 validation images, 5 classes)  
 **Confidence threshold:** 0.5  
-**Models tested:** 11 detection models
+**Models tested:** 11 detection models  
+**Metric type:** Image-level class-presence F1 (binary: does the class exist in the image?), NOT detection mAP50
 
 ---
 
 ## Overall Comparison
+
+> **Note:** These are image-level class-presence F1 scores (binary: does the class exist in the image?), NOT detection mAP50. Detection mAP50 is reported separately in experiments_log.md.
 
 | Model | TP | FP | FN | Precision | Recall | F1 |
 |---|---|---|---|---|---|---|
@@ -36,6 +39,8 @@
 | Trash | 75.5% | 42.0% | 54.0% |
 
 ## Key Findings
+
+> **Important:** The F1 scores in the table above measure image-level class-presence (binary: is the class present at all in the image?). This is a different metric from detection mAP50, which measures bounding-box localization quality. A model can have high class-presence F1 but low mAP50 if its detections are poorly localized.
 
 1. **mira_exp014.pt (EXP-014) is the best model overall** with 85.8% F1 — highest on every metric.
 2. **Trash is the weakest class** across all models (best: 54.0% F1 by EXP-014). Most models hover around 30-37%.

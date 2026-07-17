@@ -29,7 +29,9 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-class_names = ['glass', 'metal', 'paper', 'plastic', 'trash']
+# Stage A classifier was trained on 4 classes (no trash).
+# The TFLite model outputs 4 logits; map to the correct class names.
+class_names = ['glass', 'metal', 'paper', 'plastic']
 
 # 2. TEMPORAL SMOOTHING CONFIGURATION
 alpha = 0.15  # Smoothing factor (0.01 = extremely sluggish/stable, 0.9 = flickering/fast)

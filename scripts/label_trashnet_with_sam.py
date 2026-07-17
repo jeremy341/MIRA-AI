@@ -87,6 +87,7 @@ for d in [train_img_dir, train_lbl_dir, val_img_dir, val_lbl_dir]:
 # RUN SAM INFERENCE
 # ============================================================
 print("\nRunning SAM auto-labeling...")
+random.seed(42)
 random.shuffle(samples)
 split_idx = int(len(samples) * 0.8)
 train_samples = samples[:split_idx]

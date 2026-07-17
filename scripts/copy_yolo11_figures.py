@@ -4,7 +4,7 @@ import shutil
 # Root directory setup
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 RESULTS_DIR = os.path.join(ROOT_DIR, "results")
-FIGURES_DIR = os.path.join(ROOT_DIR, "doc", "latex", "figures")
+FIGURES_DIR = os.path.join(ROOT_DIR, "latex", "figures")
 
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
