@@ -22,7 +22,9 @@ A lightweight, edge-AI-optimized computer vision system for automated recycling 
 ## Features
 
 - **16 systematic experiments** — from baseline CNN to YOLO11n with full quantitative metrics
-- **19 trained models** committed via Git LFS — ready to use without retraining
+- **18 trained models** committed via Git LFS — ready to use without retraining
+- **Research Pipeline** — YAML-driven config, plugin CLI registry, dataset registry, model adapters, configurable training
+- **Third-party model support** — drop `.pt`/`.tflite`/`.pth` + optional YAML descriptor in `models/detection/` for instant benchmarking
 - **B&W Control Center** — Flask+SocketIO dashboard with real-time inventory chart
 - **Edge-optimized** — INT8 quantized models as small as **2.6 MB** (classifier) and **2.9 MB** (detector)
 - **Multi-dataset fusion** — TACO + TrashNet + Roboflow + WaRP, tested in 4 combinations
@@ -32,7 +34,9 @@ A lightweight, edge-AI-optimized computer vision system for automated recycling 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Configuration](#configuration)
 - [Architecture](#architecture)
+- [Research Pipeline](#research-pipeline)
 - [Models](#models)
 - [Results](#results)
 - [Dataset](#dataset)
@@ -88,6 +92,28 @@ pip install -r requirements.txt
 .\mira dashboard --host 127.0.0.1    # Localhost only
 ```
 
+### Research Pipeline
+
+```bash
+# List available dataset sources
+.\mira datasets
+
+# Merge selected sources into a unified training set
+.\mira merge --sources taco_trashnet roboflow --output datasets/mira_merged
+
+# Train via experiment config
+.\mira train --config experiments/exp014_yolo11n_multidataset.yaml
+
+# Or train with inline flags
+.\mira train --model yolo11n.pt --dataset datasets/mira_v2/dataset.yaml --epochs 50
+
+# Benchmark multiple models
+.\mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite
+
+# List discovered models
+.\mira models
+```
+
 <details open>
 <summary><strong>All CLI Commands</strong></summary>
 
@@ -99,12 +125,19 @@ pip install -r requirements.txt
 | `.\mira train-baseline` | Train the 3-layer custom CNN (EXP-001) |
 | `.\mira train-transfer` | Train MobileNetV2 with frozen base (EXP-002) |
 | `.\mira train-tune` | Fine-tune MobileNetV2 from layer 100 (EXP-003) |
-| `.\mira train-detection` | Run YOLOv8 detection training pipeline |
+| `.\mira train-detection` | Run YOLOv8 detection training pipeline (legacy) |
 | `.\mira quant-class` | Post-training INT8 quantization of the Keras classifier |
 | `.\mira quant-yolo` | Export YOLOv8 model to INT8 TFLite |
 | `.\mira eval-class --model <file> --exp <EXP>` | Evaluate a classification model |
 | `.\mira eval-yolo --model <file>` | Evaluate a YOLO detection model |
 | `.\mira field-bench` | Real-world model comparison on webcam images |
+| `.\mira datasets` | List registered dataset sources from `datasets/registry/*.yaml` |
+| `.\mira merge` | Merge registered dataset sources into a unified YOLO dataset |
+| `.\mira train` | Train a YOLO detection model via the research pipeline |
+| `.\mira experiments` | List all experiment YAML configs in `experiments/` |
+| `.\mira export` | Export a trained `.pt` model to TFLite / ONNX |
+| `.\mira benchmark` | Benchmark multiple models for accuracy and latency |
+| `.\mira models` | List all discovered model files in `models/` |
 
 </details>
 
@@ -133,21 +166,55 @@ pip install -r requirements.txt
 | Camera not opening (Windows) | Ensure no other app is using the webcam. Try `--camera 1` to switch device index. |
 | `No module named 'ultralytics'` | Run `pip install ultralytics>=8.3.0` |
 
+---
+
+## Configuration
+
+MIRA uses `mira.yaml` as the single source of truth for project-wide settings. All scripts, CLI commands, and the pipeline read from this file.
+
+```yaml
+# mira.yaml — key settings
+classes:
+  names: ["glass", "metal", "paper", "plastic", "trash"]
+  count: 5
+
+training:
+  default_model: yolo11n.pt
+  default_epochs: 120
+  default_batch_size: 32
+  default_imgsz: 640
+
+inference:
+  reject_threshold: 0.55
+  default_conf: 0.5
+  default_iou: 0.7
+```
+
+CLI flags override `mira.yaml` defaults:
+```bash
+.\mira train --epochs 200 --batch-size 16    # Override training defaults
+.\mira live --conf 0.25 --reject 0.60       # Override inference defaults
+```
+
 ## Dataset Access
 
 Training datasets are not included in this repository due to size. To reproduce training:
 
-1. **TACO** (Trash Annotations in Context): Download from [GitHub](https://github.com/AlessandroSaviolo/TACO), convert with `scripts/convert_taco_to_yolo.py`
+1. **TACO** (Trash Annotations in Context): Download from [GitHub](https://github.com/AlessandroSaviolo/TACO), convert with `scripts/build_raw_dataset.py`
 2. **TrashNet**: Download from [Kaggle](https://www.kaggle.com/datasets/techsash/waste-classification-data), convert with `scripts/add_trashnet_to_dataset.py`
-3. **Roboflow Trash Detection**: Download via Roboflow API, remap with `scripts/merge_dataset_model1.py`
-4. **WaRP** (Waste Recognition Protocol): Download from [GitHub](https://github.com/DTUGreenAmbition/WaRP), remap with `scripts/merge_dataset_model2.py`
+3. **Roboflow Trash Detection**: Download via Roboflow API, place in `datasets/roboflow_raw/`
+4. **WaRP** (Waste Recognition Protocol): Download from [GitHub](https://github.com/DTUGreenAmbition/WaRP), place in `datasets/warp/`
 
-After downloading, run the appropriate merge script to create the training datasets:
+After downloading, merge sources into training datasets:
 ```bash
-py scripts/merge_dataset_model1.py   # Model 1: TACO + TrashNet + Roboflow
-py scripts/merge_dataset_model2.py   # Model 2: TACO + TrashNet + WaRP
-py scripts/merge_dataset_model3.py   # Model 3: WaRP only
-py scripts/merge_dataset_model4.py   # Model 4: All datasets
+# Unified merger (recommended)
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow       # → datasets/mira_tnr/
+py scripts/merge_dataset.py --sources taco_trashnet,warp           # → datasets/mira_tnw/
+py scripts/merge_dataset.py --sources warp                         # → datasets/mira_warp_only/
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow,warp  # → datasets/mira_all/
+
+# Preview without copying
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow --dry-run
 ```
 
 ---
@@ -208,6 +275,61 @@ MIRA uses a 3-tier confidence system to handle uncertain detections:
 The reject threshold is configurable via the dashboard slider or `--reject` CLI flag.
 
 > **Note:** The 0.25 lower bound is only active when explicitly passed via `--conf 0.25` or when loading INT8 TFLite models (which auto-set conf to 0.25). With default `--conf 0.5`, only boxes with confidence ≥0.5 are drawn.
+
+---
+
+## Research Pipeline
+
+MIRA includes a modular research pipeline for systematic experimentation. The pipeline is YAML-driven, plugin-based, and designed for extensibility.
+
+```
+ CLI (cli.py)
+   │
+   ├─ datasets ──→ DatasetRegistry ──→ datasets/registry/*.yaml
+   │                                        │
+   ├─ merge ─────→ copy_passthrough ───────→ datasets/<merged>/
+   │                copy_remapped_images         │
+   │                                             ▼
+   ├─ train ─────→ TrainingPipeline ──→ models/detection/*.pt
+   │                (experiments/*.yaml)         │
+   │                                             ▼
+   ├─ export ────→ model.export() ────→ models/detection/*_int8.tflite
+   │                                             │
+   ├─ benchmark ─→ ModelBenchmark ───→ results/benchmark_*.json
+   │                (YOLOAdapter,                   │
+   │                 YOLOTFLiteAdapter,             ▼
+   │                 ThirdPartyAdapter)       comparison_table()
+   │
+   └─ models ────→ ModelRegistry ────→ models/detection/*.pt + *.tflite + *.yaml
+                   (auto-discovery)
+```
+
+### Extension Points
+
+| What | Where | How |
+|---|---|---|
+| New CLI command | `src/pipeline/registry.py` | Add module, register with `@register_command` |
+| New dataset source | `datasets/registry/` | Drop a YAML descriptor |
+| New model format | `src/pipeline/models.py` | Add adapter class with `@register_model_adapter` |
+| New training strategy | `src/pipeline/train.py` | Add strategy fn, expose as CLI flag |
+| New export target | `src/pipeline/train.py` | Add exporter in `TrainingPipeline.export` |
+| New benchmark metric | `src/pipeline/benchmark.py` | Add metric fn, include in report output |
+
+### Adding a Third-Party Model
+
+1. Place the model file (`.pt`, `.tflite`, `.pth`) in `models/detection/`
+2. Create a YAML descriptor (see `models/detection/example_third_party.yaml`):
+   ```yaml
+   name: "My Custom Model"
+   type: tflite
+   model_file: my_model.tflite
+   imgsz: 320
+   class_names: [glass, metal, paper, plastic, trash]
+   ```
+3. Run `.\mira models` to verify it appears
+4. Run `.\mira benchmark --models my_custom_model --dataset datasets/mira_all`
+
+Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the adapter loads them via `ultralytics.YOLO()` automatically.
 
 ---
 
@@ -277,12 +399,12 @@ The reject threshold is configurable via the dashboard slider or `--reject` CLI 
 
 To find the optimal training data mix, we trained YOLO11n on 4 dataset combinations:
 
-| Model | Datasets | ~Images | mAP50 | Script |
+| Model | Datasets | ~Images | mAP50 | Merge Command |
 |---|---|---|---|---|
-| Model 1 | TACO + TrashNet + Roboflow | 6,802 | **60.7%** | `scripts/merge_dataset_model1.py` |
-| Model 2 | TACO + TrashNet + WaRP | ~6,800¹ | 56.0% | `scripts/merge_dataset_model2.py` |
-| Model 3 | WaRP only | ~3,000 | 58.8% | `scripts/merge_dataset_model3.py` |
-| Model 4 | All four datasets | ~17,000 | Planned | `scripts/merge_dataset_model4.py` |
+| Model 1 | TACO + TrashNet + Roboflow | 6,802 | **60.7%** | `py scripts/merge_dataset.py --sources taco_trashnet,roboflow` |
+| Model 2 | TACO + TrashNet + WaRP | ~6,800¹ | 56.0% | `py scripts/merge_dataset.py --sources taco_trashnet,warp` |
+| Model 3 | WaRP only | ~3,000 | 58.8% | `py scripts/merge_dataset.py --sources warp` |
+| Model 4 | All four datasets | ~17,000 | Planned | `py scripts/merge_dataset.py --sources taco_trashnet,roboflow,warp` |
 
 ¹ Raw WaRP contains ~10,000 images across 28 classes; only images with one of the 5 MIRA-mapped classes are kept, yielding ~2,800. Combined with TACO+TrashNet (3,924), the actual training set is ~6,800 images — consistent with EXP-015.
 
@@ -330,20 +452,17 @@ All datasets are remapped to 5 unified classes:
 ### Merge Scripts
 
 ```bash
-# Model 1: TACO + TrashNet + Roboflow (recommended)
-py scripts/merge_dataset_model1.py
-
-# Model 2: TACO + TrashNet + WaRP
-py scripts/merge_dataset_model2.py
-
-# Model 3: WaRP only
-py scripts/merge_dataset_model3.py
-
-# Model 4: All combined
-py scripts/merge_dataset_model4.py
+# Unified merger (recommended)
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow       # → datasets/mira_tnr/
+py scripts/merge_dataset.py --sources taco_trashnet,warp           # → datasets/mira_tnw/
+py scripts/merge_dataset.py --sources warp                         # → datasets/mira_warp_only/
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow,warp  # → datasets/mira_all/
 
 # Preview without copying
-py scripts/merge_dataset_model1.py --dry-run
+py scripts/merge_dataset.py --sources taco_trashnet,roboflow --dry-run
+
+# Legacy: Model 4 (all datasets combined)
+py scripts/merge_dataset_model4.py
 ```
 
 ---
@@ -436,6 +555,28 @@ The MIRA Control Center is a Flask+SocketIO web dashboard with a B&W monochrome 
 | `.\mira live --conf 0.25 --reject 0.55` | Custom confidence/reject thresholds |
 | `.\mira dashboard` | Launch web control center |
 
+### Pipeline Commands
+
+| Command | Description |
+|---|---|
+| `.\mira datasets` | List registered dataset sources from `datasets/registry/*.yaml` |
+| `.\mira merge` | Merge selected sources into a unified YOLO dataset |
+| `.\mira train` | Train a YOLO detection model via the research pipeline |
+| `.\mira experiments` | List all experiment YAML configs in `experiments/` |
+| `.\mira export` | Export a trained `.pt` model to TFLite / ONNX |
+| `.\mira benchmark` | Benchmark multiple models for accuracy and latency |
+| `.\mira models` | List all discovered model files in `models/` |
+
+```bash
+# Full pipeline example
+.\mira datasets                                                    # List available sources
+.\mira merge --sources taco_trashnet,roboflow --output datasets/mira_tnr
+.\mira train --config experiments/exp014_yolo11n_multidataset.yaml
+.\mira export --model models/detection/mira_exp014.pt --format tflite --int8
+.\mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite --dataset datasets/mira_tnr
+.\mira models                                                       # Verify model discovery
+```
+
 ---
 
 ## Training on Kaggle
@@ -511,35 +652,43 @@ The live detection engine runs camera capture in a **background thread** (`Camer
 
 ```text
 MIRA-AI/
-├── src/                          # Runtime tools
-│   ├── cli.py                    # Unified MIRA command-line interface
-│   ├── config.py                 # Shared paths, constants, and utilities
-│   ├── inference_engine.py       # Camera setup, model loading, inference loop
-│   ├── visualize.py              # Bounding-box drawing with 3-tier confidence
-│   ├── field_benchmark.py        # Real-world model comparison
-│   ├── logger.py                 # Singleton logger
-│   ├── model_picker.py           # Interactive arrow-key model selector
-│   └── dashboard_flask/          # Flask+SocketIO web control center
-│       ├── app.py                # Backend (camera, inference, SocketIO events)
-│       └── templates/
-│           └── index.html        # B&W themed frontend (Tailwind + Chart.js)
+├── mira.yaml                       # Single source of truth: classes, paths, training defaults
 │
-├── scripts/                      # Dataset merge, training, and utility scripts
-│   ├── merge_dataset_model1.py   # TACO + TrashNet + Roboflow → 6,802 images
-│   ├── merge_dataset_model2.py   # TACO + TrashNet + WaRP → ~6,800 images
-│   ├── merge_dataset_model3.py   # WaRP only → ~3,000 images
-│   ├── merge_dataset_model4.py   # All datasets → ~17,000 images
-│   ├── train_detector_kaggle.py  # Configurable Kaggle training
+├── src/                            # Runtime tools
+│   ├── cli.py                      # Unified MIRA command-line interface (21 commands)
+│   ├── config.py                   # Shared paths, constants, and utilities
+│   ├── inference_engine.py         # Camera setup, model loading, inference loop
+│   ├── visualize.py                # Bounding-box drawing with 3-tier confidence
+│   ├── field_benchmark.py          # Real-world model comparison
+│   ├── logger.py                   # Singleton logger
+│   ├── model_picker.py             # Interactive arrow-key model selector
+│   ├── dashboard_flask/            # Flask+SocketIO web control center
+│   │   ├── app.py                  # Backend (camera, inference, SocketIO events)
+│   │   └── templates/
+│   │       └── index.html          # B&W themed frontend (Tailwind + Chart.js)
+│   └── pipeline/                   # Research pipeline framework
+│       ├── __init__.py             # Public API exports
+│       ├── registry.py             # Plugin registry: @register_command, @register_dataset_source
+│       ├── dataset.py              # DatasetRegistry: YAML-based dataset source management
+│       ├── models.py               # Model adapters: YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
+│       ├── train.py                # TrainingPipeline: configurable YOLO training
+│       └── benchmark.py            # ModelBenchmark: accuracy + latency comparison
+│
+├── scripts/                        # Dataset merge, training, and utility scripts
+│   ├── merge_dataset.py            # Unified dataset merger (--sources flag)
+│   ├── merge_utils.py              # Shared merge helpers (copy_passthrough, copy_remapped_images)
+│   ├── merge_dataset_mira_v3.py    # MIRA v3 dataset builder
+│   ├── merge_dataset_model4.py     # Legacy: Model 4 (all datasets)
+│   ├── train_detector_kaggle.py    # Configurable Kaggle training
 │   ├── capture_classifier_frames.py  # Webcam data collection (Stage A)
 │   ├── visualize_classifier_dataset.py  # Dataset distribution viewer
-│   ├── generate_report_plots.py  # LaTeX figure generation
-│   ├── convert_taco_to_yolo.py   # TACO COCO → YOLO format converter
+│   ├── generate_report_plots.py    # LaTeX figure generation
+│   ├── add_trashnet_to_dataset.py  # TrashNet bbox labeling via SAM
 │   ├── label_trashnet_with_sam.py  # SAM-assisted bounding box labeling
-│   ├── class_mappings.py         # Class name remapping tables
-│   ├── warp_utils.py             # WaRP dataset utilities
-│   └── ...
+│   ├── class_mappings.py           # Class name remapping tables
+│   └── build_raw_dataset.py        # Raw dataset builder
 │
-├── reference/                    # Training, evaluation, and quantization scripts
+├── reference/                      # Training, evaluation, and quantization scripts
 │   ├── train_classifier_baseline.py   # EXP-001: Custom CNN
 │   ├── train_classifier_transfer.py   # EXP-002: MobileNetV2 frozen
 │   ├── train_classifier_finetune.py   # EXP-003: MobileNetV2 fine-tuned
@@ -549,56 +698,59 @@ MIRA-AI/
 │   ├── quantize_detector.py           # YOLO INT8 export
 │   └── ...
 │
-├── models/                       # All trained model exports (Git LFS)
-│   ├── classifier/               # Stage A: Keras + TFLite
+├── models/                         # All trained model exports (Git LFS)
+│   ├── classifier/                 # Stage A: Keras + TFLite
 │   │   ├── mira_classifier_baseline.keras
 │   │   ├── mira_classifier_transfer.keras
 │   │   ├── mira_classifier_tuned.keras
 │   │   ├── mira_classifier_fp32.tflite
 │   │   └── mira_classifier_int8.tflite      ← Best deployment model
-│   └── detection/                # Stage B: YOLO .pt + .tflite
+│   └── detection/                  # Stage B: YOLO .pt + .tflite + third-party
 │       ├── mira_exp014.pt                 ← CURRENT BEST
 │       ├── mira_exp014_int8.tflite        ← Best for edge deployment
-│       └── ... (19 models total)
+│       ├── example_third_party.yaml       # Example: drop .pt/.tflite + YAML here
+│       └── ... (14 models total)
+│
+├── experiments/                    # Training experiment configs (YAML)
+│   ├── exp009_yolov8n_int8.yaml
+│   ├── exp013_yolo11n_taco_trashnet.yaml
+│   └── exp014_yolo11n_multidataset.yaml
 │
 ├── data/
-│   └── classes/                  # Manually collected Stage A webcam images
+│   └── classes/                    # Manually collected Stage A webcam images
 │       ├── glass/  metal/  paper/  plastic/  trash/
 │
-├── datasets/                     # Detection datasets (gitignored)
-│   ├── mira_v2/                  # TACO + TrashNet (3,924 images)
-│   ├── mira_tnr/                 # Model 1: TACO+TrashNet+Roboflow
-│   ├── mira_tnw/                 # Model 2: TACO+TrashNet+WaRP
-│   └── mira_all/                 # Model 4: all four combined
+├── datasets/                       # Detection datasets (gitignored)
+│   ├── registry/                   # Dataset YAML descriptors for pipeline
+│   ├── mira_v2/                    # TACO + TrashNet (3,924 images)
+│   ├── mira_tnr/                   # Model 1: TACO+TrashNet+Roboflow
+│   ├── mira_tnw/                   # Model 2: TACO+TrashNet+WaRP
+│   └── mira_all/                   # Model 4: all four combined
 │
-├── results/                      # Experiment outputs and logs
-│   ├── experiments_log.md        # Full quantitative metrics (16 experiments)
+├── results/                        # Experiment outputs and logs
+│   ├── experiments_log.md          # Full quantitative metrics (16 experiments)
 │   ├── field_benchmark_results.md
-│   └── exp014_yolo11n_tnr/       # Confusion matrices, training curves
+│   └── exp014_yolo11n_tnr/         # Confusion matrices, training curves
 │
-├── latex/                        # Jugend Forscht report
-│   ├── main.tex                  # LaTeX source
-│   ├── main.pdf                  # Compiled report (22 pages)
-│   ├── figures/                  # 19 PNG figures
-│   └── references.bib            # Bibliography
+├── latex/                          # Jugend Forscht report
+│   ├── main.tex                    # LaTeX source
+│   ├── main.pdf                    # Compiled report (22 pages)
+│   ├── figures/                    # 19 PNG figures
+│   └── references.bib              # Bibliography
 │
-├── docs/                         # Project documentation
-│   ├── MIRA_JUFO_Writing_Context.md
-│   ├── MIRA_JUFO_Audit_Report.md
-│   └── ...
-│
-├── tests/                        # Test suite
+├── tests/                          # Test suite (45 tests)
 │   ├── test_config.py
 │   ├── test_field_benchmark.py
-│   └── test_visualize.py
+│   ├── test_visualize.py
+│   └── test_pipeline.py
 │
-├── .github/workflows/ci.yml     # GitHub Actions: Ruff lint + pytest
-├── .gitattributes                # Git LFS for model files
-├── bytetrack.yaml                # ByteTrack tracker configuration
-├── pyproject.toml                # Project metadata + Ruff + pytest config
-├── requirements.txt              # Python dependencies
-├── mira.bat                      # Windows CLI launcher
-├── LICENSE                       # MIT License
+├── .github/workflows/ci.yml       # GitHub Actions: Ruff lint + pytest
+├── .gitattributes                  # Git LFS for model files
+├── bytetrack.yaml                  # ByteTrack tracker configuration
+├── pyproject.toml                  # Project metadata + Ruff + pytest config
+├── requirements.txt                # Python dependencies
+├── mira.bat                        # Windows CLI launcher
+├── LICENSE                         # MIT License
 └── README.md
 ```
 
@@ -683,6 +835,24 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+### Adding a New CLI Command
+
+Use the plugin registry to add commands without editing existing files:
+
+```python
+# src/pipeline/my_module.py
+from pipeline.registry import register_command
+
+@register_command("my-command", "Description of what it does")
+def cmd_my_command(args):
+    print("Hello from my command!")
+
+def setup(parser):
+    parser.add_argument("--flag", help="Custom flag")
+```
+
+Then import the module in `cli.py` to activate it.
 
 ---
 
