@@ -37,13 +37,11 @@ DATA_DIR = ROOT_DIR / "data" / "classes"
 SAVE_DIR = ROOT_DIR / 'results' / args.exp
 SAVE_DIR.mkdir(parents=True, exist_ok=True)
 
-# Central models directory path with safe fallback logic
+# Central models directory path
 MODEL_PATH = ROOT_DIR / "models" / "classifier" / args.model
-if not MODEL_PATH.exists():
-    MODEL_PATH = SCRIPT_DIR / args.model
 
 if not MODEL_PATH.exists():
-    raise FileNotFoundError(f"Could not locate model file: {args.model} under /models or /src")
+    raise FileNotFoundError(f"Could not locate model file: {args.model} in {ROOT_DIR / 'models' / 'classifier'}")
 
 # Match image size dynamically based on which model is selected
 img_size = (180, 180) if ("baseline" in args.model or "waste" in args.model) else (224, 224)

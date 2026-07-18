@@ -38,7 +38,7 @@ Während der Entwicklung der Live-Inferenz zeigte sich ein systematischer Fehler
 Zur Stabilisierung kurzzeitig fehlender Detektionen wurde ByteTrack integriert; es verknüpft Detektionen über mehrere Frames und verbessert die Objektkohärenz ohne zusätzliche Modellinferenz.
 
 \subsection{Das MIRA-Control-Center (Dashboard)}
-Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Streamlit} implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
+Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Flask-Dashboard} mit SocketIO implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
 
 \subsection{Mechatronische Ansteuerung und Handshake-Protokoll}
 Um die hohe Verarbeitungsgeschwindigkeit der KI (21,7\,Frames per Second (FPS)) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen. Der ESP32-S3 empfängt Sortierbefehle über die serielle Schnittstelle, steuert die Pulsweitenmodulation (PWM) für die Servomotoren an und sendet nach Abschluss eine Fertigmeldung, woraufhin die nächste Inferenz freigegeben wird. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.

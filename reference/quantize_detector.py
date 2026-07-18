@@ -20,6 +20,8 @@ def main():
     parser = argparse.ArgumentParser(description="Quantize YOLO model to INT8 TFLite")
     parser.add_argument("--model", type=str, default=None,
                         help="Model filename to quantize. Omit for interactive picker.")
+    parser.add_argument("--data", type=str, default=None,
+                        help="Dataset YAML for INT8 calibration. Defaults to first available dataset.")
     args = parser.parse_args()
 
     if args.model:
@@ -50,7 +52,25 @@ def main():
     model = YOLO(str(model_path))
 
     print(f"\nQuantizing {model_name} to INT8 TFLite...")
-    data_yaml = ROOT_DIR / "datasets" / "mira_v2" / "dataset.yaml"
+    if args.data:
+        data_yaml = pathlib.Path(args.data)
+        if not data_yaml.is_absolute():
+            data_yaml = ROOT_DIR / data_yaml
+    else:
+        # Scan datasets/ for first available dataset.yaml
+        data_yaml = None
+        datasets_dir = ROOT_DIR / "datasets"
+        if datasets_dir.exists():
+            for subdir in sorted(datasets_dir.iterdir()):
+                if subdir.is_dir() and not subdir.name.startswith("."):
+                    candidate = subdir / "dataset.yaml"
+                    if candidate.exists():
+                        data_yaml = candidate
+                        break
+        if data_yaml is None:
+            print("ERROR: No dataset.yaml found. Use --data to specify one.")
+            sys.exit(1)
+    print(f"  Using dataset: {data_yaml}")
     model.export(format="tflite", int8=True, data=str(data_yaml))
 
     print(f"\nDone! Exported to: {DETECTION_DIR / model_name.replace('.pt', '_int8.tflite')}")

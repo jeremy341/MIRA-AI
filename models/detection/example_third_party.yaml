@@ -1,0 +1,20 @@
+# Third-party model descriptor for MIRA benchmarking.
+#
+# To benchmark a third-party model:
+# 1. Place the model file in models/detection/
+# 2. Create a YAML descriptor like this one
+# 3. Run: mira benchmark --models <model_name> --dataset datasets/mira_all
+#
+# Supported types: yolo_pt, yolo_tflite, tflite, onnx, keras
+#
+# Ultralytics-compatible models (.pt, .tflite) work out of the box —
+# the adapter will load them via `ultralytics.YOLO()` automatically.
+# Non-ultralytics models (e.g. raw keras/tf SavedModel) need a custom
+# adapter subclass that overrides load() and predict() in models.py.
+
+name: "Example Third-Party Model"
+type: tflite
+model_file: example_third_party.tflite
+imgsz: 320
+class_names: [glass, metal, paper, plastic, trash]
+preprocessing: null

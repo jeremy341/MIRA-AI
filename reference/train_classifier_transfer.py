@@ -1,10 +1,8 @@
 import matplotlib.pyplot as plt
-import numpy as np
 import pathlib
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.models import Sequential
 
 # 1. PATHS AND CONSTANTS (solved via pathlib)
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent

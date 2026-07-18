@@ -1,7 +1,6 @@
 import tensorflow as tf
 import pathlib
 import matplotlib.pyplot as plt
-from tensorflow.keras import layers
 
 # 1. PATH RESOLUTION
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent

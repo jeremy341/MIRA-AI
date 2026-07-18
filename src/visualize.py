@@ -1,6 +1,8 @@
 """Shared visualization utilities for MIRA detection models."""
+
 import cv2
 import numpy as np
+
 
 
 def draw_boxes(
@@ -8,6 +10,7 @@ def draw_boxes(
     results,
     conf_threshold: float = 0.3,
     reject_threshold: float = 0.55,
+    class_names: list[str] | None = None,
 ) -> np.ndarray:
     """Draw bounding boxes on a frame from YOLO detection results.
 
@@ -29,7 +32,8 @@ def draw_boxes(
 
         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
         cls_id = int(box.cls[0])
-        cls_name = results[0].names[cls_id]
+        names = class_names if class_names else results[0].names
+        cls_name = names[cls_id] if cls_id < len(names) else f"class_{cls_id}"
 
         x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 

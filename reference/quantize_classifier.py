@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow import keras
 import pathlib
-import numpy as np
+import random
 import os
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
@@ -15,7 +15,7 @@ def representative_data_gen():
     if len(image_paths) == 0:
         raise FileNotFoundError("No images found in data directory")
 
-    sample_paths = np.random.choice(image_paths, size=min(100, len(image_paths)), replace=False)
+    sample_paths = random.sample(image_paths, min(100, len(image_paths)))
 
     for path in sample_paths:
         img = tf.io.read_file(str(path))

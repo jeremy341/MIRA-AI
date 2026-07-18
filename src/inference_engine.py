@@ -1,14 +1,16 @@
 """Shared inference engine: camera setup, model loading, inference loop."""
-import cv2
+
+import sys
 import threading
 import time
 from collections import deque
-from pathlib import Path
+
+import cv2
 from ultralytics import YOLO
 
-from config import DETECTION_DIR, get_tflite_imgsz, setup_camera_properties, BYTE_TRACK_CONFIG_PATH
-from visualize import draw_boxes
+from config import BYTE_TRACK_CONFIG_PATH, DETECTION_DIR, get_tflite_imgsz, setup_camera_properties
 from logger import logger
+from visualize import draw_boxes
 
 
 class CameraStream:
@@ -20,7 +22,7 @@ class CameraStream:
     WARMUP_FRAMES = 10
 
     def __init__(self, index: int, width: int, height: int):
-        self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW if sys.platform == "win32" else 0)
         if not self.cap.isOpened():
             logger.error(f"Failed to open camera index {index}.")
             raise RuntimeError(f"Failed to open camera index {index}.")
@@ -43,10 +45,13 @@ class CameraStream:
             with self._lock:
                 self.ret = ret
                 self.frame = frame
+            time.sleep(0.001)
 
     def read(self):
         with self._lock:
-            return (self.ret, self.frame.copy()) if self.ret else (False, None)
+            if not self.ret or self.frame is None:
+                return False, None
+            return True, self.frame.copy()
 
     def release(self):
         self._running = False
@@ -99,10 +104,7 @@ class InferenceEngine:
 
     def _load_model(self, imgsz: int | None):
         """Load YOLO model with TFLite/INT8-specific configuration."""
-        available = sorted(
-            p.name for p in DETECTION_DIR.glob("*")
-            if p.suffix in (".pt", ".tflite", ".keras")
-        )
+        available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))
 
         logger.info("\nAvailable models in models/:")
         for name in available:
@@ -113,29 +115,23 @@ class InferenceEngine:
 
         if not self.model_path.exists():
             logger.error(
-                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
-                f"Available models: {', '.join(available)}"
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\nAvailable models: {', '.join(available)}"
             )
             raise FileNotFoundError(
-                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
-                f"Available models: {', '.join(available)}"
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\nAvailable models: {', '.join(available)}"
             )
 
         if "classifier" in self.model_name.lower():
             logger.error(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
             logger.error("Live detection requires a detection model (.pt or detection .tflite).")
             raise ValueError(
-                f"Model '{self.model_name}' is a classifier, not a detector. "
-                "Use a detection model for live detection."
+                f"Model '{self.model_name}' is a classifier, not a detector. Use a detection model for live detection."
             )
 
         task_type = "detect" if self.model_path.suffix == ".tflite" else None
         self.model = YOLO(str(self.model_path), task=task_type)
 
-        self.is_tflite_int8 = (
-            self.model_path.suffix == ".tflite"
-            and "int8" in self.model_name.lower()
-        )
+        self.is_tflite_int8 = self.model_path.suffix == ".tflite" and "int8" in self.model_name.lower()
 
         if self.model_path.suffix == ".tflite":
             self.img_size = imgsz or get_tflite_imgsz(self.model_path)
@@ -148,6 +144,8 @@ class InferenceEngine:
             logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
         if self.is_tflite_int8:
+            # INT8 quantization compresses confidence scores toward 0.5;
+            # use 0.25 so low-confidence detections are still visible.
             self.conf_threshold = 0.25
             logger.info(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
 
@@ -171,7 +169,8 @@ class InferenceEngine:
                     continue
 
                 results = self._infer(frame)
-                annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold)
+                from config import CLASS_NAMES
+                annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
                 self._update_metrics(results)
                 self._draw_status(annotated, results)
                 cv2.imshow("MIRA Real-Time Multi-Object Detection", annotated)
@@ -190,6 +189,7 @@ class InferenceEngine:
                 imgsz=self.img_size,
                 conf=self.conf_threshold,
                 verbose=False,
+                half=False,
             )
         elif self.enable_tracking:
             return self.model.track(
@@ -200,6 +200,7 @@ class InferenceEngine:
                 persist=True,
                 verbose=False,
                 tracker=str(BYTE_TRACK_CONFIG_PATH),
+                half=False,
             )
         else:
             return self.model.predict(
@@ -208,6 +209,7 @@ class InferenceEngine:
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 verbose=False,
+                half=False,
             )
 
     def _update_metrics(self, results):
@@ -217,7 +219,8 @@ class InferenceEngine:
         self.prev_time = curr_time
 
         self._current_fps = 1.0 / max(frame_time, 1e-6)
-        latency_ms = results[0].speed.get("inference", 0)
+        speed = getattr(results[0], "speed", None) or {}
+        latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
         self.latency_history.append(latency_ms)
         avg_latency = sum(self.latency_history) / len(self.latency_history)
 
@@ -225,7 +228,8 @@ class InferenceEngine:
 
     def _draw_status(self, frame, results):
         """Draw status overlay on the annotated frame."""
-        latency_ms = results[0].speed.get("inference", 0)
+        speed = getattr(results[0], "speed", None) or {}
+        latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
         avg_latency = sum(self.latency_history) / len(self.latency_history)
         fps = self._current_fps
 
@@ -235,7 +239,11 @@ class InferenceEngine:
             f"Skip: {'ON' if self.skip_frame else 'OFF'}"
         )
         cv2.putText(
-            frame, status_text, (20, 40),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2,
+            frame,
+            status_text,
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 255, 255),
+            2,
         )
-

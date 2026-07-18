@@ -33,14 +33,14 @@ for row, class_name in enumerate(CLASSES):
     if not folder.exists():
         # If folder doesn't exist, hide all axes for this row
         for col in range(SAMPLES):
-            axes[row, col].axis('off')
+            axes[row, col].axis("off")
         continue
-        
+
     files = list(folder.glob("*.jpg")) + list(folder.glob("*.jpeg")) + list(folder.glob("*.png"))
-    
+
     # Handle the case where folder has fewer than SAMPLES images
     sampled = random.sample(files, min(SAMPLES, len(files)))
-    
+
     for col in range(SAMPLES):
         if col < len(sampled):
             img_path = sampled[col]
@@ -48,11 +48,11 @@ for row, class_name in enumerate(CLASSES):
             if img is not None:
                 img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                 axes[row, col].imshow(img)
-            axes[row, col].axis('off')
+            axes[row, col].axis("off")
         else:
             # Empty plot if we have fewer images than SAMPLES
-            axes[row, col].axis('off')
-            
+            axes[row, col].axis("off")
+
         if col == 0:
             axes[row, col].set_ylabel(class_name, fontsize=12)
 
