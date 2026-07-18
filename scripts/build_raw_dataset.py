@@ -1,47 +1,32 @@
+import sys
 import json
 import shutil
 import random
 from pathlib import Path
 
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
+_scripts_dir = str(Path(__file__).resolve().parent)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+
+from config import CLASS_NAMES as CLASS_NAMES_LIST, NUM_CLASSES
+from class_mappings import TACO_REMAP as REMAP, TRASHNET_FOLDER_MAP as TRASHNET_MAP
+
 # ============================================================
 # CONFIG
 # ============================================================
-TACO_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\taco_raw\TACO-master")
+ROOT = Path(__file__).resolve().parent.parent
+DATASETS = ROOT / "datasets"
+TACO_DIR = DATASETS / "taco_raw" / "TACO-master"
 ANNOTATIONS_PATH = TACO_DIR / "data" / "annotations.json"
-TRASHNET_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\trashnet_labeled")
-OUTPUT_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\datasets\mira_v2")
+TRASHNET_DIR = DATASETS / "trashnet_labeled"
+OUTPUT_DIR = DATASETS / "mira_v2"
 TRAIN_SPLIT = 0.8
 SEED = 42
 
 random.seed(SEED)
-
-# ============================================================
-# CATEGORY REMAP
-# ============================================================
-REMAP = {
-    "Aluminium foil": 1, "Battery": 4, "Aluminium blister pack": 4,
-    "Carded blister pack": 4, "Other plastic bottle": 3, "Clear plastic bottle": 3,
-    "Glass bottle": 0, "Plastic bottle cap": 3, "Metal bottle cap": 1,
-    "Broken glass": 0, "Food Can": 1, "Aerosol": 1, "Drink can": 1,
-    "Toilet tube": 2, "Other carton": 2, "Egg carton": 2, "Drink carton": 2,
-    "Corrugated carton": 2, "Meal carton": 2, "Pizza box": 2, "Paper cup": 2,
-    "Disposable plastic cup": 3, "Foam cup": 3, "Glass cup": 0,
-    "Other plastic cup": 3, "Food waste": 4, "Glass jar": 0, "Plastic lid": 3,
-    "Metal lid": 1, "Other plastic": 3, "Magazine paper": 2, "Tissues": 2,
-    "Wrapping paper": 2, "Normal paper": 2, "Paper bag": 2,
-    "Plastified paper bag": 2, "Plastic film": 3, "Six pack rings": 3,
-    "Garbage bag": 3, "Other plastic wrapper": 3, "Single-use carrier bag": 3,
-    "Polypropylene bag": 3, "Crisp packet": 3, "Spread tub": 3, "Tupperware": 3,
-    "Disposable food container": 3, "Foam food container": 3,
-    "Other plastic container": 3, "Plastic gloves": 3, "Plastic utensils": 3,
-    "Pop tab": 1, "Rope & strings": 4, "Scrap metal": 1, "Shoe": 4,
-    "Squeezable tube": 3, "Plastic straw": 3, "Paper straw": 2,
-    "Styrofoam piece": 3, "Unlabeled litter": 4, "Cigarette": 4,
-}
-
-TRASHNET_MAP = {
-    "cardboard": 2, "glass": 0, "metal": 1, "paper": 2, "plastic": 3, "trash": 4,
-}
 
 # ============================================================
 # STEP 1: Convert TACO (COCO -> YOLO)
@@ -142,6 +127,7 @@ val_lbl_dir = OUTPUT_DIR / "labels" / "val"
 for d in [train_img_dir, train_lbl_dir, val_img_dir, val_lbl_dir]:
     d.mkdir(parents=True, exist_ok=True)
 
+
 def write_split(samples, img_dir, lbl_dir, split_name):
     copied = 0
     for item in samples:
@@ -184,6 +170,7 @@ def write_split(samples, img_dir, lbl_dir, split_name):
         copied += 1
     print(f"  {split_name}: {copied} images written")
 
+
 write_split(train_samples, train_img_dir, train_lbl_dir, "Train")
 write_split(val_samples, val_img_dir, val_lbl_dir, "Val")
 
@@ -194,7 +181,7 @@ print("\n" + "=" * 50)
 print("CLASS DISTRIBUTION")
 print("=" * 50)
 
-class_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+class_counts = {i: 0 for i in range(NUM_CLASSES)}
 for lbl_dir in [train_lbl_dir, val_lbl_dir]:
     for lbl_file in lbl_dir.glob("*.txt"):
         with open(lbl_file) as f:
@@ -213,8 +200,8 @@ print(f"  Train: {total_train} images")
 print(f"  Val:   {total_val} images")
 print(f"  Total: {total_imgs} images, {total_lbls} annotations\n")
 
-class_names = {0: "glass", 1: "metal", 2: "paper", 3: "plastic", 4: "trash"}
-for cid in range(5):
+class_names = {i: n for i, n in enumerate(CLASS_NAMES_LIST)}
+for cid in range(NUM_CLASSES):
     pct = class_counts[cid] / total_lbls * 100 if total_lbls else 0
     bar = "#" * int(pct / 2)
     print(f"  {class_names[cid]:8s}: {class_counts[cid]:5d} ({pct:5.1f}%) {bar}")
@@ -224,10 +211,10 @@ print(f"  {'TOTAL':8s}: {total_lbls:5d}")
 # WRITE dataset.yaml
 # ============================================================
 yaml_path = OUTPUT_DIR / "dataset.yaml"
-yaml_content = f"""train: {OUTPUT_DIR / 'images' / 'train'}
-val: {OUTPUT_DIR / 'images' / 'val'}
-nc: 5
-names: ['glass', 'metal', 'paper', 'plastic', 'trash']
+yaml_content = f"""train: {OUTPUT_DIR / "images" / "train"}
+val: {OUTPUT_DIR / "images" / "val"}
+nc: {NUM_CLASSES}
+names: {CLASS_NAMES_LIST}
 """
 with open(yaml_path, "w") as f:
     f.write(yaml_content)

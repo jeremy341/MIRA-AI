@@ -1,8 +1,21 @@
 [project]
 name = "mira-ai"
-version = "0.1.0"
+version = "1.0.0"
 description = "Machine Intelligence for Recycling Automation — Jugend Forscht 2027"
+authors = [{name = "Jeremy Darko"}]
+license = {text = "MIT"}
+readme = "README.md"
+keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
 requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+
+[project.urls]
+Repository = "https://github.com/jeremydarko/MIRA-AI"
+
+[project.scripts]
+mira = "src.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -14,7 +27,7 @@ exclude = ["reference/", ".venv/", "datasets/", "models/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
-ignore = ["E501"]
+ignore = ["E501", "E402", "I001"]
 
 [tool.ruff.format]
 quote-style = "double"

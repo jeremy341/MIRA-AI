@@ -1,0 +1,45 @@
+project:
+  name: MIRA
+  version: "1.0.0"
+  description: "Machine Intelligence for Recycling Automation"
+
+classes:
+  names: ["glass", "metal", "paper", "plastic", "trash"]
+  count: 5
+
+paths:
+  datasets: datasets/
+  models: models/
+  results: results/
+  reference: reference/
+
+training:
+  default_model: yolo11n.pt
+  default_epochs: 120
+  default_batch_size: 32
+  default_imgsz: 640
+  default_lr: 0.01
+  early_stopping_patience: 30
+  augmentation:
+    hsv_h: 0.015
+    hsv_s: 0.7
+    hsv_v: 0.4
+    degrees: 10.0
+    translate: 0.1
+    scale: 0.5
+    shear: 0.0
+    perspective: 0.0
+    flipud: 0.0
+    fliplr: 0.5
+    mosaic: 1.0
+    mixup: 0.1
+    copy_paste: 0.1
+
+inference:
+  reject_threshold: 0.55
+  default_conf: 0.5
+  default_iou: 0.7
+
+quantization:
+  formats: ["int8", "fp32"]
+  calibration_samples: 100

@@ -4,7 +4,6 @@ Documenting these obstacles is explicitly required by the *Jugend forscht* guide
 
 Save this text directly into your project repository as **`docs/JuFo_Huerden_und_Fehleranalyse.md`**.
 
-```markdown
 # MIRA — Wissenschaftliche Fehleranalyse und technologische Hürden
 **Projekt:** Machine Intelligence for Recycling Automation (MIRA)
 **Wettbewerb:** Jugend forscht 2027 (Fachgebiet Technik / Informatik)
@@ -56,7 +55,7 @@ Save this text directly into your project repository as **`docs/JuFo_Huerden_und
 * **Ingenieurwissenschaftliche Lösung:** Verlagerung des gesamten Kalibrierungs- und Export-Workflows in eine cloudbasierte Linux-Umgebung (Google Colab). Das quantisierte Modell (`mira_exp006_int8.tflite`) wurde anschließend für die lokale CPU-Inferenz heruntergeladen.
 
 ### 3.2 Statische Tensor-Dimensionskonflikte (`imgsz=320` vs. `640`)
-* **Problembeschreibung:** Das Einbinden des quantisierten TFLite-Modells in das Streamlit-Dashboard erzeugte den fatalen Laufzeitfehler: `ValueError: Cannot set tensor: Dimension mismatch. Got 320 but expected 640`.
+* **Problembeschreibung:** Das Einbinden des quantisierten TFLite-Modells in das Flask+SocketIO-Dashboard erzeugte den fatalen Laufzeitfehler: `ValueError: Cannot set tensor: Dimension mismatch. Got 320 but expected 640`.
 * **Ursachenanalyse:** Im Gegensatz zu dynamischen PyTorch-Modellen (`.pt`), die Eingabeauflösungen zur Laufzeit flexibel skalieren, werden quantisierte TFLite-Modelle mit einer **statisch fixierten Eingabematrix** kompiliert. Ein bei $640 \times 640$ Pixeln exportiertes TFLite-Modell akzeptiert physisch keine $320 \times 320$ Eingabetensoren.
 * **Ingenieurwissenschaftliche Lösung:** Re-Kompilierung und gezielter INT8-Export des Modells in der Cloud unter expliziter Angabe des Ziel-Parameters `imgsz=320`. Dies reduzierte die rechnerische Faltungslast auf der CPU quadratisch um exakt 75 % und senkte die Inferenzzeit auf 46,0 ms (~21,8 FPS).
 
@@ -88,7 +87,6 @@ Save this text directly into your project repository as **`docs/JuFo_Huerden_und
 * **Problembeschreibung:** In abschließenden Stresstests wurde festgestellt, dass Getränkedosen zuverlässig erkannt werden, wenn sie seitlich liegen oder aufrecht stehen. Zeigt die Dosenöffnung jedoch frontal direkt in die Kamera (vertikale Achse), bricht die Detektion ein.
 * **Ursachenanalyse:** Dies ist ein klassischer „Canonical View Bias“. In den Trainingsdatensätzen ist die zylindrische Seitenansicht von Dosen stark überrepräsentiert. Die frontale Draufsicht auf die Öffnung stellt sich als dunkler Kreis dar, der eher der Klasse *Trash* oder einer Anomalie ähnelt.
 * **Ausblick/Lösung:** Identifiziert als Edge-Case für Targeted Fine-Tuning (Data Mix-In) vor dem physischen Aufbau des Sortierarms.
-```
 
 ---
 

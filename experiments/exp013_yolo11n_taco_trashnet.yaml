@@ -1,0 +1,38 @@
+name: exp013
+model: yolo11n.pt
+dataset: datasets/mira_taco_trashnet/dataset.yaml
+epochs: 120
+batch_size: 32
+imgsz: 640
+lr0: 0.01
+lrf: 0.01
+momentum: 0.937
+weight_decay: 0.0005
+warmup_epochs: 3
+warmup_momentum: 0.8
+patience: 30
+device: "0"
+workers: 4
+amp: true
+project: runs
+exist_ok: true
+
+augmentation:
+  hsv_h: 0.015
+  hsv_s: 0.7
+  hsv_v: 0.4
+  degrees: 0.0
+  translate: 0.1
+  scale: 0.5
+  shear: 0.0
+  perspective: 0.0
+  flipud: 0.0
+  fliplr: 0.5
+  mosaic: 1.0
+  mixup: 0.0
+  copy_paste: 0.0
+
+export:
+  formats:
+    - tflite_int8
+  calibration_samples: 100

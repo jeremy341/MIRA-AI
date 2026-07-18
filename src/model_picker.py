@@ -1,36 +1,40 @@
 """Interactive model picker for MIRA CLI."""
-import sys
+
 import os
+import sys
 
 
 def _getch():
     """Read a single keypress. Returns a token string for easy comparison."""
     if sys.platform == "win32":
         import msvcrt
+
         ch = msvcrt.getch()
-        if ch == b'\xe0':
+        if ch == b"\xe0":
             second = msvcrt.getch()
-            return {b'H': 'UP', b'P': 'DOWN', b'M': 'RIGHT', b'K': 'LEFT'}.get(second, '')
-        if ch == b'\r':
-            return 'ENTER'
-        if ch == b'\x1b':
-            return 'ESC'
-        if ch == b'\x03':
-            return 'CTRL_C'
+            return {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second, "")
+        if ch == b"\r":
+            return "ENTER"
+        if ch == b"\x1b":
+            return "ESC"
+        if ch == b"\x03":
+            return "CTRL_C"
         return ch.decode()
-    import tty, termios
+    import termios
+    import tty
+
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
         tty.setraw(fd)
         ch = sys.stdin.read(1)
-        if ch == '\x1b':
+        if ch == "\x1b":
             nxt = sys.stdin.read(2)
-            return {'[A': 'UP', '[B': 'DOWN', '[C': 'RIGHT', '[D': 'LEFT'}.get(nxt, 'ESC')
-        if ch == '\r':
-            return 'ENTER'
-        if ch == '\x03':
-            return 'CTRL_C'
+            return {"[A": "UP", "[B": "DOWN", "[C": "RIGHT", "[D": "LEFT"}.get(nxt, "ESC")
+        if ch == "\r":
+            return "ENTER"
+        if ch == "\x03":
+            return "CTRL_C"
         return ch
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
@@ -67,12 +71,12 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
                 label = labels.get(item, "")
             print(f"  {prefix} {item}{' ' + label if label else ''}{suffix}")
 
-        print(f"\n  \u2191\u2193 navigate  |  Enter: select  |  Esc: cancel")
+        print("\n  \u2191\u2193 navigate  |  Enter: select  |  Esc: cancel")
 
         if selected is not None:
             print(f"\n  Run {selected}? (y/N): ", end="", flush=True)
             ch = _getch()
-            if ch == 'y':
+            if ch == "y":
                 print("y")
                 return selected
             print("n")
@@ -80,14 +84,14 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
             continue
 
         ch = _getch()
-        if ch == 'UP':
+        if ch == "UP":
             idx = (idx - 1) % len(display_items)
-        elif ch == 'DOWN':
+        elif ch == "DOWN":
             idx = (idx + 1) % len(display_items)
-        elif ch in ('ENTER', 'RIGHT'):
+        elif ch in ("ENTER", "RIGHT"):
             choice = display_items[idx]
             if choice == "[Cancel]":
                 return None
             selected = choice
-        elif ch in ('ESC', 'CTRL_C'):
+        elif ch in ("ESC", "CTRL_C"):
             return None

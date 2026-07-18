@@ -1,11 +1,13 @@
 """Tests for MIRA field benchmark metric computation."""
-import sys
+
 import pathlib
+import sys
 
 # Add src/ to path so field_benchmark can find config module
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 
 import pytest
+
 from field_benchmark import compute_metrics, load_dataset
 
 
@@ -32,8 +34,8 @@ def test_compute_metrics_precision_recall_f1():
     results = {
         "model_b": {
             **{f"img{i}.png": {"true": {2}, "pred": {2}} for i in range(10)},
-            **{f"img{i+10}.png": {"true": set(), "pred": {2}} for i in range(2)},
-            **{f"img{i+12}.png": {"true": {2}, "pred": set()} for i in range(3)},
+            **{f"img{i + 10}.png": {"true": set(), "pred": {2}} for i in range(2)},
+            **{f"img{i + 12}.png": {"true": {2}, "pred": set()} for i in range(3)},
         },
     }
     metrics = compute_metrics(results)

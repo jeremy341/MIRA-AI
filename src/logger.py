@@ -1,4 +1,5 @@
 """Structured logging configuration for MIRA."""
+
 import logging
 import sys
 

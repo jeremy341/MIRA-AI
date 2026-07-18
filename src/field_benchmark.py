@@ -4,14 +4,16 @@ Usage:
     py src/field_benchmark.py --dataset datasets/mira_tnr
     py src/field_benchmark.py --dataset datasets/mira_warp_only
 """
+
 import argparse
 import json
 import pathlib
 import sys
 import time
+
 from ultralytics import YOLO
 
-from config import ROOT_DIR, DETECTION_DIR, CLASS_NAMES
+from config import CLASS_NAMES, DETECTION_DIR, ROOT_DIR
 
 RESULTS_DIR = ROOT_DIR / "results"
 
@@ -60,6 +62,7 @@ def load_dataset(dataset_path):
 def get_detection_models():
     """Return list of (name, path) tuples for detection models."""
     from config import get_detection_models as _get_names
+
     return [(name, DETECTION_DIR / name) for name in _get_names()]
 
 
@@ -110,38 +113,46 @@ def compute_metrics(results):
             rec = tp / (tp + fn) if (tp + fn) > 0 else 0.0
             f1 = 2 * prec * rec / (prec + rec) if (prec + rec) > 0 else 0.0
             per_class[CLASS_NAMES[cls_id]] = {
-                "tp": tp, "fp": fp, "fn": fn,
-                "precision": prec, "recall": rec, "f1": f1,
+                "tp": tp,
+                "fp": fp,
+                "fn": fn,
+                "precision": prec,
+                "recall": rec,
+                "f1": f1,
             }
         model_metrics[model_name] = per_class
     return model_metrics
 
 
 def print_results(model_metrics, dataset_name):
-    print(f"\n  {'='*70}")
+    print(f"\n  {'=' * 70}")
     print(f"  Benchmark on: {dataset_name}")
-    print(f"  {'='*70}")
+    print(f"  {'=' * 70}")
 
     for model_name, per_class in model_metrics.items():
         print(f"\n  {model_name}")
-        print(f"  {'-'*60}")
+        print(f"  {'-' * 60}")
         print(f"  {'Class':<10} {'TP':>4} {'FP':>4} {'FN':>4} {'Prec':>6} {'Recall':>6} {'F1':>6}")
-        print(f"  {'-'*60}")
+        print(f"  {'-' * 60}")
         totals = {"tp": 0, "fp": 0, "fn": 0}
         for cls_name in CLASS_NAMES:
             m = per_class[cls_name]
             for k in totals:
                 totals[k] += m[k]
-            print(f"  {cls_name:<10} {m['tp']:>4} {m['fp']:>4} {m['fn']:>4} "
-                  f"{m['precision']:>5.1%} {m['recall']:>5.1%} {m['f1']:>5.1%}")
+            print(
+                f"  {cls_name:<10} {m['tp']:>4} {m['fp']:>4} {m['fn']:>4} "
+                f"{m['precision']:>5.1%} {m['recall']:>5.1%} {m['f1']:>5.1%}"
+            )
         total_prec = totals["tp"] / (totals["tp"] + totals["fp"]) if (totals["tp"] + totals["fp"]) > 0 else 0.0
         total_rec = totals["tp"] / (totals["tp"] + totals["fn"]) if (totals["tp"] + totals["fn"]) > 0 else 0.0
         total_f1 = 2 * total_prec * total_rec / (total_prec + total_rec) if (total_prec + total_rec) > 0 else 0.0
-        print(f"  {'-'*60}")
-        print(f"  {'Total':<10} {totals['tp']:>4} {totals['fp']:>4} {totals['fn']:>4} "
-              f"{total_prec:>5.1%} {total_rec:>5.1%} {total_f1:>5.1%}")
+        print(f"  {'-' * 60}")
+        print(
+            f"  {'Total':<10} {totals['tp']:>4} {totals['fp']:>4} {totals['fn']:>4} "
+            f"{total_prec:>5.1%} {total_rec:>5.1%} {total_f1:>5.1%}"
+        )
 
-    print(f"\n  {'='*70}\n")
+    print(f"\n  {'=' * 70}\n")
 
 
 def find_datasets():
@@ -157,8 +168,12 @@ def find_datasets():
 
 def main():
     p = argparse.ArgumentParser(description="MIRA Model Benchmark on real validation data")
-    p.add_argument("--dataset", type=str, default=None,
-                   help="Path to dataset with images/val and labels/val. Omit to pick from list.")
+    p.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="Path to dataset with images/val and labels/val. Omit to pick from list.",
+    )
     p.add_argument("--conf", type=float, default=0.5, help="Confidence threshold")
     args = p.parse_args()
 
@@ -201,6 +216,7 @@ def main():
     out_dir = RESULTS_DIR / run_id
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "benchmark_results.json", "w") as f:
+        # default=str handles pathlib.Path objects in metric dicts
         json.dump(model_metrics, f, indent=2, default=str)
     print(f"  Results saved to: {out_dir / 'benchmark_results.json'}")
 

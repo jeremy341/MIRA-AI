@@ -1,7 +1,9 @@
 """Tests for MIRA shared visualization utilities."""
+
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.fixture
@@ -23,6 +25,7 @@ def _make_mock_box(conf, xyxy, cls_id):
 
     class _XYXYProxy(list):
         """List-like proxy so box.xyxy[0] returns a cpu()-chainable mock."""
+
         def __init__(self, arr):
             super().__init__([arr])
 
@@ -61,6 +64,7 @@ def _make_mock_results(boxes_list, names=None):
 
 def test_draw_boxes_no_detections_returns_frame_unchanged(sample_frame):
     from src.visualize import draw_boxes
+
     results = _make_mock_results([])
     result = draw_boxes(sample_frame, results, conf_threshold=0.3)
     np.testing.assert_array_equal(result, sample_frame)

@@ -4,8 +4,19 @@
 # ============================================================
 # Run on Kaggle with GPU. Attach TrashNet as dataset input.
 
-import os, shutil, random
+import random
+import shutil
+import sys
 from pathlib import Path
+
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
+_scripts_dir = str(Path(__file__).resolve().parent)
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+if _scripts_dir not in sys.path:
+    sys.path.insert(0, _scripts_dir)
+
+from class_mappings import TRASHNET_FOLDER_MAP as CLASS_MAP
 
 # ============================================================
 # CONFIG
@@ -26,29 +37,27 @@ if Path(INPUT_DIR).exists():
     else:
         TRASHNET_DIR = Path("/kaggle/input/trashnet-resized/dataset-resized")
 else:
-    TRASHNET_DIR = Path(r"C:\Users\jerem\Documents\Jugend Forscht\MIRA-AI\archive (1)\dataset-resized")
+    TRASHNET_DIR = Path(__file__).resolve().parent.parent / "archive (1)" / "dataset-resized"
 
 OUTPUT_DIR = Path("/kaggle/working/trashnet_labeled")
 DEVICE = 0
 
-# Class mapping (folder name -> MIRA class ID)
-CLASS_MAP = {
-    "cardboard": 2,  # cardboard -> paper
-    "glass": 0,
-    "metal": 1,
-    "paper": 2,
-    "plastic": 3,
-    "trash": 4,
-}
-
 # ============================================================
 # INSTALL
 # ============================================================
-import subprocess, sys
+import subprocess
+import sys
+
 subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ultralytics"])
 subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "opencv-python"])
 
-from ultralytics import SAM
+try:
+    from ultralytics import SAM
+except Exception as exc:
+    raise RuntimeError(
+        "Ultralytics SAM not available. Please ensure ultralytics provides SAM."
+        f" Original error: {exc}"
+    ) from exc
 import numpy as np
 import cv2
 
@@ -56,6 +65,11 @@ import cv2
 # LOAD MOBILE-SAM (lightweight, fast)
 # ============================================================
 print("Loading MobileSAM...")
+sam_checkpoint = Path("mobile_sam.pt")
+if not sam_checkpoint.exists():
+    raise FileNotFoundError(
+        "mobile_sam.pt not found. Please download MobileSAM checkpoint before running."
+    )
 model = SAM("mobile_sam.pt")
 print("MobileSAM loaded.")
 
@@ -93,16 +107,17 @@ split_idx = int(len(samples) * 0.8)
 train_samples = samples[:split_idx]
 val_samples = samples[split_idx:]
 
+
 def process_samples(samples, img_dir, lbl_dir, split_name):
     total = len(samples)
     success = 0
     no_mask = 0
-    
+
     for idx, (img_path, class_id) in enumerate(samples):
         stem = img_path.stem
         dst_img = img_dir / f"{stem}.jpg"
         dst_lbl = lbl_dir / f"{stem}.txt"
-        
+
         # Validate image can be read
         test_img = cv2.imread(str(img_path))
         if test_img is None:
@@ -112,7 +127,7 @@ def process_samples(samples, img_dir, lbl_dir, split_name):
                 f.write(f"{class_id} 0.5 0.5 1.0 1.0\n")
             no_mask += 1
             continue
-        
+
         # Run SAM prediction
         try:
             results = model.predict(img_path, device=DEVICE, verbose=False)
@@ -123,54 +138,55 @@ def process_samples(samples, img_dir, lbl_dir, split_name):
                 f.write(f"{class_id} 0.5 0.5 1.0 1.0\n")
             no_mask += 1
             continue
-        
+
         # Copy image
         shutil.copy2(img_path, dst_img)
-        
+
         # Try to extract bbox from SAM masks
         box_found = False
         if results[0].masks is not None and len(results[0].masks) > 0:
             masks = results[0].masks.data.cpu().numpy()
-            
+
             # Pick the largest mask (main object)
             areas = [mask.sum() for mask in masks]
             best_idx = int(np.argmax(areas))
             best_mask = masks[best_idx]
-            
+
             # Convert mask to bbox
             ys, xs = np.where(best_mask > 0)
             if len(xs) > 0 and len(ys) > 0:
                 x1, y1 = xs.min(), ys.min()
                 x2, y2 = xs.max(), ys.max()
                 h, w = best_mask.shape
-                
+
                 # Convert to YOLO format (x_center, y_center, width, height) normalized
                 xc = ((x1 + x2) / 2) / w
                 yc = ((y1 + y2) / 2) / h
                 bw = (x2 - x1) / w
                 bh = (y2 - y1) / h
-                
+
                 # Clamp to [0, 1]
                 xc = max(0, min(1, xc))
                 yc = max(0, min(1, yc))
                 bw = max(0, min(1, bw))
                 bh = max(0, min(1, bh))
-                
+
                 with open(dst_lbl, "w") as f:
                     f.write(f"{class_id} {xc:.6f} {yc:.6f} {bw:.6f} {bh:.6f}\n")
                 box_found = True
                 success += 1
-        
+
         if not box_found:
             # Fallback to full-image bbox
             with open(dst_lbl, "w") as f:
                 f.write(f"{class_id} 0.5 0.5 1.0 1.0\n")
             no_mask += 1
-        
+
         if (idx + 1) % 50 == 0:
-            print(f"  {split_name}: {idx+1}/{total} (masks: {success}, fallback: {no_mask})")
-    
+            print(f"  {split_name}: {idx + 1}/{total} (masks: {success}, fallback: {no_mask})")
+
     print(f"  {split_name} done: {total} images | SAM bboxes: {success} | fallback: {no_mask}")
+
 
 print("\nProcessing training set...")
 process_samples(train_samples, train_img_dir, train_lbl_dir, "Train")

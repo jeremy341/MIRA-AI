@@ -6,30 +6,28 @@ Usage (on Kaggle):
     py scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 200 --batch-size 16
     py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset All_TACO+TrashNet+Roboflow+WaRP
 """
+
 import argparse
 import subprocess
 import sys
 from pathlib import Path
 
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+from config import CLASS_NAMES, NUM_CLASSES
+
 
 def parse_args():
     p = argparse.ArgumentParser(description="Train YOLO detection model on Kaggle GPU")
-    p.add_argument("--dataset", type=str, default="mira_tnr",
-                   help="Kaggle dataset name (default: mira_tnr)")
-    p.add_argument("--model", type=str, default="yolo11n.pt",
-                   help="Base model architecture (default: yolo11n.pt)")
-    p.add_argument("--epochs", type=int, default=120,
-                   help="Training epochs (default: 120)")
-    p.add_argument("--batch-size", type=int, default=32,
-                   help="Batch size (default: 32)")
-    p.add_argument("--img-size", type=int, default=640,
-                   help="Image size (default: 640)")
-    p.add_argument("--patience", type=int, default=30,
-                   help="Early stopping patience (default: 30)")
-    p.add_argument("--device", type=int, default=0,
-                   help="GPU device ID (default: 0)")
-    p.add_argument("--lr0", type=float, default=0.01,
-                   help="Initial learning rate (default: 0.01)")
+    p.add_argument("--dataset", type=str, default="mira_tnr", help="Kaggle dataset name (default: mira_tnr)")
+    p.add_argument("--model", type=str, default="yolo11n.pt", help="Base model architecture (default: yolo11n.pt)")
+    p.add_argument("--epochs", type=int, default=120, help="Training epochs (default: 120)")
+    p.add_argument("--batch-size", type=int, default=32, help="Batch size (default: 32)")
+    p.add_argument("--img-size", type=int, default=640, help="Image size (default: 640)")
+    p.add_argument("--patience", type=int, default=30, help="Early stopping patience (default: 30)")
+    p.add_argument("--device", type=int, default=0, help="GPU device ID (default: 0)")
+    p.add_argument("--lr0", type=float, default=0.01, help="Initial learning rate (default: 0.01)")
     return p.parse_args()
 
 
@@ -46,22 +44,22 @@ def main():
     # ============================================================
     # 2. FIND DATASET
     # ============================================================
-    INPUT_DIR = "/kaggle/input"
+    input_dir = "/kaggle/input"
     data_root = None
 
-    for d in Path(INPUT_DIR).iterdir():
+    for d in Path(input_dir).iterdir():
         if d.is_dir() and args.dataset.lower().replace("+", "-") in d.name.lower().replace("+", "-").replace(" ", "-"):
             data_root = d
             break
 
     if data_root is None:
-        for d in Path(INPUT_DIR).iterdir():
+        for d in Path(input_dir).iterdir():
             if d.is_dir() and (d / "images").exists():
                 data_root = d
                 break
 
     if data_root is None:
-        for d in Path(INPUT_DIR).iterdir():
+        for d in Path(input_dir).iterdir():
             if d.is_dir():
                 for sub in d.rglob("images/train"):
                     if sub.is_dir():
@@ -71,7 +69,11 @@ def main():
                     break
 
     if data_root is None:
-        raise FileNotFoundError(f"Dataset '{args.dataset}' not found in {INPUT_DIR}")
+        raise FileNotFoundError(
+            f"Dataset '{args.dataset}' not found in {input_dir}.\n"
+            "  Expected structure: datasets/<name>/images/{train,val}/ and labels/{train,val}/\n"
+            "  Run: python scripts/merge_dataset_model1.py  (or model2/3/4) to create the dataset."
+        )
 
     print(f"Dataset: {data_root}")
     train_imgs = list(data_root.rglob("images/train/*.jpg")) + list(data_root.rglob("images/train/*.png"))
@@ -82,12 +84,12 @@ def main():
     # ============================================================
     # 3. WRITE dataset.yaml
     # ============================================================
-    WORK_DIR = "/kaggle/working"
-    yaml_path = Path(WORK_DIR) / "dataset.yaml"
+    work_dir = "/kaggle/working"
+    yaml_path = Path(work_dir) / "dataset.yaml"
     yaml_content = f"""train: {data_root}/images/train
 val: {data_root}/images/val
-nc: 5
-names: ['glass', 'metal', 'paper', 'plastic', 'trash']
+nc: {NUM_CLASSES}
+names: {CLASS_NAMES}
 """
     yaml_path.write_text(yaml_content)
     print(f"Written: {yaml_path}")
@@ -98,14 +100,14 @@ names: ['glass', 'metal', 'paper', 'plastic', 'trash']
     print(f"\nStarting training: {args.dataset} | Model: {args.model} | Epochs: {args.epochs}")
     model = YOLO(args.model)
 
-    results = model.train(
+    model.train(
         data=str(yaml_path),
         epochs=args.epochs,
         batch=args.batch_size,
         imgsz=args.img_size,
         patience=args.patience,
         device=args.device,
-        project=str(Path(WORK_DIR) / "runs"),
+        project=str(Path(work_dir) / "runs"),
         name=args.dataset,
         exist_ok=True,
         amp=True,
@@ -152,7 +154,7 @@ names: ['glass', 'metal', 'paper', 'plastic', 'trash']
     model.export(format="onnx", imgsz=args.img_size)
     print("  ONNX exported")
 
-    print(f"\nDone! Results in: {WORK_DIR}/runs/{args.dataset}/weights/")
+    print(f"\nDone! Results in: {work_dir}/runs/{args.dataset}/weights/")
 
 
 if __name__ == "__main__":

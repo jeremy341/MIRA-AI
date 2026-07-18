@@ -17,7 +17,7 @@ mappings = [
     ("exp015_yolo11n_tnw", "results.png", "exp15-results.png"),
     ("exp015_yolo11n_tnw", "confusion_matrix.png", "exp15-confusion.png"),
     ("exp016_yolo11n_warp", "results.png", "exp16-results.png"),
-    ("exp016_yolo11n_warp", "confusion_matrix.png", "exp16-confusion.png")
+    ("exp016_yolo11n_warp", "confusion_matrix.png", "exp16-confusion.png"),
 ]
 
 for src_folder, src_file, dest_file in mappings:

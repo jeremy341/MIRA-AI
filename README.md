@@ -42,6 +42,7 @@ A lightweight, edge-AI-optimized computer vision system for automated recycling 
 - [Hardware Requirements](#hardware-requirements)
 - [Project Structure](#project-structure)
 - [Known Limitations](#known-limitations)
+- [Reproducibility](#reproducibility)
 - [Related Work](#related-work)
 - [Citation](#citation)
 - [Contributing](#contributing)
@@ -62,7 +63,11 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+> **Note:** Development dependencies (pytest, mypy, ruff) are included in `requirements.txt`. For a production-only install, install only the core packages listed at the top of the file.
+
 ### Live Detection
+
+> **Platform note:** On Windows, use `.\mira` (PowerShell) or `mira.bat` (CMD). On Linux/macOS, use `python -m src.cli`.
 
 ```bash
 # Interactive model picker (arrow keys to choose)
@@ -202,6 +207,8 @@ MIRA uses a 3-tier confidence system to handle uncertain detections:
 
 The reject threshold is configurable via the dashboard slider or `--reject` CLI flag.
 
+> **Note:** The 0.25 lower bound is only active when explicitly passed via `--conf 0.25` or when loading INT8 TFLite models (which auto-set conf to 0.25). With default `--conf 0.5`, only boxes with confidence ≥0.5 are drawn.
+
 ---
 
 ## Models
@@ -246,7 +253,9 @@ The reject threshold is configurable via the dashboard slider or `--reject` CLI 
 
 ![Stage A Accuracy Comparison](latex/figures/stagea-acc-comparison.png)
 
-### Detection — 12 Experiments (EXP-005–016)
+### Detection — 11 Experiments (EXP-005–016, excl. EXP-007)
+
+> EXP-007 was an exploratory attempt and is excluded from the main results table.
 
 | Exp | Model | Dataset | mAP50 | Platform |
 |---|---|---|---|---|
@@ -297,12 +306,12 @@ Full per-class metrics, confusion matrices, and training curves: [`results/exper
 
 ### Sources
 
-| Dataset | Classes | Images | Format | Use |
-|---|---|---|---|---|
-| [TACO](http://tacodataset.org/) | 60 | 1,500 | COCO | Base detection data |
-| [TrashNet](https://github.com/garythung/trashnet) | 6 | 2,527 | Classification | Stage A + bbox via SAM |
-| [Roboflow Trash Detection](https://universe.roboflow.com/robotics-world) | 64 | ~3,300 | YOLO | Multi-class detection |
-| [WaRP](https://github.com/FrankFao/WaRP) | 28 | ~10,000 | YOLO | Glass/plastic detection |
+| Dataset | Classes | Images | Format | Use | License |
+|---|---|---|---|---|---|
+| [TACO](http://tacodataset.org/) | 60 | 1,500 | COCO | Base detection data | CC-BY-4.0 |
+| [TrashNet](https://github.com/garythung/trashnet) | 6 | 2,527 | Classification | Stage A + bbox via SAM | MIT-0 |
+| [Roboflow Trash Detection](https://universe.roboflow.com/robotics-world) | 64 | ~3,300 | YOLO | Multi-class detection | Varies by dataset (see individual dataset pages) |
+| [WaRP](https://github.com/FrankFao/WaRP) | 28 | ~10,000 | YOLO | Glass/plastic detection | Research use only (contact authors) |
 
 ### Class Schema
 
@@ -380,7 +389,6 @@ The MIRA Control Center is a Flask+SocketIO web dashboard with a B&W monochrome 
 
 | Command | Description |
 |---|---|
-| `.\mira data-build` | Build YOLO detection dataset from classification folder |
 | `.\mira data-viz` | Visualize dataset class distribution and sample grids |
 
 ### Training Commands
@@ -518,7 +526,7 @@ MIRA-AI/
 │
 ├── scripts/                      # Dataset merge, training, and utility scripts
 │   ├── merge_dataset_model1.py   # TACO + TrashNet + Roboflow → 6,802 images
-│   ├── merge_dataset_model2.py   # TACO + TrashNet + WaRP → ~14,000 images
+│   ├── merge_dataset_model2.py   # TACO + TrashNet + WaRP → ~6,800 images
 │   ├── merge_dataset_model3.py   # WaRP only → ~3,000 images
 │   ├── merge_dataset_model4.py   # All datasets → ~17,000 images
 │   ├── train_detector_kaggle.py  # Configurable Kaggle training
@@ -604,6 +612,36 @@ MIRA-AI/
 - **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 7.1% mAP50) due to its inherent visual diversity.
 - **No RPi benchmarks** — all latency measurements are on Intel i7 / NVIDIA T4, not the target Raspberry Pi Zero 2W.
 - **Windows-only launcher** — `mira.bat` is Windows-specific. Linux/macOS users must call `python src/cli.py <command>` directly.
+
+---
+
+## Reproducibility
+
+### Random Seeds
+
+All scripts use fixed random seeds for deterministic results:
+- **TensorFlow/Keras:** `seed=123`
+- **NumPy / Python random:** `seed=42`
+
+### Dataset Versions
+
+Training datasets are downloaded from specific versions:
+- **TACO:** [GitHub repo](https://github.com/AlessandroSaviolo/TACO) — commit used for conversion
+- **TrashNet:** [Kaggle dataset](https://www.kaggle.com/datasets/techsash/waste-classification-data)
+- **Roboflow:** [Roboflow Universe](https://universe.roboflow.com/robotics-world) — specific export versions linked in experiment logs
+- **WaRP:** [GitHub repo](https://github.com/DTUGreenAmbition/WaRP)
+
+### Model Checksums
+
+All trained models are available in the `models/` directory. Model integrity can be verified against Kaggle notebook outputs.
+
+### Kaggle Training Notebooks
+
+For exact reproduction of training runs, refer to the Kaggle notebooks using `scripts/train_detector_kaggle.py`. Each experiment's hyperparameters are logged in `results/experiments_log.md`.
+
+### Hardware
+
+Results were generated on Intel i7 / NVIDIA T4. Raspberry Pi Zero 2W benchmarks pending.
 
 ---
 
