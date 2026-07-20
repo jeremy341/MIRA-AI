@@ -10,9 +10,11 @@ import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from config import CLASS_NAMES
 
-# ── Data classes ─────────────────────────────────────────────────────
+import numpy as np
+
+from config import CLASS_NAMES
+from pipeline.models import DetectionModel, ModelRegistry
 
 
 @dataclass
@@ -47,6 +49,19 @@ class PerClassMetrics:
         }
 
 
+def compute_iou(box_a: list[float], box_b: list[float]) -> float:
+    """Compute IoU between two boxes in xyxy format."""
+    x1 = max(box_a[0], box_b[0])
+    y1 = max(box_a[1], box_b[1])
+    x2 = min(box_a[2], box_b[2])
+    y2 = min(box_a[3], box_b[3])
+    inter = max(0, x2 - x1) * max(0, y2 - y1)
+    area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
+    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
+    union = area_a + area_b - inter
+    return inter / union if union > 0 else 0.0
+
+
 @dataclass
 class BenchmarkResult:
     model_name: str
@@ -59,6 +74,8 @@ class BenchmarkResult:
     overall_recall: float = 0.0
     avg_latency_ms: float = 0.0
     total_detections: int = 0
+    map50: float = 0.0
+    map50_95: float = 0.0
     errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
@@ -73,17 +90,17 @@ class BenchmarkResult:
             "overall_recall": self.overall_recall,
             "avg_latency_ms": self.avg_latency_ms,
             "total_detections": self.total_detections,
+            "map50": self.map50,
+            "map50_95": self.map50_95,
             "errors": self.errors,
         }
 
 
-# ── Dataset loader ───────────────────────────────────────────────────
-
-
-def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, set[int]]]:
+def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]:
     """Load images/val + labels/val from a YOLO-format dataset.
 
-    Returns list of (image_path, set_of_class_ids) pairs.
+    Returns list of (image_path, gt_objects) where gt_objects is a list of
+    dicts with keys: class_id, bbox (xywh normalized).
     Falls back to the train split when val is unavailable.
     """
     dataset_path = Path(dataset_path)
@@ -96,7 +113,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, set[int]]]:
     else:
         raise FileNotFoundError(f"No images/val (or train) directory found in {dataset_path}")
 
-    samples: list[tuple[Path, set[int]]] = []
+    samples: list[tuple[Path, list[dict]]] = []
     skipped = 0
 
     for lbl_path in sorted(lbl_dir.glob("*.txt")):
@@ -111,13 +128,21 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, set[int]]]:
             skipped += 1
             continue
 
-        classes: set[int] = set()
+        objects: list[dict] = []
         with open(lbl_path) as f:
             for line in f:
                 parts = line.strip().split()
-                if parts:
-                    classes.add(int(parts[0]))
-        samples.append((img_path, classes))
+                if len(parts) >= 5:
+                    cls_id = int(parts[0])
+                    x_center = float(parts[1])
+                    y_center = float(parts[2])
+                    width = float(parts[3])
+                    height = float(parts[4])
+                    objects.append({
+                        "class_id": cls_id,
+                        "bbox": [x_center, y_center, width, height],
+                    })
+        samples.append((img_path, objects))
 
     print(
         f"  Loaded {len(samples)} images from {dataset_path.name}/{split}"
@@ -126,7 +151,59 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, set[int]]]:
     return samples
 
 
-# ── Benchmark runner ─────────────────────────────────────────────────
+def xywh_to_xyxy(box: list[float], img_w: int = 640, img_h: int = 640) -> list[float]:
+    """Convert normalized xywh to xyxy in pixel coords."""
+    xc, yc, w, h = box
+    x1 = (xc - w / 2) * img_w
+    y1 = (yc - h / 2) * img_h
+    x2 = (xc + w / 2) * img_w
+    y2 = (yc + h / 2) * img_h
+    return [x1, y1, x2, y2]
+
+
+def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: float = 0.5) -> float:
+    """Compute mAP at given IoU threshold using 101-point interpolation."""
+    all_detections: list[dict] = []
+    num_gt = 0
+    for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts)):
+        num_gt += len(img_gts)
+        for d in img_preds:
+            d["img_idx"] = img_idx
+            all_detections.append(d)
+    all_detections.sort(key=lambda x: x["confidence"], reverse=True)
+
+    tp = np.zeros(len(all_detections))
+    fp = np.zeros(len(all_detections))
+    gt_used = [set() for _ in gts]
+
+    for i, det in enumerate(all_detections):
+        img_idx = det["img_idx"]
+        best_iou = iou_thresh
+        best_gt = -1
+        for j, gt in enumerate(gts[img_idx]):
+            if j in gt_used[img_idx]:
+                continue
+            iou = compute_iou(det["bbox_pixel"], xywh_to_xyxy(gt["bbox"]))
+            if iou > best_iou:
+                best_iou = iou
+                best_gt = j
+        if best_gt >= 0 and det["class_id"] == gts[img_idx][best_gt]["class_id"]:
+            tp[i] = 1
+            gt_used[img_idx].add(best_gt)
+        else:
+            fp[i] = 1
+
+    acc_tp = np.cumsum(tp)
+    acc_fp = np.cumsum(fp)
+    rec = acc_tp / max(num_gt, 1)
+    prec = acc_tp / np.maximum(acc_tp + acc_fp, 1e-6)
+
+    ap = 0.0
+    for t in np.arange(0, 1.01, 0.01):
+        mask = rec >= t
+        if np.any(mask):
+            ap += np.max(prec[mask]) / 101
+    return ap
 
 
 class ModelBenchmark:
@@ -134,90 +211,106 @@ class ModelBenchmark:
 
     def __init__(
         self,
-        models: list[tuple[str, Path]],
-        dataset: Path | str,
+        models: list[DetectionModel] | None = None,
+        dataset: Path | str | None = None,
         conf: float = 0.5,
         iou: float = 0.7,
         max_images: int | None = None,
     ):
-        self.models = models
-        self.dataset = Path(dataset) if not isinstance(dataset, Path) else dataset
+        self.models = models or []
+        self.dataset = Path(dataset) if isinstance(dataset, (Path, str)) else None
         self.conf = conf
         self.iou = iou
         self.max_images = max_images
-        self.samples = load_yolo_dataset(self.dataset)
+        self.samples = load_yolo_dataset(self.dataset) if self.dataset else []
+
+    @classmethod
+    def from_registry(cls, model_names: list[str], dataset_path: Path | str, conf: float = 0.5, iou: float = 0.7, max_images: int | None = None) -> ModelBenchmark:
+        """Create benchmark from model names using ModelRegistry."""
+        registry = ModelRegistry()
+        registry.discover()
+        models = [registry.load_model(name) for name in model_names]
+        return cls(models=models, dataset=dataset_path, conf=conf, iou=iou, max_images=max_images)
 
     def run(self) -> list[BenchmarkResult]:
         """Evaluate every model and return structured results."""
-        from ultralytics import YOLO
 
-        if self.max_images:
+        if self.max_images and self.samples:
             self.samples = self.samples[: self.max_images]
 
         results: list[BenchmarkResult] = []
 
-        for model_name, model_path in self.models:
-            is_int8 = "int8" in model_name.lower() and model_path.suffix == ".tflite"
-            effective_conf = min(self.conf, 0.25) if is_int8 else self.conf
-            task_type = "detect" if model_path.suffix == ".tflite" else None
-
-            print(f"  Running {model_name}... ", end="", flush=True)
-
-            try:
-                model = YOLO(str(model_path), task=task_type)
-            except Exception as exc:
-                print(f"ERROR: {exc}")
-                results.append(
-                    BenchmarkResult(
-                        model_name=model_name,
-                        model_path=str(model_path),
-                        model_type=model_path.suffix,
-                        errors=[str(exc)],
-                    )
-                )
-                continue
+        for model in self.models:
+            print(f"  Running {model.name}... ", end="", flush=True)
 
             per_class: dict[str, PerClassMetrics] = {name: PerClassMetrics() for name in CLASS_NAMES}
             total_detections = 0
             total_latency_ms = 0.0
             errors: list[str] = []
 
-            for img_path, gt_classes in self.samples:
+            all_preds: list[list[dict]] = []
+            all_gts: list[list[dict]] = []
+
+            for img_path, gt_objects in self.samples:
                 try:
                     t0 = time.perf_counter()
-                    preds = model(
-                        str(img_path),
-                        conf=effective_conf,
-                        iou=self.iou,
-                        verbose=False,
-                    )
+                    result = model.predict(str(img_path), conf=self.conf, iou=self.iou)
                     total_latency_ms += (time.perf_counter() - t0) * 1000
 
-                    pred_classes: set[int] = set()
-                    boxes = preds[0].boxes
-                    if boxes is not None:
-                        pred_classes = set(boxes.cls.int().tolist())
-                        total_detections += len(pred_classes)
+                    img_preds: list[dict] = []
+                    for det in result.detections:
+                        total_detections += 1
+                        img_preds.append({
+                            "class_id": det.class_id,
+                            "confidence": det.confidence,
+                            "bbox_pixel": list(det.bbox),
+                        })
 
-                    for cls_id in range(len(CLASS_NAMES)):
-                        cls_name = CLASS_NAMES[cls_id]
-                        m = per_class[cls_name]
-                        in_gt = cls_id in gt_classes
-                        in_pred = cls_id in pred_classes
-                        if in_gt and in_pred:
-                            m.tp += 1
-                        elif not in_gt and in_pred:
-                            m.fp += 1
-                        elif in_gt and not in_pred:
-                            m.fn += 1
+                    # IoU-based per-class matching
+                    gt_boxes = [xywh_to_xyxy(obj["bbox"]) for obj in gt_objects]
+                    pred_boxes = [d["bbox_pixel"] for d in img_preds]
+                    gt_matched = [False] * len(gt_objects)
+                    pred_matched = [False] * len(img_preds)
+
+                    for gi, gt_box in enumerate(gt_boxes):
+                        best_iou = self.iou
+                        best_pi = -1
+                        for pi, pred_box in enumerate(pred_boxes):
+                            if pred_matched[pi]:
+                                continue
+                            iou_val = compute_iou(gt_box, pred_box)
+                            gt_class = gt_objects[gi]["class_id"]
+                            pred_class = img_preds[pi]["class_id"]
+                            if iou_val >= best_iou and gt_class == pred_class:
+                                best_iou = iou_val
+                                best_pi = pi
+                        if best_pi >= 0:
+                            gt_matched[gi] = True
+                            pred_matched[best_pi] = True
+
+                    for gi, matched in enumerate(gt_matched):
+                        cls_name = CLASS_NAMES[gt_objects[gi]["class_id"]]
+                        if matched:
+                            per_class[cls_name].tp += 1
+                        else:
+                            per_class[cls_name].fn += 1
+
+                    for pi, matched in enumerate(pred_matched):
+                        if not matched:
+                            cls_name = CLASS_NAMES[img_preds[pi]["class_id"]]
+                            per_class[cls_name].fp += 1
+
+                    all_preds.append(img_preds)
+                    all_gts.append(gt_objects)
 
                 except Exception as exc:
                     errors.append(f"{img_path.name}: {exc}")
+                    all_preds.append([])
+                    all_gts.append(gt_objects)
 
             n = len(self.samples)
             avg_latency = total_latency_ms / n if n > 0 else 0.0
 
-            # Micro-averaged overall metrics
             total_tp = sum(m.tp for m in per_class.values())
             total_fp = sum(m.fp for m in per_class.values())
             total_fn = sum(m.fn for m in per_class.values())
@@ -230,11 +323,14 @@ class ModelBenchmark:
                 else 0.0
             )
 
+            map50 = compute_map(all_preds, all_gts, iou_thresh=0.5)
+            map50_95 = float(np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.96, 0.05)]))
+
             results.append(
                 BenchmarkResult(
-                    model_name=model_name,
-                    model_path=str(model_path),
-                    model_type=model_path.suffix,
+                    model_name=model.name,
+                    model_path=str(model.path),
+                    model_type=getattr(model, "model_type", str(model.path.suffix)),
                     total_images=n,
                     per_class=per_class,
                     overall_f1=overall_f1,
@@ -242,6 +338,8 @@ class ModelBenchmark:
                     overall_recall=overall_rec,
                     avg_latency_ms=avg_latency,
                     total_detections=total_detections,
+                    map50=map50,
+                    map50_95=map50_95,
                     errors=errors,
                 )
             )
@@ -264,8 +362,8 @@ class ModelBenchmark:
         """Return a markdown table comparing models, sorted by F1 descending."""
         sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
 
-        header = "| Model | Images | Precision | Recall | F1 | Latency (ms) | Detections | Errors |"
-        sep = "|---|---:|---:|---:|---:|---:|---:|---:|"
+        header = "| Model | Images | Precision | Recall | F1 | mAP50 | Latency (ms) |"
+        sep = "|---|---:|---:|---:|---:|---:|---:|"
         rows = [header, sep]
 
         for r in sorted_res:
@@ -275,9 +373,8 @@ class ModelBenchmark:
                 f"| {r.overall_precision:.1%} "
                 f"| {r.overall_recall:.1%} "
                 f"| {r.overall_f1:.1%} "
-                f"| {r.avg_latency_ms:.1f} "
-                f"| {r.total_detections} "
-                f"| {len(r.errors)} |"
+                f"| {r.map50:.1%} "
+                f"| {r.avg_latency_ms:.1f} |"
             )
 
         return "\n".join(rows)

@@ -207,14 +207,35 @@ def cmd_live(args):
 
 def _add_dashboard_args(parser):
     parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0).")
-    parser.add_argument("--port", type=int, default=5000, help="Port number (default: 5000).")
+    parser.add_argument("--port", type=int, default=8000, help="Port number (default: 8000).")
+    parser.add_argument("--debug", action="store_true", help="Enable auto-reload on code changes.")
 
 
-@register_command("dashboard", "Launch Flask+SocketIO web control center (B&W theme)", add_args=_add_dashboard_args)
+@register_command("dashboard", "Launch FastAPI+WebSocket web control center", add_args=_add_dashboard_args)
 def cmd_dashboard(args):
-    from dashboard_flask.app import run_dashboard
+    import importlib.util
+    import uvicorn
 
-    run_dashboard(host=args.host, port=args.port)
+    dashboard_dir = Path(__file__).resolve().parent / "dashboard"
+    main_path = dashboard_dir / "main.py"
+
+    # Add dashboard dir to sys.path so relative imports work
+    if str(dashboard_dir) not in sys.path:
+        sys.path.insert(0, str(dashboard_dir))
+
+    print(f"\n  MIRA Control Center")
+    print(f"  http://localhost:{args.port}\n")
+
+    spec = importlib.util.spec_from_file_location("dashboard_main", str(main_path))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    uvicorn.run(
+        mod.app,
+        host=args.host,
+        port=args.port,
+        log_level="info" if args.debug else "warning",
+    )
 
 
 # ── New Pipeline Commands ────────────────────────────────────────────
@@ -382,21 +403,12 @@ def _add_benchmark_args(parser):
 @register_command("benchmark", "Benchmark multiple models for accuracy and latency", add_args=_add_benchmark_args)
 def cmd_benchmark(args):
     from pipeline.benchmark import ModelBenchmark
-    from pipeline.models import ModelRegistry
 
     dataset = resolve_detection_data_yaml(args.dataset)
 
-    registry = ModelRegistry()
-    registry.discover()
-
-    model_tuples = []
-    for name in args.models:
-        info = registry.get_model(name)
-        model_tuples.append((name, info["path"]))
-
-    bench = ModelBenchmark(
-        models=model_tuples,
-        dataset=dataset,
+    bench = ModelBenchmark.from_registry(
+        model_names=args.models,
+        dataset_path=dataset,
         conf=args.conf,
         max_images=args.max_images,
     )

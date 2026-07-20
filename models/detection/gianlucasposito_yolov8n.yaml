@@ -1,0 +1,13 @@
+name: gianlucasposito_yolov8n
+display_name: \"gianlucasposito YOLOv8n (5-class waste)\"
+model_type: third_party
+task: detect
+input_size: 640
+class_names: [\"glass\", \"metal\", \"paper\", \"plastic\", \"trash\"]
+model_file: gianlucasposito_yolov8n.pt
+training:
+  dataset: \"TACO subset\"
+  framework: \"YOLOv8n\"
+tags: [\"third-party\", \"yolov8n\", \"taco\", \"baseline\"]
+recommended_for: \"benchmarking\"
+source_url: \"https://github.com/gianlucasposito/YOLO-Waste-Detection\"

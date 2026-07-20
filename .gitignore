@@ -75,6 +75,9 @@ runs/
 *.zip
 *.tar.gz
 
+# --- Freebuff cache ---
+.freebuff/
+
 # --- Secrets / Environment ---
 .env
 .env.*

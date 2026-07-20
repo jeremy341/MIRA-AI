@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "mira-ai"
 version = "1.0.0"
@@ -16,6 +20,9 @@ Repository = "https://github.com/jeremydarko/MIRA-AI"
 
 [project.scripts]
 mira = "src.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
