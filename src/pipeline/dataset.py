@@ -22,15 +22,20 @@ Usage:
 
 from __future__ import annotations
 
-# Add scripts/ to path for merge_utils imports
+import importlib.util
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
-if _SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPTS_DIR)
+
+def _import_merge_utils():
+    """Lazy-import merge_utils from scripts/ directory."""
+    scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
+    if scripts_dir not in sys.path:
+        sys.path.insert(0, scripts_dir)
+    import merge_utils
+    return merge_utils
 
 
 @dataclass
@@ -146,10 +151,7 @@ class DatasetRegistry:
         dry_run: bool = False,
     ) -> MergeResult:
         """Merge registered sources + optional custom dataset."""
-        from merge_utils import (
-            print_stats,
-            write_dataset_yaml,
-        )
+        mu = _import_merge_utils()
 
         # Validate and create output directory
         try:
@@ -196,8 +198,8 @@ class DatasetRegistry:
         # Generate stats + YAML
         if not dry_run and (total_added > 0 or custom_path):
             if total_added > 0:
-                print_stats(output, f"Merged: {', '.join(sources_used)}")
-                write_dataset_yaml(output)
+                mu.print_stats(output, f"Merged: {', '.join(sources_used)}")
+                mu.write_dataset_yaml(output)
             elif total_added == 0:
                 print("  Warning: No images were added from any source.")
 
@@ -210,22 +212,20 @@ class DatasetRegistry:
 
     def _merge_passthrough(self, source: DatasetSource, output: Path, dry_run: bool) -> int:
         """Copy data that's already in MIRA 5-class format."""
-        from merge_utils import copy_passthrough
-
         if dry_run:
             print(f"  [DRY] Passthrough: {source.input_path}")
             return 0
 
+        mu = _import_merge_utils()
         print(f"  Copying {source.name} (passthrough)...")
         total = 0
         for split_name, split_rel in source.splits.items():
             img_src = source.input_path / split_rel
-            # Find matching label dir
             lbl_rel = split_rel.replace("images", "labels")
             lbl_src = source.input_path / lbl_rel
             dst_split = "val" if split_name == "valid" else split_name
             if img_src.exists():
-                a, _ = copy_passthrough(
+                a, _ = mu.copy_passthrough(
                     img_src,
                     lbl_src,
                     output / "images" / dst_split,
@@ -236,12 +236,11 @@ class DatasetRegistry:
 
     def _merge_remapped(self, source: DatasetSource, output: Path, dry_run: bool) -> tuple[int, int]:
         """Copy data with class ID remapping."""
-        from merge_utils import copy_remapped_images, create_split_from_train
-
         if dry_run:
             print(f"  [DRY] Remap: {source.input_path} ({len(source.class_mapping)} mappings)")
             return 0, 0
 
+        mu = _import_merge_utils()
         print(f"  Adding {source.name} (remap {source.source_format})...")
         total_added = 0
         total_skipped = 0
@@ -256,11 +255,10 @@ class DatasetRegistry:
 
             dst_split = "val" if split_name in ("valid", "test") else split_name
 
-            # If only train split exists and we need val, create split
             if split_name == "train" and "val" not in source.splits:
-                train_stems, val_stems = create_split_from_train(img_src)
+                train_stems, val_stems = mu.create_split_from_train(img_src)
                 for ds, stems in [("train", train_stems), ("val", val_stems)]:
-                    a, s = copy_remapped_images(
+                    a, s = mu.copy_remapped_images(
                         stems,
                         img_src,
                         lbl_src,
@@ -272,7 +270,7 @@ class DatasetRegistry:
                     total_skipped += s
             else:
                 stems = [f.stem for f in lbl_src.glob("*.txt")]
-                a, s = copy_remapped_images(
+                a, s = mu.copy_remapped_images(
                     stems,
                     img_src,
                     lbl_src,
@@ -293,8 +291,7 @@ class DatasetRegistry:
         dry_run: bool,
     ) -> tuple[int, int]:
         """Add a custom YOLO-format dataset."""
-        from merge_utils import copy_passthrough, copy_remapped_images
-
+        mu = _import_merge_utils()
         path = Path(path)
         if not path.exists():
             print(f"  ERROR: Custom source not found: {path}")
@@ -314,7 +311,7 @@ class DatasetRegistry:
                 continue
             if mapping:
                 stems = [f.stem for f in lbl_src.glob("*.txt")]
-                a, s = copy_remapped_images(
+                a, s = mu.copy_remapped_images(
                     stems,
                     img_src,
                     lbl_src,
@@ -323,7 +320,7 @@ class DatasetRegistry:
                     mapping,
                 )
             else:
-                a, s = copy_passthrough(
+                a, s = mu.copy_passthrough(
                     img_src,
                     lbl_src,
                     output / "images" / split,

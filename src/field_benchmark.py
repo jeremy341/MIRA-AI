@@ -61,9 +61,12 @@ def load_dataset(dataset_path):
 
 def get_detection_models():
     """Return list of (name, path) tuples for detection models."""
-    from config import get_detection_models as _get_names
+    from pipeline.models import ModelRegistry
 
-    return [(name, DETECTION_DIR / name) for name in _get_names()]
+    registry = ModelRegistry()
+    registry.discover()
+    return [(m["name"], pathlib.Path(m["path"])) for m in registry.list_models()
+            if m["exists"]]
 
 
 def run_models(models, annotations, img_dir, conf=0.5):

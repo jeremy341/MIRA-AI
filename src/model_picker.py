@@ -12,9 +12,10 @@ def _getch():
         ch = msvcrt.getch()
         if ch == b"\xe0":
             second = msvcrt.getch()
-            return {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second, "")
-        if ch == b"\xe0":
-            # Function key sequence - consume remaining bytes
+            mapped = {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second)
+            if mapped:
+                return mapped
+            # Function key or other extended key — consume remaining bytes
             try:
                 while msvcrt.kbhit():
                     msvcrt.getch()

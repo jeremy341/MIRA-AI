@@ -4,8 +4,11 @@ import pathlib
 
 import yaml
 
-SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR = SCRIPT_DIR.parent
+from exceptions import CameraError, ConfigError
+
+SRC_DIR = pathlib.Path(__file__).resolve().parent
+ROOT_DIR = SRC_DIR.parent
+SCRIPT_DIR = SRC_DIR  # backward compatibility — SRC_DIR is preferred
 
 # Load project config
 _CONFIG_PATH = ROOT_DIR / "mira.yaml"
@@ -13,9 +16,9 @@ try:
     with open(_CONFIG_PATH) as f:
         PROJECT_CONFIG = yaml.safe_load(f)
 except FileNotFoundError:
-    raise RuntimeError(f"Config file not found: {_CONFIG_PATH}") from None
+    raise ConfigError(f"Config file not found: {_CONFIG_PATH}") from None
 except yaml.YAMLError as e:
-    raise RuntimeError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
+    raise ConfigError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
 
 def _get_config_path(key: str, default: str | None = None) -> str:
     """Safely get a nested path key from PROJECT_CONFIG."""
@@ -24,7 +27,7 @@ def _get_config_path(key: str, default: str | None = None) -> str:
     except KeyError:
         if default is not None:
             return default
-        raise RuntimeError(f"Missing required config key '{key}' in mira.yaml") from None
+        raise ConfigError(f"Missing required config key '{key}' in mira.yaml") from None
 
 # Directory paths (derived from config)
 REF_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("reference", "reference")
@@ -121,7 +124,7 @@ def setup_camera_properties(cap, width: int, height: int, fps: int = 30):
     import cv2
 
     if not cap.isOpened():
-        raise RuntimeError("Camera is not opened before setting properties.")
+        raise CameraError("Camera is not opened before setting properties.")
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
