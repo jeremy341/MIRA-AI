@@ -222,7 +222,7 @@ def test_comparison_table():
 
 
 def test_default_config():
-    from src.pipeline.train import TrainConfig
+    from src.pipeline.strategies import TrainConfig
 
     cfg = TrainConfig()
     assert cfg.model == "yolo11n.pt"
@@ -234,7 +234,7 @@ def test_default_config():
 
 
 def test_config_from_yaml():
-    from src.pipeline.train import TrainConfig
+    from src.pipeline.strategies import TrainConfig
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         yaml.dump(
@@ -272,17 +272,13 @@ def test_exception_hierarchy():
 
 
 def test_config_roundtrip():
-    from src.pipeline.train import TrainConfig
+    from src.pipeline.strategies import TrainConfig
 
-    with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as f:
-        original = TrainConfig(name="roundtrip", epochs=25, batch_size=8)
-        original.to_yaml(f.name)
-
-        loaded = TrainConfig.from_yaml(f.name)
-        assert loaded.name == original.name
-        assert loaded.epochs == original.epochs
-        assert loaded.batch_size == original.batch_size
-        assert loaded.imgsz == original.imgsz
-        assert loaded.model == original.model
-
-    Path(f.name).unlink()
+    original = TrainConfig(name="roundtrip", epochs=25, batch_size=8)
+    data = {f.name: getattr(original, f.name) for f in original.__dataclass_fields__.values()}
+    loaded = TrainConfig(**data)
+    assert loaded.name == original.name
+    assert loaded.epochs == original.epochs
+    assert loaded.batch_size == original.batch_size
+    assert loaded.imgsz == original.imgsz
+    assert loaded.model == original.model

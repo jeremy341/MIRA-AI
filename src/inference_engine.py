@@ -1,62 +1,14 @@
 """Shared inference engine: camera setup, model loading, inference loop."""
 
-import sys
-import threading
 import time
 from collections import deque
 
 import cv2
-from ultralytics import YOLO
 
-from config import BYTE_TRACK_CONFIG_PATH, DETECTION_DIR, get_tflite_imgsz, setup_camera_properties
+from config import BYTE_TRACK_CONFIG_PATH, DETECTION_DIR, get_tflite_imgsz
+from hardware import USBCamera
 from logger import logger
 from visualize import draw_boxes
-
-
-class CameraStream:
-    """Threaded camera reader with adaptive frame delivery.
-
-    Discards stale frames so the inference loop always gets the freshest image.
-    """
-
-    WARMUP_FRAMES = 10
-
-    def __init__(self, index: int, width: int, height: int):
-        self.cap = cv2.VideoCapture(index, cv2.CAP_DSHOW if sys.platform == "win32" else 0)
-        if not self.cap.isOpened():
-            logger.error(f"Failed to open camera index {index}.")
-            raise RuntimeError(f"Failed to open camera index {index}.")
-
-        setup_camera_properties(self.cap, width, height)
-
-        logger.info(f"Warming up camera {index} ({self.WARMUP_FRAMES} frames)...")
-        for _ in range(self.WARMUP_FRAMES):
-            self.cap.read()
-
-        self.ret, self.frame = self.cap.read()
-        self._lock = threading.Lock()
-        self._running = True
-        self._thread = threading.Thread(target=self._reader, daemon=True)
-        self._thread.start()
-
-    def _reader(self):
-        while self._running:
-            ret, frame = self.cap.read()
-            with self._lock:
-                self.ret = ret
-                self.frame = frame
-            time.sleep(0.001)
-
-    def read(self):
-        with self._lock:
-            if not self.ret or self.frame is None:
-                return False, None
-            return True, self.frame.copy()
-
-    def release(self):
-        self._running = False
-        self._thread.join(timeout=2)
-        self.cap.release()
 
 
 class InferenceEngine:
@@ -94,7 +46,7 @@ class InferenceEngine:
         self._load_model(imgsz)
 
         # Initialize camera
-        self.stream = CameraStream(camera_index, cam_width, cam_height)
+        self.stream = USBCamera(camera_index, cam_width, cam_height)
 
         # Tracking state
         self.prev_time = time.perf_counter()
