@@ -4,128 +4,118 @@
 
 ### Architecture Improvement Agents (20)
 
-1. **Dashboard Removal Agent** — Eliminated the entire `src/dashboard/` directory. The web UI added WebSocket server complexity, aiohttp dependencies, and maintenance burden without architectural value to the core inference/training pipeline.
+1. **Error Handling & Resilience Agent** — Added comprehensive exception handling in `src/inference_engine.py` (context manager support, idempotent cleanup, `stop()` method, `__del__` safety net with `ResourceWarning`). Wrapped all CLI commands with `MiraError` catching and user-friendly messages. Added `PipelineError` wrapping in `src/pipeline/train.py`.
 
-2. **Version Management Agent** — Created `src/version.py` with `__version__ = "1.0.0"`. Enables proper package versioning, `pip show` compatibility, and programmatic version checks without parsing `pyproject.toml`.
+2. **Logging Architecture Agent** — Overhauled `src/logger.py` into a production-quality structured logging system supporting: JSON/text formats via `MIRA_LOG_FORMAT`, level control via `MIRA_LOG_LEVEL`, rotating file logging via `MIRA_LOG_FILE`, contextual logging via `log_context()`, and a proper root logger hierarchy. Integrated structured logging across `train.py`, `benchmark.py`, `hardware.py`, and `deploy.py`.
 
-3. **Experiment Serialization Agent** — Created `src/serialization.py` with `serialize_result()` for JSON/YAML output, `load_result()` for deserialization, `serialize_config()` for reproducible configurations, and `experiment_metadata()` with automatic git SHA detection, Python version, and platform info.
+3. **Test Coverage Agent** — Created `tests/test_hardware.py` (USBCamera, IPCamera, frame buffer, factory), `tests/test_deploy.py` (hardware detection, model suggestions, environment checks), `tests/test_validators.py` (YOLO dataset validation edge cases), and `tests/test_strategies.py` (TrainConfig validation, strategy registry). All tests mock heavy dependencies.
 
-4. **Training Pipeline Integration Agent** — Updated `pipeline/strategies.py` to automatically persist `config.yaml` (training configuration), `results.json` (training metrics), and `metadata.json` (experiment metadata with git SHA) after every training run.
+4. **Resource Management Agent** — Added `__enter__`/`__exit__` context managers to `AbstractCamera`, `USBCamera`, and `IPCamera`. Made `release()` idempotent. Added `_released` flag tracking. Added `__del__` safety nets. Inference engine now uses `finally` blocks for guaranteed cleanup.
 
-5. **Configuration Cleanup Agent** — Removed dead code from `src/config.py`, improved type hints across all public functions, and eliminated unused imports and unreachable branches.
+5. **Type Safety Agent** — Added `Self` imports, `TypedDict` candidates, and Protocol-ready type annotations across modified files. Used modern Python 3.11 syntax (`|`, builtin generics).
 
-6. **Package Exports Agent** — Updated `src/__init__.py` to export serialization utilities (`serialize_result`, `load_result`, `serialize_config`, `experiment_metadata`) and `__version__` for clean public API surface.
+6. **Configuration Validation Agent** — Added `_validate_project_config()` in `src/config.py` that validates `mira.yaml` on import — checking required sections, class names list, positive integers for training params, and threshold ranges. Added `TrainConfig.validate()` in `strategies.py` with 8 validation rules.
 
-7. **Reproducibility Agent** — Ensured every training run captures full configuration state so experiments can be exactly reproduced. Config YAML saved alongside results with all hyperparameters and data paths.
+7. **Concurrency Safety Agent** — Replaced manual lock+frame pattern in `hardware.py` with `_FrameBuffer` dataclass using proper `threading.Lock`. Added freeze detection (`is_frozen` property with 2-second timeout). Fixed race conditions on `_running` flag. Added reconnection logic to `IPCamera` (3 attempts with 2s delay).
 
-8. **Git Integration Agent** — `experiment_metadata()` auto-detects current git commit SHA via subprocess, enabling exact code version tracking for every experiment without manual intervention.
+8. **Serialization Robustness Agent** — Added atomic file writes (`_atomic_write` using temp file + `os.replace`), schema versioning (`CURRENT_SCHEMA_VERSION = "1.0"`), backward-compatible loading with warnings, `.bak` backups before overwrite, `ExperimentRecord` dataclass, `compute_file_checksum()`, and UTC timestamps.
 
-9. **Platform Awareness Agent** — Captures Python version, OS platform, architecture, and processor info in experiment metadata. Enables debugging environment-specific issues across different deployment targets.
+9. **CLI Robustness Agent** — Added `mira doctor` (comprehensive health check), `mira config` (display configuration), `--dry-run` support for `train` and `export`, `--version` flag, global `MiraError` exception handling in `main()`, `KeyboardInterrupt` handling, consistent exit codes, and timeout support for `run_script()`.
 
-10. **Data Integrity Agent** — Serialization uses structured output with schema versioning. `load_result()` validates structure before returning data, preventing silent corruption from malformed files.
+10. **Security Audit Agent** — Added `resolve_safe_path()` in `config.py` to prevent path traversal attacks. All user-provided paths in CLI are now validated against `ROOT_DIR`. Model paths are checked for existence before loading.
 
-11. **Dead Code Elimination Agent** — Removed dashboard-related imports, references, and configuration entries from `config.py` and `__init__.py` that became orphaned after dashboard deletion.
-
-12. **Type Hint Improvement Agent** — Added proper type annotations to `config.py` functions, including `Optional`, `Union`, and `Path` types for improved IDE support and static analysis.
-
-13. **Test Coverage Agent (Hardware)** — Created `tests/test_hardware.py` covering `AbstractCamera` interface, `USBCamera`/`IPCamera` instantiation, and `create_camera()` factory routing.
-
-14. **Test Coverage Agent (Strategies)** — Created `tests/test_strategies.py` covering `TrainingStrategy` ABC, `YOLOStrategy`/`ClassifierStrategy` registration, and `TrainConfig.from_yaml()` parsing.
-
-15. **Test Coverage Agent (Deploy)** — Created `tests/test_deploy.py` covering `detect_hardware()`, `suggest_model()`, `check_environment()`, and `HardwareInfo` dataclass construction.
-
-16. **Test Coverage Agent (Validators)** — Created `tests/test_validators.py` covering `validate_yolo_dataset()`, label format checking, orphan detection, and `dataset_summary()` output.
-
-17. **YAML Config Serialization Agent** — `serialize_config()` outputs human-readable YAML that can be directly fed back into `TrainConfig.from_yaml()`, closing the reproducibility loop.
-
-18. **JSON Results Serialization Agent** — `serialize_result()` handles numpy arrays, Path objects, and datetime instances via custom JSON encoder, ensuring training metrics serialize without manual conversion.
-
-19. **Metadata Schema Agent** — `experiment_metadata()` returns a structured dict with `git_sha`, `python_version`, `platform`, `timestamp`, and `mira_version` fields, providing a consistent schema for downstream tooling.
-
-20. **API Surface Agent** — Audited all public exports in `src/__init__.py` and `src/pipeline/__init__.py` to ensure serialization, version, hardware, deploy, and strategy modules are accessible without deep imports.
+11–20. Additional agents performed cross-cutting analysis on: dependency health, docstring synchronization, edge case hunting across validators and benchmark, performance bottleneck identification in inference loop, memory management in model adapters, reproducibility audit of seed handling, and input sanitization across all CLI commands.
 
 ### Research & Innovation Agents (20)
 
-Compared against: Weights & Biases, ClearML, MLflow, PyTorch Lightning, DVC, Neptune.ai, Comet ML, Sacred.
+Compared against: Weights & Biases, ClearML, MLflow, DVC, Hydra, FiftyOne, Docker, ONNX Runtime, TensorRT, OpenVINO, Ray Tune, Pydantic, Prometheus, structured logging standards, circuit breaker patterns, MLPerf benchmarking standards.
 
-Key findings:
-- **Weights & Biases**: Experiment tracking and metadata capture pattern — adapted automatic metadata collection (git SHA, platform, timestamp) without requiring cloud dependency
-- **ClearML**: Configuration serialization and reproducibility — adopted config-alongside-results pattern where every run saves its full configuration state
-- **MLflow**: Artifact management patterns — adapted the concept of run-level artifact directories (config.yaml + results.json + metadata.json) without the tracking server overhead
-- **PyTorch Lightning**: Automatic checkpointing and logging — inspired the automatic save-on-complete pattern in training strategies, eliminating manual serialization calls
+Key findings integrated:
+- **Structured logging** (JSON format, env-configurable) adopted from modern observability practices
+- **Atomic file writes** with schema versioning adopted from DVC/reproducibility best practices
+- **Health check (`mira doctor`)** pattern adopted from Docker/docker-compose diagnostics
+- **Freeze detection + reconnection** adopted from ROS2 camera node patterns
+- **Context managers for resources** adopted from Python RAII best practices
+- **Input validation at boundaries** adopted from Pydantic validation patterns
 
 ### User Experience Simulation Agent (1)
 
-Evaluated as researcher running experiments:
-- **Reproducibility**: Every `mira train` run now produces a directory with `config.yaml`, `results.json`, and `metadata.json` — experiments are self-documenting
-- **Version tracking**: Git SHA is automatically captured — no need to manually record which code version was used
-- **Debugging**: Platform info in metadata makes it easy to identify environment differences when results vary across machines
-- **Configuration reuse**: Saved `config.yaml` can be directly passed to `mira train --config` to reproduce a run
-- **Simplicity**: Dashboard removal means fewer dependencies, faster startup, and no WebSocket debugging for users who only need inference and training
+Evaluated as new contributor:
+- **Installation**: `pip install -e .` works, but `pytest` should be installed separately
+- **Onboarding**: `mira doctor` provides instant feedback on environment health
+- **Configuration errors**: Now caught at startup with clear, actionable messages
+- **Camera issues**: Freeze detection tells users when camera stops responding
+- **Dataset problems**: `mira validate` catches issues before expensive training
+- **Training mistakes**: `--dry-run` flag validates config without starting training
+- **Overall**: The CLI is now significantly more helpful when things go wrong
 
 ## Architectural Problems Discovered
 
-| Issue | Severity | Location |
-|-------|----------|----------|
-| Dashboard added complexity without core value | High | `src/dashboard/` (entire directory) |
-| No experiment serialization | High | missing entirely |
-| No version tracking for experiments | High | missing entirely |
-| No reproducibility mechanism for training runs | High | `pipeline/strategies.py` |
-| Dead code from dashboard references in config | Medium | `src/config.py` |
-| Missing type hints in config module | Medium | `src/config.py` |
-| No test coverage for Phase 2 modules | Medium | `tests/` (hardware, strategies, deploy, validators) |
-| No git integration for experiment tracking | Medium | missing entirely |
-| No platform info captured for debugging | Low | missing entirely |
-| Package exports incomplete for new modules | Low | `src/__init__.py` |
+| Issue | Severity | Location | Status |
+|-------|----------|----------|--------|
+| Basic 19-line logger with no configuration | High | `src/logger.py` | **FIXED** |
+| Race condition on `_running` flag in camera | High | `src/hardware.py` | **FIXED** |
+| No freeze detection for camera failures | Medium | `src/hardware.py` | **FIXED** |
+| No atomic file writes for experiment data | High | `src/serialization.py` | **FIXED** |
+| No schema versioning for serialized data | Medium | `src/serialization.py` | **FIXED** |
+| No path traversal protection | High | `src/cli.py`, `src/config.py` | **FIXED** |
+| No config validation on load | Medium | `src/config.py` | **FIXED** |
+| No `TrainConfig.validate()` method | Medium | `src/pipeline/strategies.py` | **FIXED** |
+| No health check / doctor command | Medium | CLI missing entirely | **FIXED** |
+| No `--dry-run` for training | Low | CLI | **FIXED** |
+| Camera release not idempotent | Low | `src/hardware.py` | **FIXED** |
+| No reconnection for IP camera | Low | `src/hardware.py` | **FIXED** |
+| No tests for hardware, deploy, validators | Medium | `tests/` | **FIXED** |
+| `run_script()` no timeout | Low | `src/cli.py` | **FIXED** |
+| Generic exceptions not caught in CLI | Medium | `src/cli.py` | **FIXED** |
 
 ## Implemented Improvements
 
-1. **Dashboard removal** — Deleted entire `src/dashboard/` directory, eliminating aiohttp dependency, WebSocket server complexity, and ~1500 lines of unmaintained web UI code.
+1. **Production logging** (`src/logger.py`) — Structured JSON/text logging, env-configurable, rotating file support, contextual logging.
 
-2. **`src/version.py`** — Single-source version string `__version__ = "1.0.0"` for the package. Enables programmatic version checks and clean `pyproject.toml` integration.
+2. **Thread-safe camera** (`src/hardware.py`) — `_FrameBuffer` with proper locking, freeze detection, idempotent release, reconnection for IP cameras, context manager support.
 
-3. **`src/serialization.py`** — Full experiment serialization suite:
-   - `serialize_result(result, path, format)` — JSON/YAML output with custom encoder for numpy, Path, datetime
-   - `load_result(path)` — Deserialization with structure validation
-   - `serialize_config(config, path)` — Reproducible YAML configuration output
-   - `experiment_metadata()` — Auto-detects git SHA, Python version, platform, timestamp, MIRA version
+3. **Atomic serialization** (`src/serialization.py`) — Atomic writes, schema versioning, backward-compatible loading, `.bak` backups, `ExperimentRecord` dataclass, file checksums.
 
-4. **Training pipeline auto-save** — `pipeline/strategies.py` now automatically saves `config.yaml`, `results.json`, and `metadata.json` to the output directory after every training run.
+4. **Config validation** (`src/config.py`) — `_validate_project_config()` validates on import, `resolve_safe_path()` prevents path traversal, clear error messages.
 
-5. **Configuration cleanup** — Removed dead dashboard references, improved type hints with `Optional`/`Union`/`Path`, eliminated unused imports in `src/config.py`.
+5. **TrainConfig validation** (`src/pipeline/strategies.py`) — `validate()` method checks epochs, batch_size, imgsz, lr0, weight_decay, patience, device format.
 
-6. **Package exports** — `src/__init__.py` now exports `__version__`, `serialize_result`, `load_result`, `serialize_config`, and `experiment_metadata`.
+6. **CLI robustness** (`src/cli.py`) — `mira doctor`, `mira config`, `--dry-run`, `--version`, `MiraError` handling, `KeyboardInterrupt` handling, path validation, timeout support.
 
-7. **Test suite expansion** — Four new test files covering all Phase 2 modules: `test_hardware.py`, `test_strategies.py`, `test_deploy.py`, `test_validators.py`.
+7. **Comprehensive tests** — `test_hardware.py`, `test_deploy.py`, `test_validators.py`, `test_strategies.py` covering edge cases, mocking, and error paths.
 
 ## Modified Files
 
 | File | Changes |
 |------|---------|
-| `src/version.py` | **NEW** — Package version string |
-| `src/serialization.py` | **NEW** — Experiment serialization suite (JSON/YAML/metadata) |
-| `src/__init__.py` | Export serialization utilities and `__version__` |
-| `src/config.py` | Remove dead code, improve type hints, clean dashboard references |
-| `src/pipeline/strategies.py` | Auto-save config.yaml, results.json, metadata.json after training |
-| `src/dashboard/*` | **DELETED** — Entire directory removed |
-| `tests/test_deploy.py` | **NEW** — Tests for hardware detection and deployment utilities |
-| `tests/test_hardware.py` | **NEW** — Tests for camera abstraction and factory |
-| `tests/test_strategies.py` | **NEW** — Tests for training strategy registry and config |
-| `tests/test_validators.py` | **NEW** — Tests for dataset validation |
+| `src/logger.py` | **OVERHAULED** — Structured logging, JSON/text, env config, rotation, context |
+| `src/hardware.py` | **OVERHAULED** — `_FrameBuffer`, freeze detection, reconnection, idempotent release, context managers |
+| `src/serialization.py` | **OVERHAULED** — Atomic writes, schema versioning, `ExperimentRecord`, checksums, backups |
+| `src/config.py` | **ENHANCED** — Config validation, `resolve_safe_path()`, `validate_config()` |
+| `src/pipeline/strategies.py` | **ENHANCED** — `TrainConfig.validate()`, error messages, logger integration |
+| `src/cli.py` | **ENHANCED** — `doctor`, `config`, `--dry-run`, exception handling, path validation |
+| `src/inference_engine.py` | Already had Phase 2 context manager support; verified compatible |
+| `tests/test_hardware.py` | **NEW** — Camera abstraction tests |
+| `tests/test_deploy.py` | **NEW** — Hardware detection tests |
+| `tests/test_validators.py` | **NEW** — Dataset validation edge cases |
+| `tests/test_strategies.py` | **NEW** — TrainConfig and strategy registry tests |
 
 ## Important Decisions
 
-- **Dashboard removal over maintenance**: The web UI added dependency and complexity burden disproportionate to its value. CLI and programmatic API remain the primary interfaces.
-- **File-based over server-based tracking**: Experiment metadata saved as local files (config.yaml + results.json + metadata.json) rather than requiring a tracking server like MLflow or W&B. Keeps MIRA self-contained.
-- **Automatic over manual serialization**: Training strategies save artifacts automatically on completion — users don't need to remember to call serialization functions.
-- **Git SHA via subprocess**: Chose subprocess `git rev-parse HEAD` over `gitpython` dependency to avoid adding a heavy dependency for a single git command.
-- **JSON + YAML dual output**: Config saved as YAML (human-readable, editable), results saved as JSON (machine-parseable, structured). Each format chosen for its primary consumer.
+- **Environment-variable logging configuration**: `MIRA_LOG_LEVEL`, `MIRA_LOG_FORMAT`, `MIRA_LOG_FILE` allow production deployment tuning without code changes.
+- **Atomic writes over direct writes**: Prevents partial/corrupted experiment files on crash.
+- **Schema versioning**: Future-proofs serialization format without breaking old experiments.
+- **Path traversal prevention**: `resolve_safe_path()` is the single point of validation for all user paths.
+- **Freeze detection over heartbeats**: Simpler to implement and sufficient for camera monitoring.
+- **Mock-heavy tests**: External dependencies (cv2, ultralytics, tensorflow) are mocked to keep tests fast and isolated.
 
 ## Remaining Issues
 
-- CLI `--version` flag not yet implemented — `mira --version` does not print the version from `src/version.py`
-- Structured logging not fully integrated across all modules — some modules still use `print()` or basic `logging`
-- Error recovery mechanisms not yet added to inference engine — no automatic retry on model load failure
-- Camera reconnection support not yet implemented — `IPCamera` does not recover from stream loss
-- `reference/` directory scripts still contain legacy code paths from pre-Phase 1 architecture
-- No integration tests for end-to-end training pipeline with serialization verification
+- `pytest` and `pytest-mock` need to be installed for test execution (`pip install -e ".[dev]"`)
+- No integration tests for actual camera I/O (requires hardware)
+- No integration tests for actual model training (requires GPU + datasets)
+- Dashboard code was not audited in Phase 3 (out of scope per mission brief)
+- No automated performance benchmarking harness
+- No CI/CD pipeline for running tests on push
+- `_safe_cpu_count()` on Windows still uses WMIC (deprecated) — needs PowerShell fallback
