@@ -310,7 +310,8 @@ def _add_train_args(parser):
 
 @register_command("train", "Train a YOLO detection model via the new pipeline", add_args=_add_train_args)
 def cmd_train(args):
-    from pipeline.train import TrainConfig, TrainingPipeline
+    from pipeline.strategies import TrainConfig
+    from pipeline.train import TrainingPipeline
 
     if args.config:
         config = TrainConfig.from_yaml(args.config)
@@ -437,6 +438,78 @@ def cmd_models(args):
         size = m.get("size_mb")
         size_str = f"{size:.1f} MB" if isinstance(size, (int, float)) else ""
         print(f"{m['label']:<50} {m['model_type']:<16} {size_str:<10}")
+
+
+# ── New Phase 2 Commands ─────────────────────────────────────────────
+
+
+@register_command("diagnostics", "Check hardware capabilities and environment")
+def cmd_diagnostics(args):
+    from deploy import detect_hardware, check_environment, suggest_model
+
+    info = detect_hardware()
+    print(f"\n  Hardware Diagnostics")
+    print(f"  {'=' * 50}")
+    print(f"  Platform:     {info.platform} ({info.arch})")
+    print(f"  Python:       {info.python_version.split()[0]}")
+    print(f"  CPU cores:    {info.cpu_count}")
+    print(f"  Memory:       {info.memory_mb} MB")
+    if info.is_raspberry_pi:
+        print(f"  Model:        Raspberry Pi ({info.pi_model})")
+    if info.is_jetson:
+        print(f"  Model:        NVIDIA Jetson")
+    print(f"  CUDA:         {'Yes (' + info.cuda_version + ')' if info.has_cuda else 'No'}")
+    print(f"  PyTorch:      {'Yes' if info.has_torch else 'No'}")
+    print(f"  TensorFlow:   {'Yes' if info.has_tensorflow else 'No'}")
+    print(f"  TFLite:       {'Yes' if info.has_tflite_runtime else 'No'}")
+    print(f"\n  Suggested model: {suggest_model(info)}")
+
+    warnings = check_environment()
+    if warnings:
+        print(f"\n  Warnings:")
+        for w in warnings:
+            print(f"    ! {w}")
+    print()
+
+
+def _add_validate_args(parser):
+    parser.add_argument("--dataset", type=str, required=True, help="Path to dataset directory to validate.")
+
+
+@register_command("validate", "Validate a YOLO-format dataset", add_args=_add_validate_args)
+def cmd_validate(args):
+    from pipeline.validators import validate_yolo_dataset
+
+    result = validate_yolo_dataset(args.dataset)
+    print(f"\n  Dataset validation: {args.dataset}")
+    print(f"  {'=' * 50}")
+    print(f"  Valid:          {'YES' if result.is_valid else 'NO'}")
+    print(f"  Images:         {result.total_images}")
+    print(f"  Labels:         {result.total_labels}")
+
+    if result.class_counts:
+        print(f"\n  Class distribution:")
+        for cls_id, count in sorted(result.class_counts.items()):
+            print(f"    class {cls_id}: {count} instances")
+
+    if result.warnings:
+        print(f"\n  Warnings:")
+        for w in result.warnings:
+            print(f"    ! {w}")
+
+    if result.errors:
+        print(f"\n  Errors:")
+        for e in result.errors:
+            print(f"    ! {e}")
+
+    if result.orphaned_labels:
+        print(f"\n  Orphaned labels ({len(result.orphaned_labels)}):")
+        for p in result.orphaned_labels[:5]:
+            print(f"    {p}")
+        if len(result.orphaned_labels) > 5:
+            print(f"    ... and {len(result.orphaned_labels) - 5} more")
+
+    print()
 
 
 # ── Main dispatcher ──────────────────────────────────────────────────
