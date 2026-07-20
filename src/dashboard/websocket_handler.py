@@ -3,6 +3,7 @@ WebSocket handlers for real-time video streaming
 """
 import asyncio
 import base64
+from datetime import datetime
 import cv2
 import numpy as np
 from typing import Dict, Any
@@ -229,16 +230,17 @@ class WebSocketHandler:
         """Broadcast message to all connected clients"""
         if not self.connections:
             return
-        
-        # Create tasks for all connections
+
+        broken: set = set()
         tasks = []
-        for websocket in self.connections:
+        for websocket in list(self.connections):
             try:
                 tasks.append(websocket.send_json(message))
-            except:
-                # Remove broken connections
-                self.connections.remove(websocket)
-        
-        # Send concurrently
+            except Exception:
+                broken.add(websocket)
+
+        if broken:
+            self.connections -= broken
+
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)

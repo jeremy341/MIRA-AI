@@ -106,12 +106,13 @@ class CameraService:
                     self.is_tflite_int8 = False
                     self.img_size = config.get("imgsz", 640)
                 
+                self.img_size = getattr(config, "imgsz", 640) if not model_path.suffix == ".tflite" else self.img_size
                 self.model = YOLO(str(model_path), task=task_type)
-                
+
                 # Adjust confidence for INT8 models
                 if self.is_tflite_int8:
                     config.conf_threshold = min(config.conf_threshold, 0.25)
-                
+
                 self.model_config = config
                 self._update_status(SystemStatus.IDLE, f"Model {model_name} loaded")
                 return True

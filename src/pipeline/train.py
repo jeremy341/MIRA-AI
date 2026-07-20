@@ -82,15 +82,24 @@ class TrainConfig:
     def from_yaml(cls, path: str | Path) -> TrainConfig:
         with open(path) as f:
             data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 
-        if "epochs" in data and not isinstance(data["epochs"], int):
-            raise ValueError(f"epochs must be an integer, got {type(data['epochs']).__name__}")
-        if "batch_size" in data and not isinstance(data["batch_size"], int):
-            raise ValueError(f"batch_size must be an integer, got {type(data['batch_size']).__name__}")
-        if "lr0" in data and not isinstance(data["lr0"], (int, float)):
-            raise ValueError(f"lr0 must be a number, got {type(data['lr0']).__name__}")
-        if "epochs" in data and data["epochs"] <= 0:
-            raise ValueError(f"epochs must be positive, got {data['epochs']}")
+        _validate = {
+            "epochs": (int, lambda v: v > 0, "must be positive"),
+            "batch_size": (int, lambda v: v > 0, "must be positive"),
+            "lr0": ((int, float), lambda v: v > 0, "must be positive"),
+            "imgsz": (int, lambda v: v > 0, "must be positive"),
+            "workers": (int, lambda v: v >= 0, "cannot be negative"),
+            "patience": (int, lambda v: v >= 0, "cannot be negative"),
+            "seed": (int, None, None),
+        }
+        for key, (types, validator, msg) in _validate.items():
+            if key in data:
+                if not isinstance(data[key], types):
+                    raise ValueError(f"'{key}' must be {types}, got {type(data[key]).__name__}")
+                if validator and not validator(data[key]):
+                    raise ValueError(f"'{key}' {msg}, got {data[key]}")
 
         known_fields = {f.name for f in fields(cls)}
         unknown = set(data.keys()) - known_fields - {"augmentation", "export"}

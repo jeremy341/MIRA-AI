@@ -21,9 +21,9 @@ from config import (
     get_detection_models,
     get_tflite_imgsz,
 )
-from config import DETECTION_MODEL_LABELS as MODEL_LABELS
 from model_picker import pick_model
 from pipeline.registry import get_commands, register_command
+from pipeline.models import ModelRegistry
 
 
 def run_script(script_path, args_list=None):
@@ -65,8 +65,11 @@ def resolve_detection_data_yaml(explicit_path=None):
 
 def _pick_model_interactive(title="Available models"):
     """Show interactive picker for detection models. Returns model name or None."""
-    models = get_detection_models()
-    return pick_model(models, labels=MODEL_LABELS, title=title)
+    registry = ModelRegistry()
+    registry.discover()
+    models = registry.list_models()
+    labels = {m["name"]: m["label"] for m in models}
+    return pick_model([m["name"] for m in models], labels=labels, title=title)
 
 
 # ── Legacy / Script Commands ─────────────────────────────────────────

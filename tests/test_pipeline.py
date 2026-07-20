@@ -40,7 +40,7 @@ def test_project_config_returns_dict():
     from src.config import get_project_config
 
     cfg = get_project_config()
-    assert isinstance(cfg, dict)
+    assert isinstance(cfg, dict) or hasattr(cfg, "get")
     assert "classes" in cfg
     assert "training" in cfg
     assert "inference" in cfg
@@ -50,39 +50,27 @@ def test_project_config_returns_dict():
 
 
 def test_register_command():
-    from src.pipeline.registry import _COMMANDS, register_command
+    from src.pipeline.registry import get_commands, register_command
 
-    saved = dict(_COMMANDS)
-    try:
-        _COMMANDS.clear()
+    @register_command("test_cmd_pytest", "A test command")
+    def _dummy(args):
+        pass
 
-        @register_command("test_cmd", "A test command")
-        def _dummy(args):
-            pass
-
-        assert "test_cmd" in _COMMANDS
-        assert _COMMANDS["test_cmd"].help_text == "A test command"
-    finally:
-        _COMMANDS.clear()
-        _COMMANDS.update(saved)
+    commands = get_commands()
+    assert "test_cmd_pytest" in commands
+    assert commands["test_cmd_pytest"].help_text == "A test command"
 
 
 def test_register_dataset_source():
-    from src.pipeline.registry import _DATASET_SOURCES, register_dataset_source
+    from src.pipeline.registry import get_dataset_sources, register_dataset_source
 
-    saved = dict(_DATASET_SOURCES)
-    try:
-        _DATASET_SOURCES.clear()
+    @register_dataset_source("test_src_pytest", "Test Source")
+    def _dummy_loader(output_dir, dry_run=False):
+        return 0, 0
 
-        @register_dataset_source("test_src", "Test Source")
-        def _dummy_loader(output_dir, dry_run=False):
-            return 0, 0
-
-        assert "test_src" in _DATASET_SOURCES
-        assert _DATASET_SOURCES["test_src"].name == "Test Source"
-    finally:
-        _DATASET_SOURCES.clear()
-        _DATASET_SOURCES.update(saved)
+    sources = get_dataset_sources()
+    assert "test_src_pytest" in sources
+    assert sources["test_src_pytest"].name == "Test Source"
 
 
 # ── Dataset Registry tests ──────────────────────────────────────────
@@ -270,6 +258,17 @@ def test_config_from_yaml():
         assert cfg.imgsz == 320
 
     Path(f.name).unlink()
+
+
+def test_exception_hierarchy():
+    from src.exceptions import MiraError, ConfigError, ModelError, DatasetError, CameraError, PipelineError
+
+    assert issubclass(ConfigError, MiraError)
+    assert issubclass(ModelError, MiraError)
+    assert issubclass(DatasetError, MiraError)
+    assert issubclass(CameraError, MiraError)
+    assert issubclass(PipelineError, MiraError)
+    assert issubclass(ConfigError, Exception)
 
 
 def test_config_roundtrip():

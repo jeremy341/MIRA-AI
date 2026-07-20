@@ -100,10 +100,15 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
     """Load images/val + labels/val from a YOLO-format dataset.
 
     Returns list of (image_path, gt_objects) where gt_objects is a list of
-    dicts with keys: class_id, bbox (xywh normalized).
+    dicts with keys: class_id, bbox (xyxy pixel).
     Falls back to the train split when val is unavailable.
     """
+    from PIL import Image
+
     dataset_path = Path(dataset_path)
+
+    if dataset_path.is_file() and dataset_path.suffix in (".yaml", ".yml"):
+        dataset_path = dataset_path.parent
 
     for split in ("val", "train"):
         img_dir = dataset_path / "images" / split
@@ -128,20 +133,36 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
             skipped += 1
             continue
 
+        with Image.open(img_path) as img:
+            img_w, img_h = img.size
+
         objects: list[dict] = []
         with open(lbl_path) as f:
             for line in f:
                 parts = line.strip().split()
-                if len(parts) >= 5:
-                    cls_id = int(parts[0])
-                    x_center = float(parts[1])
-                    y_center = float(parts[2])
-                    width = float(parts[3])
-                    height = float(parts[4])
-                    objects.append({
-                        "class_id": cls_id,
-                        "bbox": [x_center, y_center, width, height],
-                    })
+                if len(parts) < 5:
+                    continue
+                cls_id = int(parts[0])
+                coords = [float(p) for p in parts[1:]]
+                if len(coords) == 4:
+                    # Detection format: x_center, y_center, width, height
+                    xc, yc, w, h = coords
+                    x1 = (xc - w / 2) * img_w
+                    y1 = (yc - h / 2) * img_h
+                    x2 = (xc + w / 2) * img_w
+                    y2 = (yc + h / 2) * img_h
+                else:
+                    # Segmentation polygon: x1, y1, x2, y2, ...
+                    xs = [coords[i] for i in range(0, len(coords), 2)]
+                    ys = [coords[i] for i in range(1, len(coords), 2)]
+                    x1 = min(xs) * img_w
+                    y1 = min(ys) * img_h
+                    x2 = max(xs) * img_w
+                    y2 = max(ys) * img_h
+                objects.append({
+                    "class_id": cls_id,
+                    "bbox": [x1, y1, x2, y2],
+                })
         samples.append((img_path, objects))
 
     print(
@@ -151,7 +172,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
     return samples
 
 
-def xywh_to_xyxy(box: list[float], img_w: int = 640, img_h: int = 640) -> list[float]:
+def xywh_to_xyxy(box: list[float], img_w: int, img_h: int) -> list[float]:
     """Convert normalized xywh to xyxy in pixel coords."""
     xc, yc, w, h = box
     x1 = (xc - w / 2) * img_w
@@ -183,7 +204,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
         for j, gt in enumerate(gts[img_idx]):
             if j in gt_used[img_idx]:
                 continue
-            iou = compute_iou(det["bbox_pixel"], xywh_to_xyxy(gt["bbox"]))
+            iou = compute_iou(det["bbox_pixel"], gt["bbox"])
             if iou > best_iou:
                 best_iou = iou
                 best_gt = j
@@ -266,8 +287,8 @@ class ModelBenchmark:
                             "bbox_pixel": list(det.bbox),
                         })
 
-                    # IoU-based per-class matching
-                    gt_boxes = [xywh_to_xyxy(obj["bbox"]) for obj in gt_objects]
+                    # IoU-based per-class matching (GT bbox already in xyxy pixel)
+                    gt_boxes = [obj["bbox"] for obj in gt_objects]
                     pred_boxes = [d["bbox_pixel"] for d in img_preds]
                     gt_matched = [False] * len(gt_objects)
                     pred_matched = [False] * len(img_preds)
