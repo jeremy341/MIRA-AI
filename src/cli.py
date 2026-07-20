@@ -12,6 +12,7 @@ _scripts_dir = str(Path(_src_dir).parent / "scripts")
 if _scripts_dir not in sys.path:
     sys.path.insert(0, _scripts_dir)
 
+from version import __version__
 from config import (
     DETECTION_DIR,
     REF_DIR,
@@ -207,38 +208,6 @@ def cmd_live(args):
     )
     engine.run()
 
-
-def _add_dashboard_args(parser):
-    parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0).")
-    parser.add_argument("--port", type=int, default=8000, help="Port number (default: 8000).")
-    parser.add_argument("--debug", action="store_true", help="Enable auto-reload on code changes.")
-
-
-@register_command("dashboard", "Launch FastAPI+WebSocket web control center", add_args=_add_dashboard_args)
-def cmd_dashboard(args):
-    import importlib.util
-    import uvicorn
-
-    dashboard_dir = Path(__file__).resolve().parent / "dashboard"
-    main_path = dashboard_dir / "main.py"
-
-    # Add dashboard dir to sys.path so relative imports work
-    if str(dashboard_dir) not in sys.path:
-        sys.path.insert(0, str(dashboard_dir))
-
-    print(f"\n  MIRA Control Center")
-    print(f"  http://localhost:{args.port}\n")
-
-    spec = importlib.util.spec_from_file_location("dashboard_main", str(main_path))
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-
-    uvicorn.run(
-        mod.app,
-        host=args.host,
-        port=args.port,
-        log_level="info" if args.debug else "warning",
-    )
 
 
 # ── New Pipeline Commands ────────────────────────────────────────────
@@ -521,7 +490,6 @@ def main():
         epilog="""\
 Examples:
   mira live --model mira_exp014_int8.tflite
-  mira dashboard --port 8080
   mira train --config experiments/exp014_yolo11n_multidataset.yaml
   mira train --model yolo11n.pt --dataset datasets/mira_v2/dataset.yaml --epochs 50
   mira merge --sources taco_trashnet roboflow warp --output datasets/mira_merged
@@ -531,6 +499,7 @@ Examples:
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
+    parser.add_argument("--version", action="version", version=f"MIRA {__version__}")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     for name, entry in get_commands().items():

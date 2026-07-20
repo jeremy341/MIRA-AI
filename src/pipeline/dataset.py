@@ -28,6 +28,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from logger import get_logger
+
+logger = get_logger(__name__)
+
 
 def _import_merge_utils():
     """Lazy-import merge_utils from scripts/ directory."""
@@ -117,7 +121,7 @@ class DatasetRegistry:
                 self.sources[source.key] = source
                 count += 1
             except Exception as e:
-                print(f"Warning: Failed to load {yaml_file.name}: {e}")
+                logger.warning("Failed to load %s: %s", yaml_file.name, e)
         return count
 
     def list_sources(self) -> list[dict]:
@@ -174,7 +178,7 @@ class DatasetRegistry:
         for key in sources:
             source = self.get_source(key)
             sources_used.append(key)
-            print(f"[{source.name}]")
+            logger.info("[%s]", source.name)
 
             if source.source_format == "yolo" and source.class_mapping is None:
                 # Passthrough — already in MIRA format
@@ -186,7 +190,7 @@ class DatasetRegistry:
                 total_added += added
                 total_skipped += skipped
             else:
-                print(f"  Warning: Unsupported format '{source.source_format}' for {key}")
+                logger.warning("Unsupported format '%s' for %s", source.source_format, key)
 
         # Process custom dataset
         if custom_path:
@@ -201,7 +205,7 @@ class DatasetRegistry:
                 mu.print_stats(output, f"Merged: {', '.join(sources_used)}")
                 mu.write_dataset_yaml(output)
             elif total_added == 0:
-                print("  Warning: No images were added from any source.")
+                logger.warning("No images were added from any source.")
 
         return MergeResult(
             output_dir=output,

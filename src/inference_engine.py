@@ -1,9 +1,15 @@
 """Shared inference engine: camera setup, model loading, inference loop."""
 
+from __future__ import annotations
+
 import time
+import warnings
 from collections import deque
+from types import TracebackType
+from typing import Self
 
 import cv2
+from ultralytics import YOLO
 
 from config import BYTE_TRACK_CONFIG_PATH, DETECTION_DIR, get_tflite_imgsz
 from hardware import USBCamera
@@ -16,6 +22,10 @@ class InferenceEngine:
 
     Handles camera initialization, model loading, TFLite/INT8 configuration,
     and the main real-time inference loop.
+
+    Usage as context manager (recommended):
+        with InferenceEngine(...) as engine:
+            engine.run()
     """
 
     def __init__(
@@ -40,6 +50,10 @@ class InferenceEngine:
         self.reject_threshold = reject_threshold
         self.enable_tracking = enable_tracking
         self.iou_threshold = iou_threshold
+
+        # Lifecycle flags
+        self._stopped = False
+        self._released = False
 
         # Resolve and load model
         self.model_path = DETECTION_DIR / model_name
@@ -101,6 +115,40 @@ class InferenceEngine:
             self.conf_threshold = 0.25
             logger.info(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
 
+    def __enter__(self) -> Self:
+        """Context manager entry."""
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        """Context manager exit — always release resources."""
+        self._cleanup()
+
+    def stop(self) -> None:
+        """Signal the inference loop to stop on the next iteration."""
+        self._stopped = True
+
+    def _cleanup(self) -> None:
+        """Release all held resources. Safe to call multiple times (idempotent)."""
+        if self._released:
+            return
+        self._released = True
+        self._stopped = True
+        try:
+            if hasattr(self, "stream") and self.stream is not None:
+                self.stream.release()
+        except Exception as exc:
+            logger.warning(f"Exception while releasing camera: {exc}")
+        finally:
+            try:
+                cv2.destroyAllWindows()
+            except Exception as exc:
+                logger.warning(f"Exception while destroying cv2 windows: {exc}")
+
     def run(self):
         """Start the real-time inference loop."""
         logger.info(
@@ -111,7 +159,7 @@ class InferenceEngine:
         )
 
         try:
-            while True:
+            while not self._stopped:
                 ret, frame = self.stream.read()
                 if not ret or frame is None:
                     continue
@@ -130,8 +178,7 @@ class InferenceEngine:
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
         finally:
-            self.stream.release()
-            cv2.destroyAllWindows()
+            self._cleanup()
 
     def _infer(self, frame):
         """Run model inference or tracking on a single frame."""
@@ -199,3 +246,18 @@ class InferenceEngine:
             (0, 255, 255),
             2,
         )
+
+    def __del__(self):
+        """Safety-net finalizer. Warns if resources were not explicitly released."""
+        if getattr(self, "_released", False):
+            return
+        warnings.warn(
+            "InferenceEngine was not explicitly released. "
+            "Use it as a context manager (with-statement) for guaranteed cleanup.",
+            ResourceWarning,
+            stacklevel=2,
+        )
+        try:
+            self._cleanup()
+        except Exception:
+            pass
