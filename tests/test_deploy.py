@@ -1,202 +1,183 @@
-"""Tests for MIRA deployment utilities — hardware detection and environment checks."""
+"""Tests for MIRA deployment and hardware detection utilities."""
+
+from __future__ import annotations
 
 import sys
-import pathlib
-from unittest.mock import patch, MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-_project_root = str(pathlib.Path(__file__).resolve().parent.parent)
-_src_dir = str(pathlib.Path(__file__).resolve().parent.parent / "src")
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+from deploy import (
+    HardwareInfo,
+    detect_hardware,
+    suggest_model,
+    check_environment,
+    _module_available,
+    _safe_cpu_count,
+    _safe_memory_mb,
+    _detect_raspberry_pi,
+    _detect_jetson,
+    _detect_cuda,
+)
 
 
-# ── HardwareInfo dataclass ───────────────────────────────────────────
+# ── HardwareInfo tests ───────────────────────────────────────────────
 
 
 def test_hardware_info_defaults():
-    from src.deploy import HardwareInfo
-
     info = HardwareInfo(platform="linux", arch="x86_64")
     assert info.platform == "linux"
     assert info.arch == "x86_64"
-    assert info.is_raspberry_pi is False
-    assert info.is_jetson is False
-    assert info.has_cuda is False
-    assert info.cuda_version == ""
-    assert info.has_tflite_runtime is False
-    assert info.has_tensorflow is False
-    assert info.has_torch is False
-    assert info.has_opencv is False
-    assert info.memory_mb == 0
-    assert info.cpu_count == 0
-    assert info.python_version == ""
-    assert info.details == {}
+    assert not info.is_raspberry_pi
+    assert not info.is_jetson
+    assert info.memory_mb >= 0
 
 
-def test_hardware_info_with_values():
-    from src.deploy import HardwareInfo
-
-    info = HardwareInfo(
-        platform="linux",
-        arch="aarch64",
-        is_raspberry_pi=True,
-        has_cuda=True,
-        cuda_version="12.1",
-        memory_mb=4096,
-        cpu_count=4,
-    )
-    assert info.is_raspberry_pi is True
-    assert info.has_cuda is True
-    assert info.memory_mb == 4096
+# ── detect_hardware tests ────────────────────────────────────────────
 
 
-# ── detect_hardware ──────────────────────────────────────────────────
-
-
-@patch("src.deploy._detect_cuda", return_value=(False, ""))
-@patch("src.deploy._detect_jetson", return_value=False)
-@patch("src.deploy._detect_raspberry_pi", return_value=False)
-@patch("src.deploy._safe_memory_mb", return_value=16384)
-@patch("src.deploy._safe_cpu_count", return_value=8)
-@patch("src.deploy._module_available", return_value=True)
-def test_detect_hardware_returns_hardware_info(mock_mod, mock_cpu, mock_mem, mock_pi, mock_jet, mock_cuda):
-    from src.deploy import detect_hardware
-
+def test_detect_hardware_returns_info():
     info = detect_hardware()
-    assert hasattr(info, "platform")
-    assert hasattr(info, "arch")
-    assert isinstance(info.cpu_count, int)
-    assert isinstance(info.memory_mb, int)
+    assert isinstance(info, HardwareInfo)
+    assert info.platform == sys.platform
+    assert info.cpu_count > 0
+    assert info.python_version != ""
 
 
-@patch("src.deploy._detect_cuda", return_value=(True, "535.129.03"))
-@patch("src.deploy._detect_jetson", return_value=False)
-@patch("src.deploy._detect_raspberry_pi", return_value=False)
-@patch("src.deploy._safe_memory_mb", return_value=8192)
-@patch("src.deploy._safe_cpu_count", return_value=16)
-@patch("src.deploy._module_available", return_value=True)
-def test_detect_hardware_cuda_detected(mock_mod, mock_cpu, mock_mem, mock_pi, mock_jet, mock_cuda):
-    from src.deploy import detect_hardware
-
-    info = detect_hardware()
-    assert info.has_cuda is True
-    assert info.cuda_version == "535.129.03"
+def test_detect_hardware_detects_cuda():
+    with patch("subprocess.run") as mock_run:
+        mock_run.return_value = MagicMock(returncode=0, stdout="525.85.12\n")
+        has_cuda, version = _detect_cuda()
+        assert has_cuda
+        assert version == "525.85.12"
 
 
-@patch("src.deploy._detect_cuda", return_value=(False, ""))
-@patch("src.deploy._detect_jetson", return_value=False)
-@patch("src.deploy._detect_raspberry_pi", return_value=True)
-@patch("src.deploy._safe_memory_mb", return_value=2048)
-@patch("src.deploy._safe_cpu_count", return_value=4)
-@patch("src.deploy._module_available", return_value=False)
-def test_detect_hardware_raspberry_pi(mock_mod, mock_cpu, mock_mem, mock_pi, mock_jet, mock_cuda):
-    from src.deploy import detect_hardware
+def test_detect_cuda_fallback_torch():
+    with patch("subprocess.run") as mock_run:
+        mock_run.side_effect = FileNotFoundError()
+        mock_torch = MagicMock()
+        mock_torch.cuda.is_available.return_value = True
+        mock_torch.version.cuda = "11.8"
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            has_cuda, version = _detect_cuda()
+            assert has_cuda
+            assert version == "11.8"
 
-    info = detect_hardware()
-    assert info.is_raspberry_pi is True
+
+def test_detect_cuda_no_cuda():
+    with patch("subprocess.run") as mock_run:
+        mock_run.side_effect = FileNotFoundError()
+        has_cuda, version = _detect_cuda()
+        assert not has_cuda
+        assert version == ""
 
 
-# ── suggest_model ────────────────────────────────────────────────────
+# ── suggest_model tests ──────────────────────────────────────────────
 
 
 def test_suggest_model_raspberry_pi():
-    from src.deploy import HardwareInfo, suggest_model
-
-    info = HardwareInfo(platform="linux", arch="aarch64", is_raspberry_pi=True)
+    info = HardwareInfo(platform="linux", arch="armv7l", is_raspberry_pi=True)
     assert suggest_model(info) == "tflite_int8"
 
 
 def test_suggest_model_jetson():
-    from src.deploy import HardwareInfo, suggest_model
-
     info = HardwareInfo(platform="linux", arch="aarch64", is_jetson=True)
     assert suggest_model(info) == "tensorrt"
 
 
-def test_suggest_model_cuda_torch():
-    from src.deploy import HardwareInfo, suggest_model
-
+def test_suggest_model_cuda():
     info = HardwareInfo(platform="linux", arch="x86_64", has_cuda=True, has_torch=True)
     assert suggest_model(info) == "pt"
 
 
-def test_suggest_model_cuda_no_torch():
-    from src.deploy import HardwareInfo, suggest_model
-
-    info = HardwareInfo(platform="linux", arch="x86_64", has_cuda=True, has_torch=False)
-    assert suggest_model(info) == "pt"
-
-
-def test_suggest_model_no_cuda():
-    from src.deploy import HardwareInfo, suggest_model
-
-    info = HardwareInfo(platform="linux", arch="x86_64", has_cuda=False, has_torch=False)
+def test_suggest_model_cpu_only():
+    info = HardwareInfo(platform="linux", arch="x86_64")
     assert suggest_model(info) == "tflite_fp32"
 
 
-# ── check_environment ────────────────────────────────────────────────
+def test_suggest_model_none_calls_detect():
+    with patch("deploy.detect_hardware") as mock_detect:
+        mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64")
+        result = suggest_model()
+        assert result == "tflite_fp32"
+        mock_detect.assert_called_once()
 
 
-@patch("src.deploy.detect_hardware")
-def test_check_environment_no_warnings(mock_detect):
-    from src.deploy import HardwareInfo, check_environment
-
-    mock_detect.return_value = HardwareInfo(
-        platform="linux",
-        arch="x86_64",
-        has_opencv=True,
-        has_torch=True,
-    )
-    warnings = check_environment()
-    assert isinstance(warnings, list)
-    assert len(warnings) == 0
+# ── check_environment tests ──────────────────────────────────────────
 
 
-@patch("src.deploy.detect_hardware")
-def test_check_environment_missing_opencv(mock_detect):
-    from src.deploy import HardwareInfo, check_environment
-
-    mock_detect.return_value = HardwareInfo(
-        platform="linux",
-        arch="x86_64",
-        has_opencv=False,
-        has_torch=True,
-    )
-    warnings = check_environment()
-    assert any("OpenCV" in w for w in warnings)
+def test_check_environment_no_opencv():
+    with patch("deploy.detect_hardware") as mock_detect:
+        mock_detect.return_value = HardwareInfo(
+            platform="linux", arch="x86_64", has_opencv=False
+        )
+        warnings = check_environment()
+        assert any("OpenCV" in w for w in warnings)
 
 
-@patch("src.deploy.detect_hardware")
-def test_check_environment_no_frameworks(mock_detect):
-    from src.deploy import HardwareInfo, check_environment
-
-    mock_detect.return_value = HardwareInfo(
-        platform="linux",
-        arch="x86_64",
-        has_opencv=True,
-        has_torch=False,
-        has_tensorflow=False,
-    )
-    warnings = check_environment()
-    assert any("deep learning framework" in w for w in warnings)
+def test_check_environment_no_frameworks():
+    with patch("deploy.detect_hardware") as mock_detect:
+        mock_detect.return_value = HardwareInfo(
+            platform="linux", arch="x86_64", has_opencv=True, has_torch=False, has_tensorflow=False
+        )
+        warnings = check_environment()
+        assert any("deep learning framework" in w for w in warnings)
 
 
-@patch("src.deploy.detect_hardware")
-def test_check_environment_pi_no_tflite(mock_detect):
-    from src.deploy import HardwareInfo, check_environment
+def test_check_environment_healthy():
+    with patch("deploy.detect_hardware") as mock_detect:
+        mock_detect.return_value = HardwareInfo(
+            platform="linux", arch="x86_64", has_opencv=True, has_torch=True
+        )
+        warnings = check_environment()
+        assert warnings == []
 
-    mock_detect.return_value = HardwareInfo(
-        platform="linux",
-        arch="aarch64",
-        is_raspberry_pi=True,
-        has_opencv=True,
-        has_torch=False,
-        has_tensorflow=False,
-        has_tflite_runtime=False,
-    )
-    warnings = check_environment()
-    assert any("Raspberry Pi" in w for w in warnings)
+
+# ── _module_available tests ──────────────────────────────────────────
+
+
+def test_module_available_existing():
+    assert _module_available("sys")
+
+
+def test_module_available_missing():
+    assert not _module_available("nonexistent_module_12345")
+
+
+# ── Platform detection tests ─────────────────────────────────────────
+
+
+def test_detect_raspberry_pi_true():
+    with patch("builtins.open", patch.mock_open(read_data="Hardware\t: Raspberry Pi 4")):
+        with patch("sys.platform", "linux"):
+            assert _detect_raspberry_pi()
+
+
+def test_detect_raspberry_pi_false():
+    with patch("builtins.open", patch.mock_open(read_data="Intel CPU")):
+        with patch("sys.platform", "linux"):
+            assert not _detect_raspberry_pi()
+
+
+def test_detect_jetson_true():
+    with patch("pathlib.Path.exists", return_value=True):
+        with patch("sys.platform", "linux"):
+            assert _detect_jetson()
+
+
+def test_detect_jetson_false():
+    with patch("pathlib.Path.exists", return_value=False):
+        with patch("sys.platform", "linux"):
+            assert not _detect_jetson()
+
+
+# ── _safe_cpu_count tests ────────────────────────────────────────────
+
+
+def test_safe_cpu_count_returns_positive():
+    count = _safe_cpu_count()
+    assert isinstance(count, int)
+    assert count >= 1

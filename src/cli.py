@@ -21,27 +21,41 @@ from config import (
     SCRIPT_DIR,
     get_detection_models,
     get_tflite_imgsz,
+    resolve_safe_path,
 )
+from exceptions import ConfigError, MiraError
+from logger import get_logger
 from model_picker import pick_model
 from pipeline.registry import get_commands, register_command
 from pipeline.models import ModelRegistry
 
+logger = get_logger(__name__)
 
-def run_script(script_path, args_list=None):
+
+def run_script(script_path, args_list=None, timeout: int | None = None):
     if not script_path.exists():
         raise FileNotFoundError(f"Script not found at {script_path}")
     cmd = [sys.executable, str(script_path)]
     if args_list:
         cmd.extend(args_list)
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        logger.error(f"Script timed out after {timeout}s: {script_path}")
+        raise
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Script failed with exit code {e.returncode}: {script_path}")
+        raise
 
 
 def resolve_detection_data_yaml(explicit_path=None):
     candidates = []
     if explicit_path:
-        candidate = pathlib.Path(explicit_path).expanduser()
-        if not candidate.is_absolute():
-            candidate = (ROOT_DIR / candidate).resolve()
+        try:
+            candidate = resolve_safe_path(explicit_path, base_dir=ROOT_DIR)
+        except ConfigError as e:
+            print(f"Error: {e}")
+            sys.exit(2)
         if candidate.is_file():
             return candidate
         print(f"Warning: {explicit_path} is not a valid file, searching defaults...")
@@ -209,7 +223,6 @@ def cmd_live(args):
     engine.run()
 
 
-
 # ── New Pipeline Commands ────────────────────────────────────────────
 
 
@@ -275,6 +288,8 @@ def _add_train_args(parser):
                         help="Base model for classifier training (mobilenetv2, custom_cnn).")
     parser.add_argument("--fine-tune", action="store_true",
                         help="Enable fine-tuning for classifier training.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Validate configuration without starting training.")
 
 
 @register_command("train", "Train a YOLO detection model via the new pipeline", add_args=_add_train_args)
@@ -301,6 +316,23 @@ def cmd_train(args):
         config.device = args.device
     if args.data_dir is not None:
         config.data_dir = args.data_dir
+
+    # Validate before running
+    errors = config.validate()
+    if errors:
+        print("Configuration errors:")
+        for e in errors:
+            print(f"  - {e}")
+        sys.exit(2)
+
+    if args.dry_run:
+        print("Configuration is valid. Dry run — no training started.")
+        print(f"  model: {config.model}")
+        print(f"  dataset: {config.dataset}")
+        print(f"  epochs: {config.epochs}")
+        print(f"  batch_size: {config.batch_size}")
+        print(f"  imgsz: {config.imgsz}")
+        return
 
     pipeline = TrainingPipeline()
     if args.task == "classifier":
@@ -333,7 +365,7 @@ def cmd_experiments(args):
     for p in yaml_files:
         import yaml as _yaml
 
-        with open(p) as f:
+        with open(p, encoding="utf-8") as f:
             data = _yaml.safe_load(f) or {}
         desc = data.get("name", data.get("model", ""))
         print(f"{p.name:<50} {desc}")
@@ -349,14 +381,29 @@ def _add_export_args(parser):
         help="Export formats (default: tflite_int8). Options: tflite_int8, tflite_fp32, onnx.",
     )
     parser.add_argument("--dataset", type=str, default="", help="Dataset YAML for INT8 calibration (optional).")
+    parser.add_argument("--dry-run", action="store_true", help="Validate model path without exporting.")
 
 
 @register_command("export", "Export a trained .pt model to TFLite / ONNX", add_args=_add_export_args)
 def cmd_export(args):
     from pipeline.train import TrainingPipeline
 
+    model_path = Path(args.model)
+    if not model_path.is_absolute():
+        model_path = (ROOT_DIR / model_path).resolve()
+    if not model_path.exists():
+        print(f"Error: Model not found at {model_path}")
+        print("Run 'mira models' to see available models.")
+        sys.exit(1)
+
+    if args.dry_run:
+        print(f"Model found: {model_path}")
+        print(f"Formats: {', '.join(args.formats)}")
+        print("Dry run — no export performed.")
+        return
+
     pipeline = TrainingPipeline()
-    exported = pipeline.export_model(args.model, args.formats, args.dataset)
+    exported = pipeline.export_model(str(model_path), args.formats, args.dataset)
     if exported:
         print("Exported:")
         for p in exported:
@@ -481,6 +528,93 @@ def cmd_validate(args):
     print()
 
 
+# ── Phase 3 Commands ─────────────────────────────────────────────────
+
+
+@register_command("doctor", "Run comprehensive environment and project health check")
+def cmd_doctor(args):
+    """Run a comprehensive health check of the MIRA environment."""
+    from deploy import detect_hardware, check_environment, suggest_model
+    from config import validate_config, PROJECT_CONFIG
+    from pipeline.models import ModelRegistry
+
+    print(f"\n  MIRA Doctor v{__version__}")
+    print(f"  {'=' * 60}")
+
+    # Config validation
+    print("\n  [1/5] Configuration")
+    config_errors = validate_config()
+    if config_errors:
+        print(f"    ! {len(config_errors)} config error(s):")
+        for e in config_errors:
+            print(f"      - {e}")
+    else:
+        print("    ✓ mira.yaml is valid")
+
+    # Hardware
+    print("\n  [2/5] Hardware")
+    info = detect_hardware()
+    print(f"    Platform: {info.platform} ({info.arch})")
+    print(f"    Memory: {info.memory_mb} MB")
+    print(f"    CPUs: {info.cpu_count}")
+    if info.has_cuda:
+        print(f"    ✓ CUDA: {info.cuda_version}")
+    else:
+        print("    ⚠ No CUDA detected")
+    print(f"    Suggested model: {suggest_model(info)}")
+
+    # Environment
+    print("\n  [3/5] Environment")
+    env_warnings = check_environment()
+    if env_warnings:
+        for w in env_warnings:
+            print(f"    ! {w}")
+    else:
+        print("    ✓ All required libraries available")
+
+    # Models
+    print("\n  [4/5] Models")
+    registry = ModelRegistry()
+    count = registry.discover()
+    if count:
+        print(f"    ✓ {count} model(s) discovered")
+    else:
+        print("    ⚠ No models found in models/detection/")
+
+    # Datasets
+    print("\n  [5/5] Datasets")
+    from pipeline.dataset import DatasetRegistry
+    ds_registry = DatasetRegistry()
+    ds_count = ds_registry.discover()
+    available = [s for s in ds_registry.list_sources() if s["exists"]]
+    if available:
+        print(f"    ✓ {len(available)}/{ds_count} dataset source(s) available")
+        for s in available:
+            print(f"      - {s['key']}: {s['name']}")
+    else:
+        print("    ⚠ No dataset sources available")
+
+    print(f"\n  {'=' * 60}")
+    if config_errors or env_warnings:
+        print("  Status: ISSUES FOUND — see details above")
+    else:
+        print("  Status: HEALTHY")
+    print()
+
+
+@register_command("config", "Display current project configuration")
+def cmd_config(args):
+    """Display the current mira.yaml configuration."""
+    from config import get_project_config
+    import json
+
+    cfg = get_project_config()
+    print("\n  Current MIRA Configuration (mira.yaml)")
+    print(f"  {'=' * 50}")
+    print(json.dumps(dict(cfg), indent=4))
+    print()
+
+
 # ── Main dispatcher ──────────────────────────────────────────────────
 
 
@@ -496,6 +630,7 @@ Examples:
   mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite
   mira models
   mira experiments
+  mira doctor
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -515,7 +650,19 @@ Examples:
 
     commands = get_commands()
     if args.command in commands:
-        commands[args.command].fn(args)
+        try:
+            commands[args.command].fn(args)
+        except MiraError as e:
+            logger.error(str(e))
+            print(f"\nError: {e}")
+            sys.exit(1)
+        except KeyboardInterrupt:
+            print("\nInterrupted by user.")
+            sys.exit(130)
+        except Exception as e:
+            logger.exception(f"Unexpected error in command '{args.command}': {e}")
+            print(f"\nUnexpected error: {e}")
+            sys.exit(1)
     else:
         parser.print_help()
 

@@ -13,7 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from config import PROJECT_CONFIG, ROOT_DIR, MODELS_DIR
+from exceptions import ConfigError
+from logger import get_logger
 from serialization import serialize_result, serialize_config, experiment_metadata
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -40,19 +44,55 @@ class TrainConfig:
     exist_ok: bool = True
     extra: dict[str, Any] = field(default_factory=dict)
 
+    def validate(self) -> list[str]:
+        """Validate this configuration and return a list of error messages."""
+        errors: list[str] = []
+
+        if self.epochs < 1:
+            errors.append(f"epochs must be >= 1, got {self.epochs}")
+        if self.batch_size < 1:
+            errors.append(f"batch_size must be >= 1, got {self.batch_size}")
+        if self.imgsz < 1:
+            errors.append(f"imgsz must be >= 1, got {self.imgsz}")
+        if self.lr0 <= 0:
+            errors.append(f"lr0 must be > 0, got {self.lr0}")
+        if self.weight_decay < 0:
+            errors.append(f"weight_decay must be >= 0, got {self.weight_decay}")
+        if self.patience < 1:
+            errors.append(f"patience must be >= 1, got {self.patience}")
+        if self.workers < 0:
+            errors.append(f"workers must be >= 0, got {self.workers}")
+        if self.seed < 0:
+            errors.append(f"seed must be >= 0, got {self.seed}")
+
+        # Device validation
+        if self.device != "cpu" and not all(c.isdigit() or c == "," for c in self.device):
+            errors.append(f"device must be 'cpu' or comma-separated GPU IDs, got '{self.device}'")
+
+        return errors
+
     @classmethod
     def from_yaml(cls, path: str | Path) -> TrainConfig:
         import yaml
         from dataclasses import fields as dc_fields
 
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         if not isinstance(data, dict):
             raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 
         known = {f.name for f in dc_fields(cls)}
         extra = {k: v for k, v in data.items() if k not in known}
-        return cls(**{k: v for k, v in data.items() if k in known}, extra=extra)
+        config = cls(**{k: v for k, v in data.items() if k in known}, extra=extra)
+
+        errors = config.validate()
+        if errors:
+            raise ConfigError(
+                f"Validation failed for '{path}' with {len(errors)} error(s):\n  - "
+                + "\n  - ".join(errors)
+            )
+
+        return config
 
 
 @dataclass

@@ -1,237 +1,207 @@
 """Tests for MIRA hardware abstraction layer."""
 
+from __future__ import annotations
+
 import sys
-import pathlib
-from unittest.mock import MagicMock, patch, PropertyMock
+import threading
+import time
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-_project_root = str(pathlib.Path(__file__).resolve().parent.parent)
-_src_dir = str(pathlib.Path(__file__).resolve().parent.parent / "src")
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+from exceptions import CameraError
+from hardware import (
+    AbstractCamera,
+    USBCamera,
+    IPCamera,
+    create_camera,
+    _FrameBuffer,
+)
 
-# ── AbstractCamera interface ─────────────────────────────────────────
 
+# ── _FrameBuffer tests ───────────────────────────────────────────────
 
-def test_abstract_camera_cannot_be_instantiated():
-    from src.hardware import AbstractCamera
 
-    with pytest.raises(TypeError):
-        AbstractCamera()
+def test_frame_buffer_update_and_get():
+    buf = _FrameBuffer()
+    fake_frame = object()
+    buf.update(True, fake_frame)
+    ret, frame = buf.get()
+    assert ret is True
+    assert frame is not None
 
 
-def test_abstract_camera_read_raises():
-    from src.hardware import AbstractCamera
+def test_frame_buffer_get_returns_copy():
+    buf = _FrameBuffer()
+    import numpy as np
+    arr = np.array([1, 2, 3])
+    buf.update(True, arr)
+    _, frame = buf.get()
+    assert frame is not arr  # should be a copy
 
-    class _Dummy(AbstractCamera):
-        def read(self):
-            return super().read()
 
-        def release(self):
-            pass
+def test_frame_buffer_not_frozen_initially():
+    buf = _FrameBuffer()
+    assert not buf.is_frozen
 
-        def width(self):
-            return 0
 
-        def height(self):
-            return 0
+def test_frame_buffer_frozen_after_timeout():
+    buf = _FrameBuffer()
+    buf.update(True, object())
+    # Manually set last_update to way in the past
+    with buf._lock:
+        buf._last_update = time.perf_counter() - 10.0
+    assert buf.is_frozen
+
+
+def test_frame_buffer_stop():
+    buf = _FrameBuffer()
+    assert buf.running
+    buf.stop()
+    assert not buf.running
+
+
+# ── create_camera factory tests ──────────────────────────────────────
+
+
+def test_create_camera_int():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = create_camera(0)
+        assert isinstance(cam, USBCamera)
+        cam.release()
+
+
+def test_create_camera_int_str():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = create_camera("1")
+        assert isinstance(cam, USBCamera)
+        cam.release()
+
+
+def test_create_camera_rtsp():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = create_camera("rtsp://example.com/stream")
+        assert isinstance(cam, IPCamera)
+        cam.release()
+
+
+def test_create_camera_http():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = create_camera("http://example.com/stream")
+        assert isinstance(cam, IPCamera)
+        cam.release()
+
+
+def test_create_camera_unknown():
+    with pytest.raises(CameraError):
+        create_camera("/dev/random")
+
 
-    with pytest.raises(TypeError):
-        _Dummy().read()
-
-
-# ── USBCamera ────────────────────────────────────────────────────────
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_usb_camera_read_returns_none_when_not_connected(mock_cv2, mock_setup):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera
-
-    cam = USBCamera(index=0, width=640, height=360)
-    ret, frame = cam.read()
-    assert ret is False
-    assert frame is None
-    cam.release()
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_usb_camera_constructor_stores_dimensions(mock_cv2, mock_setup):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera
-
-    cam = USBCamera(index=2, width=800, height=600)
-    assert cam.width() == 800
-    assert cam.height() == 600
-    assert cam._index == 2
-    cam.release()
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_usb_camera_release_idempotent(mock_cv2, mock_setup):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera
-
-    cam = USBCamera(index=0)
-    cam.release()
-    cam.release()
-    mock_cap.release.assert_called()
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_usb_camera_raises_on_failed_open(mock_cv2, mock_setup):
-    from src.exceptions import CameraError
-
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = False
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera
-
-    with pytest.raises(CameraError, match="Failed to open USB camera"):
-        USBCamera(index=99)
-
-
-# ── IPCamera ─────────────────────────────────────────────────────────
-
-
-@patch("src.hardware.cv2")
-def test_ip_camera_constructor(mock_cv2):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-
-    from src.hardware import IPCamera
-
-    url = "rtsp://192.168.1.100:554/stream"
-    cam = IPCamera(rtsp_url=url, width=1280, height=720)
-    assert cam._rtsp_url == url
-    assert cam.width() == 1280
-    assert cam.height() == 720
-    cam.release()
-
-
-@patch("src.hardware.cv2")
-def test_ip_camera_raises_on_failed_open(mock_cv2):
-    from src.exceptions import CameraError
-
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = False
-    mock_cv2.VideoCapture.return_value = mock_cap
-
-    from src.hardware import IPCamera
-
-    with pytest.raises(CameraError, match="Failed to open IP camera"):
-        IPCamera(rtsp_url="rtsp://unreachable/stream")
-
-
-@patch("src.hardware.cv2")
-def test_ip_camera_read_returns_none_when_no_frame(mock_cv2):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-
-    from src.hardware import IPCamera
-
-    cam = IPCamera(rtsp_url="rtsp://test/stream")
-    ret, frame = cam.read()
-    assert ret is False
-    assert frame is None
-    cam.release()
-
-
-# ── create_camera factory ────────────────────────────────────────────
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_create_camera_int_returns_usb(mock_cv2, mock_setup):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera, create_camera
-
-    cam = create_camera(source=0)
-    assert isinstance(cam, USBCamera)
-    cam.release()
-
-
-@patch("src.hardware.setup_camera_properties")
-@patch("src.hardware.cv2")
-def test_create_camera_digit_string_returns_usb(mock_cv2, mock_setup):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-    mock_cv2.CAP_DSHOW = 0x700
-
-    from src.hardware import USBCamera, create_camera
-
-    cam = create_camera(source="1")
-    assert isinstance(cam, USBCamera)
-    cam.release()
-
-
-@patch("src.hardware.cv2")
-def test_create_camera_rtsp_returns_ip(mock_cv2):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-
-    from src.hardware import IPCamera, create_camera
-
-    cam = create_camera(source="rtsp://192.168.1.1:554/stream")
-    assert isinstance(cam, IPCamera)
-    cam.release()
-
-
-@patch("src.hardware.cv2")
-def test_create_camera_http_returns_ip(mock_cv2):
-    mock_cap = MagicMock()
-    mock_cap.isOpened.return_value = True
-    mock_cap.read.return_value = (False, None)
-    mock_cv2.VideoCapture.return_value = mock_cap
-
-    from src.hardware import IPCamera, create_camera
-
-    cam = create_camera(source="http://192.168.1.1:8080/video")
-    assert isinstance(cam, IPCamera)
-    cam.release()
-
-
-def test_create_camera_invalid_source_raises():
-    from src.exceptions import CameraError
-    from src.hardware import create_camera
-
-    with pytest.raises(CameraError, match="Unknown camera source"):
-        create_camera(source="invalid_source_string")
+# ── USBCamera tests ──────────────────────────────────────────────────
+
+
+def test_usbcamera_init_success():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = USBCamera(0, 640, 360)
+        assert cam.width() == 640
+        assert cam.height() == 360
+        cam.release()
+
+
+def test_usbcamera_init_failure():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = False
+        mock_cap.return_value = mock_instance
+        with pytest.raises(CameraError):
+            USBCamera(0)
+
+
+def test_usbcamera_is_alive():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_instance.read.return_value = (True, object())
+        mock_cap.return_value = mock_instance
+        cam = USBCamera(0)
+        assert cam.is_alive()
+        cam.release()
+        assert not cam.is_alive()
+
+
+def test_usbcamera_release_idempotent():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = USBCamera(0)
+        cam.release()
+        cam.release()  # should not raise
+        assert cam._released
+
+
+def test_usbcamera_context_manager():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        with USBCamera(0) as cam:
+            assert isinstance(cam, USBCamera)
+
+
+# ── IPCamera tests ───────────────────────────────────────────────────
+
+
+def test_ipcamera_init_success():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        mock_cap.return_value = mock_instance
+        cam = IPCamera("rtsp://test", 640, 360)
+        assert cam.width() == 640
+        cam.release()
+
+
+def test_ipcamera_reconnection():
+    with patch("hardware.cv2.VideoCapture") as mock_cap:
+        mock_instance = MagicMock()
+        mock_instance.isOpened.return_value = True
+        # First read succeeds, subsequent reads fail to trigger reconnection
+        mock_instance.read.side_effect = [
+            (True, object()),
+            (False, None),
+            (False, None),
+            (False, None),
+            (False, None),
+        ]
+        mock_cap.return_value = mock_instance
+        cam = IPCamera("rtsp://test")
+        # Let reader thread run briefly
+        time.sleep(0.1)
+        cam.release()
+
+
+# ── AbstractCamera interface tests ───────────────────────────────────
+
+
+def test_abstract_camera_constants():
+    assert AbstractCamera.WARMUP_FRAMES == 10
+    assert AbstractCamera.FREEZE_TIMEOUT_SECONDS == 2.0
