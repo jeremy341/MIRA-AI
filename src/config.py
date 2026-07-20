@@ -1,6 +1,9 @@
 """Shared configuration, constants, and utility functions for MIRA."""
 
+from __future__ import annotations
+
 import pathlib
+from types import MappingProxyType
 
 import yaml
 
@@ -19,15 +22,6 @@ except FileNotFoundError:
     raise ConfigError(f"Config file not found: {_CONFIG_PATH}") from None
 except yaml.YAMLError as e:
     raise ConfigError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
-
-def _get_config_path(key: str, default: str | None = None) -> str:
-    """Safely get a nested path key from PROJECT_CONFIG."""
-    try:
-        return PROJECT_CONFIG[key]
-    except KeyError:
-        if default is not None:
-            return default
-        raise ConfigError(f"Missing required config key '{key}' in mira.yaml") from None
 
 # Directory paths (derived from config)
 REF_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("reference", "reference")
@@ -60,15 +54,9 @@ DETECTION_MODEL_LABELS: dict[str, str] = {
     "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
     "mira_exp016.pt": "EXP-016 (YOLO11n, +WaRP)",
     "mira_exp016_int8.tflite": "EXP-016 INT8 (YOLO11n, +WaRP)",
-    "mira_exp017.pt": "EXP-017 (YOLO11n, all 4 sources)",
-    "mira_exp017_int8.tflite": "EXP-017 INT8 (YOLO11n, all 4 sources)",
-    "mira_exp017.onnx": "EXP-017 ONNX (YOLO11n, all 4 sources)",
 }
 
-
-from types import MappingProxyType
-
-_PROJECT_CONFIG_FROZEN = MappingProxyType(PROJECT_CONFIG)
+_PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 
 
 def get_project_config() -> dict:

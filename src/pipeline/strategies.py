@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from config import PROJECT_CONFIG, ROOT_DIR, MODELS_DIR
+from serialization import serialize_result, serialize_config, experiment_metadata
 
 
 @dataclass
@@ -114,7 +115,7 @@ class YOLOStrategy(TrainingStrategy):
             metrics["map50"] = getattr(results.box, "map50", 0.0)
             metrics["map"] = getattr(results.box, "map", 0.0)
 
-        return TrainResult(
+        train_result = TrainResult(
             name=config.name,
             model_path=last_path,
             best_path=best_path,
@@ -122,6 +123,17 @@ class YOLOStrategy(TrainingStrategy):
             metrics=metrics,
             duration_seconds=elapsed,
         )
+
+        results_dir = Path(config.project) / config.name
+        serialize_config(config, results_dir / "config.yaml")
+        serialize_result(train_result, results_dir / "results.json")
+        meta = experiment_metadata(
+            command="train_yolo",
+            args={"model": config.model, "dataset": config.dataset, "epochs": config.epochs},
+        )
+        serialize_result(meta, results_dir / "metadata.json")
+
+        return train_result
 
 
 class ClassifierStrategy(TrainingStrategy):
@@ -204,7 +216,7 @@ class ClassifierStrategy(TrainingStrategy):
         Path(model_path).parent.mkdir(parents=True, exist_ok=True)
         model.save(model_path)
 
-        return TrainResult(
+        train_result = TrainResult(
             name=config.name,
             model_path=model_path,
             best_path=model_path,
@@ -215,6 +227,17 @@ class ClassifierStrategy(TrainingStrategy):
             },
             duration_seconds=elapsed,
         )
+
+        results_dir = Path(config.project) / config.name
+        serialize_config(config, results_dir / "config.yaml")
+        serialize_result(train_result, results_dir / "results.json")
+        meta = experiment_metadata(
+            command="train_classifier",
+            args={"base_model": base_model, "fine_tune": fine_tune, "epochs": config.epochs},
+        )
+        serialize_result(meta, results_dir / "metadata.json")
+
+        return train_result
 
 
 # ── Strategy Registry ────────────────────────────────────────────────

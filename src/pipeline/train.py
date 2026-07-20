@@ -9,43 +9,93 @@ Usage:
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 
 import yaml
 
+from exceptions import PipelineError
+from logger import logger
 from pipeline.strategies import TrainConfig, TrainResult, get_strategy, register_strategy
+from serialization import serialize_config, serialize_result, experiment_metadata
 
 
 class TrainingPipeline:
     """High-level training pipeline that delegates to registered strategies."""
 
     def train(self, task: str, config: TrainConfig) -> TrainResult:
-        strategy = get_strategy(task)
-        return strategy.train(config)
+        try:
+            strategy = get_strategy(task)
+            result = strategy.train(config)
+        except PipelineError:
+            raise
+        except Exception as e:
+            logger.error(f"Training failed for task '{task}' with config '{config.name}': {e}")
+            raise PipelineError(f"Training failed for task '{task}': {e}") from e
+        return result
 
     def export_model(self, model_path: str, formats: list[str], dataset: str = "") -> list[str]:
-        from ultralytics import YOLO
+        try:
+            from ultralytics import YOLO
+        except ImportError as e:
+            raise PipelineError(
+                "ultralytics is required for model export. Install it with: pip install ultralytics"
+            ) from e
 
-        model = YOLO(model_path)
+        try:
+            model = YOLO(model_path)
+        except Exception as e:
+            logger.error(f"Failed to load model from '{model_path}': {e}")
+            raise PipelineError(f"Failed to load model '{model_path}': {e}") from e
+
         exported = []
         for fmt in formats:
             fmt_lower = fmt.lower().replace("-", "_")
-            out = model.export(format="tflite", int8=True) if fmt_lower == "tflite_int8" else \
-                  model.export(format="tflite", int8=False) if fmt_lower == "tflite_fp32" else \
-                  model.export(format="onnx") if fmt_lower == "onnx" else \
-                  model.export(format="engine", half=True, imgsz=640, workspace=4) if fmt_lower == "tensorrt" else \
-                  None
+            try:
+                out = model.export(format="tflite", int8=True) if fmt_lower == "tflite_int8" else \
+                      model.export(format="tflite", int8=False) if fmt_lower == "tflite_fp32" else \
+                      model.export(format="onnx") if fmt_lower == "onnx" else \
+                      model.export(format="engine", half=True, imgsz=640, workspace=4) if fmt_lower == "tensorrt" else \
+                      None
+            except Exception as e:
+                logger.error(f"Export to format '{fmt}' failed: {e}")
+                raise PipelineError(f"Model export to format '{fmt}' failed: {e}") from e
             if out:
                 exported.append(str(out))
         return exported
 
     def train_yolo(self, config: TrainConfig) -> TrainResult:
-        return self.train("detection", config)
+        run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        config.project = "runs/train"
+        config.name = run_name
+
+        try:
+            result = self.train("detection", config)
+        except PipelineError:
+            raise
+        except Exception as e:
+            logger.error(f"YOLO training failed: {e}")
+            raise PipelineError(
+                f"YOLO training failed: {e}. "
+                f"Check that your dataset YAML is valid and that the 'detection' strategy is registered."
+            ) from e
+
+        results_dir = Path(config.project) / config.name
+        logger.info(f"Experiment saved to {results_dir}")
+        return result
 
     def train_classifier(self, config: TrainConfig, base_model: str = "mobilenetv2", fine_tune: bool = False) -> TrainResult:
         config.extra["base_model"] = base_model
         config.extra["fine_tune"] = fine_tune
-        return self.train("classifier", config)
+
+        run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        config.project = "runs/train"
+        config.name = run_name
+
+        result = self.train("classifier", config)
+        results_dir = Path(config.project) / config.name
+        print(f"  Experiment saved to {results_dir}")
+        return result
 
     @classmethod
     def register_strategy(cls, task: str, strategy_cls):
