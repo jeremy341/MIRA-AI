@@ -488,3 +488,45 @@ EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+
 
 ### Observation
 EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 classes). With 58.8% mAP50 overall, it outperforms the mixed-dataset EXP-015 (56.0%) despite having no Trash class. Glass (77.7%) and Plastic (73.1%) are strong — WaRP is rich in bottles and packaging. Metal (42.1%) and Paper (42.2%) are weaker, likely because WaRP's metal/paper subclasses are fewer and more diverse. Trash is absent entirely (WaRP has zero residual waste images), so the model cannot detect it. This makes EXP-016 a specialized model: excellent at glass/plastic detection but unusable for trash sorting. As a 4-model comparison entry, it confirms that WaRP alone is not a viable general-purpose recycling detector.
+
+---
+
+## EXP-017: YOLO11n on ALL 4 Sources (TACO + TrashNet + Roboflow + WaRP)
+* **Date:** July 20, 2026
+* **Architecture:** YOLO11n
+* **Dataset:** mira_all (9,774 images, 5 classes — all 4 sources merged)
+* **Hardware:** Kaggle GPU (Tesla T4, 14GB VRAM)
+* **Training Time:** 6.01 hours (120 epochs)
+
+### Hyperparameters
+* **Batch Size:** 32 | **Image Size:** 640
+* **Patience:** 30 | **Optimizer:** AdamW (lr0=0.01, lrf=0.01)
+* **Augmentation:** mosaic=1.0, mixup=0.1, copy_paste=0.1, hsv_h=0.015, hsv_s=0.7, hsv_v=0.4, scale=0.5, fliplr=0.5
+
+### Quantitative Metrics
+| Class | Images | Instances | Precision | Recall | mAP50 | mAP50-95 |
+|---|---|---|---|---|---|---|
+| **All** | 2599 | 6424 | 0.639 | 0.549 | 0.593 | 0.465 |
+| glass | 680 | 1027 | 0.675 | 0.685 | 0.706 | 0.531 |
+| metal | 489 | 641 | 0.631 | 0.590 | 0.621 | 0.497 |
+| paper | 644 | 777 | 0.660 | 0.614 | 0.686 | 0.583 |
+| plastic | 1678 | 3418 | 0.713 | 0.677 | 0.727 | 0.566 |
+| trash | 243 | 561 | 0.501 | 0.178 | 0.227 | 0.146 |
+
+### Speed
+* **Preprocess:** 0.7 ms | **Inference:** 2.8 ms | **Postprocess:** 0.9 ms
+
+### Quantization (INT8 TFLite)
+* **Original Model Size:** 10.14 MiB
+* **Quantized INT8 Model Size:** 2.90 MiB
+* **Compression Ratio:** 3.5x smaller
+* **Export Time:** 176.95 ms
+
+### Comparison with EXP-014 (Best Previous)
+* **mAP50: 59.3%** — slightly lower than EXP-014 (60.7%)
+* **Trash: 22.7% mAP50** — similar to EXP-014 (28.3%), remains the worst class
+* **Plastic: 72.7% mAP50** — best class, improves over EXP-014 (70.7%)
+* **Paper: 68.6% mAP50** — best seen so far
+
+### Observation
+EXP-017 merges ALL 4 available dataset sources (9,774 images), but adding WaRP actually hurt overall mAP50 (60.7% → 59.3%) compared to EXP-014 which used only 3 sources. This suggests label noise or distribution mismatch in WaRP degrades generalization despite the larger dataset size. Trash remains critically weak (22.7%) — it needs either more high-quality trash data or a dedicated augmentation strategy. Plastic and Paper saw minor gains. The TFLite export is fast (177 ms) and produces a 2.9 MB model suitable for edge deployment.

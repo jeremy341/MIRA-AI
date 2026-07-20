@@ -57,7 +57,6 @@ class DetectionModel(ABC):
     ) -> InferenceResult: ...
 
     def _parse_yolo_results(self, results, latency_ms: float, image: str | Path, class_names: list[str] | None = None) -> InferenceResult:
-        """Parse Ultralytics YOLO results into InferenceResult."""
         names = class_names or CLASS_NAMES
         detections: list[Detection] = []
         boxes = results[0].boxes
@@ -92,7 +91,6 @@ class YOLOAdapter(DetectionModel):
 
     def load(self) -> None:
         from ultralytics import YOLO
-
         self._model = YOLO(str(self.path))
         self._loaded = True
 
@@ -104,11 +102,9 @@ class YOLOAdapter(DetectionModel):
     ) -> InferenceResult:
         if not self._loaded:
             self.load()
-
         start = time.perf_counter()
         results = self._model(str(image), conf=conf, iou=iou, verbose=False)
         latency_ms = (time.perf_counter() - start) * 1000
-
         return self._parse_yolo_results(results, latency_ms, image)
 
 
@@ -117,7 +113,6 @@ class YOLOTFLiteAdapter(DetectionModel):
 
     def load(self) -> None:
         from ultralytics import YOLO
-
         self._model = YOLO(str(self.path), task="detect")
         self._loaded = True
 
@@ -129,14 +124,11 @@ class YOLOTFLiteAdapter(DetectionModel):
     ) -> InferenceResult:
         if not self._loaded:
             self.load()
-
         if "int8" in self.path.name.lower():
             conf = min(conf, 0.25)
-
         start = time.perf_counter()
         results = self._model(str(image), conf=conf, iou=iou, verbose=False)
         latency_ms = (time.perf_counter() - start) * 1000
-
         return self._parse_yolo_results(results, latency_ms, image)
 
 
@@ -157,13 +149,11 @@ class ThirdPartyAdapter(DetectionModel):
 
     def load(self) -> None:
         import logging
-
         log = logging.getLogger(__name__)
         suffix = self.path.suffix.lower()
         if suffix in (".tflite", ".onnx", ".pt"):
             try:
                 from ultralytics import YOLO
-
                 task = "detect" if suffix == ".tflite" else None
                 self._model = YOLO(str(self.path), task=task)
                 self._loaded = True
@@ -175,8 +165,7 @@ class ThirdPartyAdapter(DetectionModel):
             log.warning(
                 "ThirdPartyAdapter cannot auto-load %s (suffix %s). "
                 "Subclass ThirdPartyAdapter and override load()/predict().",
-                self.path.name,
-                suffix,
+                self.path.name, suffix,
             )
         self._loaded = False
 
@@ -208,32 +197,48 @@ class ModelRegistry:
 
     def discover(self) -> int:
         self._models.clear()
+        self._adapters.clear()
+
+        sidecar_models: set[str] = set()
+        for p in sorted(self.detection_dir.iterdir()):
+            if p.suffix == ".yaml" and not p.name.startswith("example"):
+                self._load_descriptor(p)
+                name = p.stem
+                sidecar_models.add(name)
+                tflite_path = self.detection_dir / f"{name}_int8.tflite"
+                if tflite_path.exists():
+                    label = self._models.get(name, {}).get("label", name)
+                    self._models[f"{name}_int8.tflite"] = {
+                        "path": tflite_path,
+                        "model_type": "yolo_tflite",
+                        "label": f"{label} INT8",
+                        "is_third_party": False,
+                    }
 
         for p in sorted(self.detection_dir.iterdir()):
+            stem = p.stem
+            if stem in sidecar_models:
+                continue
             if p.suffix.lower() in (".pt", ".pth"):
                 label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
-                    "path": p,
-                    "model_type": "yolo_pt",
-                    "label": label,
-                    "is_third_party": False,
+                    "path": p, "model_type": "yolo_pt",
+                    "label": label, "is_third_party": False,
                 }
             elif p.suffix == ".tflite":
+                base_name = stem.replace("_int8", "").replace("_fp32", "")
+                if base_name in sidecar_models:
+                    continue
                 label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
-                    "path": p,
-                    "model_type": "yolo_tflite",
-                    "label": label,
-                    "is_third_party": False,
+                    "path": p, "model_type": "yolo_tflite",
+                    "label": label, "is_third_party": False,
                 }
-            elif p.suffix == ".yaml":
-                self._load_descriptor(p)
 
         return len(self._models)
 
     def _load_descriptor(self, yaml_path: Path) -> None:
         import yaml
-
         with open(yaml_path) as f:
             data = yaml.safe_load(f)
 
@@ -244,9 +249,16 @@ class ModelRegistry:
             return
 
         name = data.get("name", yaml_path.stem)
-        model_path = self.detection_dir / data.get("model_file", "")
+        model_file = data.get("model_file", "")
+        if not model_file:
+            print(f"Warning: Model descriptor {yaml_path.name} has no model_file field, skipping")
+            return
+        model_path = self.detection_dir / model_file
         if not model_path.exists():
-            model_path = Path(data.get("model_file", ""))
+            model_path = Path(model_file)
+        if not model_path.exists():
+            print(f"Warning: Model file {model_file} for {name} not found, skipping")
+            return
 
         self._models[name] = {
             "path": model_path,
@@ -257,6 +269,11 @@ class ModelRegistry:
         }
 
     def list_models(self) -> list[dict[str, Any]]:
+        def _safe_stat(p: Path) -> float | None:
+            try:
+                return round(p.stat().st_size / 1_048_576, 1) if p.exists() else None
+            except (OSError, FileNotFoundError):
+                return None
         return [
             {
                 "name": name,
@@ -264,7 +281,7 @@ class ModelRegistry:
                 "model_type": info["model_type"],
                 "label": info["label"],
                 "exists": info["path"].exists(),
-                "size_mb": round(info["path"].stat().st_size / 1_048_576, 1) if info["path"].exists() else None,
+                "size_mb": _safe_stat(info["path"]),
             }
             for name, info in self._models.items()
         ]
@@ -285,17 +302,26 @@ class ModelRegistry:
 
         if info.get("is_third_party"):
             adapter = ThirdPartyAdapter(
-                path=path,
-                name=name,
+                path=path, name=name,
                 model_type=model_type,
                 class_names=info.get("class_names"),
             )
-        elif model_type == "yolo_pt":
-            adapter = YOLOAdapter(path=path, name=name)
-        elif model_type == "yolo_tflite":
-            adapter = YOLOTFLiteAdapter(path=path, name=name)
         else:
-            raise ValueError(f"Unknown model_type '{model_type}' for model '{name}'")
+            try:
+                from pipeline.registry import get_model_adapters
+                adapters = get_model_adapters()
+                if model_type in adapters:
+                    cls = adapters[model_type].adapter_class
+                    adapter = cls(path=path, name=name)
+                else:
+                    raise KeyError(model_type)
+            except (ImportError, KeyError):
+                if model_type == "yolo_pt":
+                    adapter = YOLOAdapter(path=path, name=name)
+                elif model_type == "yolo_tflite":
+                    adapter = YOLOTFLiteAdapter(path=path, name=name)
+                else:
+                    raise ValueError(f"Unknown model_type '{model_type}' for model '{name}'")
 
         adapter.load()
         self._adapters[name] = adapter

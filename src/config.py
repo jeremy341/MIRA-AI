@@ -17,20 +17,31 @@ except FileNotFoundError:
 except yaml.YAMLError as e:
     raise RuntimeError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
 
+def _get_config_path(key: str, default: str | None = None) -> str:
+    """Safely get a nested path key from PROJECT_CONFIG."""
+    try:
+        return PROJECT_CONFIG[key]
+    except KeyError:
+        if default is not None:
+            return default
+        raise RuntimeError(f"Missing required config key '{key}' in mira.yaml") from None
+
 # Directory paths (derived from config)
-REF_DIR = ROOT_DIR / PROJECT_CONFIG["paths"]["reference"]
-MODELS_DIR = ROOT_DIR / PROJECT_CONFIG["paths"]["models"]
+REF_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("reference", "reference")
+MODELS_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("models", "models")
 CLASSIFIER_DIR = MODELS_DIR / "classifier"
 DETECTION_DIR = MODELS_DIR / "detection"
 DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
 BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
 
 # Class configuration (single source of truth)
-CLASS_NAMES: list[str] = PROJECT_CONFIG["classes"]["names"]
-NUM_CLASSES: int = PROJECT_CONFIG["classes"]["count"]
+_RAW_CLASSES = PROJECT_CONFIG.get("classes", {})
+CLASS_NAMES: list[str] = _RAW_CLASSES.get("names", ["glass", "metal", "paper", "plastic", "trash"])
+NUM_CLASSES: int = _RAW_CLASSES.get("count", len(CLASS_NAMES))
 
 # Inference defaults
-REJECT_THRESHOLD: float = PROJECT_CONFIG["inference"]["reject_threshold"]
+_INFERENCE = PROJECT_CONFIG.get("inference", {})
+REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
 
 DETECTION_MODEL_LABELS: dict[str, str] = {
     "mira_exp006.pt": "EXP-006 (YOLOv8n, multi-dataset)",
@@ -46,12 +57,20 @@ DETECTION_MODEL_LABELS: dict[str, str] = {
     "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
     "mira_exp016.pt": "EXP-016 (YOLO11n, +WaRP)",
     "mira_exp016_int8.tflite": "EXP-016 INT8 (YOLO11n, +WaRP)",
+    "mira_exp017.pt": "EXP-017 (YOLO11n, all 4 sources)",
+    "mira_exp017_int8.tflite": "EXP-017 INT8 (YOLO11n, all 4 sources)",
+    "mira_exp017.onnx": "EXP-017 ONNX (YOLO11n, all 4 sources)",
 }
+
+
+from types import MappingProxyType
+
+_PROJECT_CONFIG_FROZEN = MappingProxyType(PROJECT_CONFIG)
 
 
 def get_project_config() -> dict:
     """Return the full project configuration loaded from mira.yaml."""
-    return PROJECT_CONFIG
+    return _PROJECT_CONFIG_FROZEN
 
 
 def get_detection_models() -> list[str]:

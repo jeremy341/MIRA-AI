@@ -26,7 +26,7 @@ class AugmentConfig:
     hsv_h: float = 0.015
     hsv_s: float = 0.7
     hsv_v: float = 0.4
-    degrees: float = 0.0
+    degrees: float = 10.0
     translate: float = 0.1
     scale: float = 0.5
     shear: float = 0.0
@@ -34,8 +34,8 @@ class AugmentConfig:
     flipud: float = 0.0
     fliplr: float = 0.5
     mosaic: float = 1.0
-    mixup: float = 0.0
-    copy_paste: float = 0.0
+    mixup: float = 0.1
+    copy_paste: float = 0.1
 
     def to_ultralytics(self) -> dict[str, float]:
         return asdict(self)
@@ -97,11 +97,16 @@ class TrainConfig:
         if unknown:
             print(f"Warning: Unknown fields in {path}: {unknown}")
 
-        aug_data = data.pop("augmentation", {})
-        export_data = data.pop("export", {})
+        aug_data = data.pop("augmentation", None)
+        export_data = data.pop("export", None)
         config = cls(**data)
         if aug_data:
             config.augmentation = AugmentConfig(**aug_data)
+        else:
+            from config import PROJECT_CONFIG
+            mira_aug = PROJECT_CONFIG.get("training", {}).get("augmentation", {})
+            if mira_aug:
+                config.augmentation = AugmentConfig(**mira_aug)
         if export_data:
             config.export = ExportConfig(**export_data)
         return config
@@ -170,9 +175,9 @@ class TrainingPipeline:
             metrics["map"] = getattr(results.box, "map", 0.0)
 
         exported = self.export_model(
-            str(best_path) if Path(best_path).exists() else str(last_path),
             config.export.formats,
             config.dataset,
+            trained_model=model,
         )
 
         return TrainResult(
@@ -185,10 +190,15 @@ class TrainingPipeline:
             exported=exported,
         )
 
-    def export_model(self, model_path: str, formats: list[str], dataset: str = "") -> list[str]:
+    def export_model(self, formats: list[str], dataset: str = "", model_path: str | None = None, trained_model: Any = None) -> list[str]:
         from ultralytics import YOLO
 
-        model = YOLO(model_path)
+        if trained_model is not None:
+            model = trained_model
+        elif model_path:
+            model = YOLO(model_path)
+        else:
+            raise ValueError("Provide either trained_model or model_path")
         exported = []
         for fmt in formats:
             fmt_lower = fmt.lower().replace("-", "_")
@@ -198,6 +208,8 @@ class TrainingPipeline:
                 out = model.export(format="tflite", int8=False)
             elif fmt_lower == "onnx":
                 out = model.export(format="onnx")
+            elif fmt_lower == "tensorrt":
+                out = model.export(format="engine", half=True, imgsz=640, workspace=4)
             else:
                 continue
             exported.append(str(out))

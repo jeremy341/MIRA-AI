@@ -662,10 +662,14 @@ MIRA-AI/
 │   ├── field_benchmark.py          # Real-world model comparison
 │   ├── logger.py                   # Singleton logger
 │   ├── model_picker.py             # Interactive arrow-key model selector
-│   ├── dashboard_flask/            # Flask+SocketIO web control center
-│   │   ├── app.py                  # Backend (camera, inference, SocketIO events)
+│   ├── dashboard/                   # FastAPI+WebSocket web control center
+│   │   ├── main.py                  # FastAPI server (REST + WebSocket)
+│   │   ├── camera_service.py        # Camera + YOLO inference management
+│   │   ├── websocket_handler.py     # WebSocket video streaming
+│   │   ├── models.py                # Pydantic data models
+│   │   ├── requirements.txt         # Dashboard dependencies
 │   │   └── templates/
-│   │       └── index.html          # B&W themed frontend (Tailwind + Chart.js)
+│   │       └── dashboard.html       # Ultralytics-themed frontend (2964 lines)
 │   └── pipeline/                   # Research pipeline framework
 │       ├── __init__.py             # Public API exports
 │       ├── registry.py             # Plugin registry: @register_command, @register_dataset_source

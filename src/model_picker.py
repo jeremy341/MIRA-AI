@@ -13,15 +13,28 @@ def _getch():
         if ch == b"\xe0":
             second = msvcrt.getch()
             return {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second, "")
+        if ch == b"\xe0":
+            # Function key sequence - consume remaining bytes
+            try:
+                while msvcrt.kbhit():
+                    msvcrt.getch()
+            except Exception:
+                pass
+            return ""
         if ch == b"\r":
             return "ENTER"
         if ch == b"\x1b":
             return "ESC"
         if ch == b"\x03":
             return "CTRL_C"
-        return ch.decode()
+        try:
+            return ch.decode("utf-8")
+        except UnicodeDecodeError:
+            return ""
+    # Unix: read up to 3 bytes for longer escape sequences
     import termios
     import tty
+    import select
 
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
@@ -29,8 +42,19 @@ def _getch():
         tty.setraw(fd)
         ch = sys.stdin.read(1)
         if ch == "\x1b":
-            nxt = sys.stdin.read(2)
-            return {"[A": "UP", "[B": "DOWN", "[C": "RIGHT", "[D": "LEFT"}.get(nxt, "ESC")
+            # Check if more bytes available (non-blocking)
+            rest = ""
+            while select.select([sys.stdin], [], [], 0.01)[0]:
+                rest += sys.stdin.read(1)
+            if rest == "[A":
+                return "UP"
+            if rest == "[B":
+                return "DOWN"
+            if rest == "[C":
+                return "RIGHT"
+            if rest == "[D":
+                return "LEFT"
+            return "ESC"  # Unknown escape sequence
         if ch == "\r":
             return "ENTER"
         if ch == "\x03":
