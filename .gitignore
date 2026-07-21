@@ -14,6 +14,7 @@ __pycache__/
 *.pyo
 *.egg-info/
 .pytest_cache/
+.mypy_cache/
 .hypothesis/
 *.cache
 
@@ -39,18 +40,8 @@ results/**/*.pt
 results/**/*.onnx
 results/**/*.tflite
 
-# --- Latex build artifacts ---
-latex/*.aux
-latex/*.bbl
-latex/*.blg
-latex/*.bcf
-latex/*.fdb_latexmk
-latex/*.fls
-latex/*.log
-latex/*.run.xml
-latex/*.synctex.gz
-latex/*.toc
-latex/main.bbl-SAVE-ERROR
+# --- Latex (JUFO report, not part of the package) ---
+latex/
 
 # --- CLAUDE AI context (private) ---
 CLAUDE/
@@ -86,3 +77,9 @@ runs/
 secrets.*
 credentials.*
 config.local.*
+
+# --- Dev / setup files (not for distribution) ---
+.clinerules
+setup/
+dashboard_output/
+dashboard_output_backup/
