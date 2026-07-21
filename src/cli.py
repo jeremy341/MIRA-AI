@@ -1,6 +1,3 @@
-import argparse
-import pathlib
-import subprocess
 import sys
 from pathlib import Path
 
@@ -8,21 +5,8 @@ _src_dir = str(Path(__file__).resolve().parent)
 if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
-_scripts_dir = str(Path(_src_dir).parent / "scripts")
-if _scripts_dir not in sys.path:
-    sys.path.insert(0, _scripts_dir)
-
 from version import __version__
-from config import (
-    DETECTION_DIR,
-    REF_DIR,
-    REJECT_THRESHOLD,
-    ROOT_DIR,
-    SCRIPT_DIR,
-    get_detection_models,
-    get_tflite_imgsz,
-    resolve_safe_path,
-)
+from config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
 from exceptions import ConfigError, MiraError
 from logger import get_logger
 from model_picker import pick_model
@@ -30,22 +14,6 @@ from pipeline.registry import get_commands, register_command
 from pipeline.models import ModelRegistry
 
 logger = get_logger(__name__)
-
-
-def run_script(script_path, args_list=None, timeout: int | None = None):
-    if not script_path.exists():
-        raise FileNotFoundError(f"Script not found at {script_path}")
-    cmd = [sys.executable, str(script_path)]
-    if args_list:
-        cmd.extend(args_list)
-    try:
-        subprocess.run(cmd, check=True, timeout=timeout)
-    except subprocess.TimeoutExpired:
-        logger.error(f"Script timed out after {timeout}s: {script_path}")
-        raise
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Script failed with exit code {e.returncode}: {script_path}")
-        raise
 
 
 def resolve_detection_data_yaml(explicit_path=None):
@@ -86,68 +54,6 @@ def _pick_model_interactive(title="Available models"):
     labels = {m["name"]: m["label"] for m in models}
     return pick_model([m["name"] for m in models], labels=labels, title=title)
 
-
-# ── Legacy / Script Commands ─────────────────────────────────────────
-
-
-@register_command("data-build", "[DEPRECATED] Use mira merge instead")
-def cmd_data_build(args):
-    print("[DEPRECATED] This command is no longer available.")
-    print("Use 'mira merge' to merge dataset sources.")
-    print("Example: mira merge --sources taco_trashnet roboflow warp --output datasets/mira_merged")
-
-
-@register_command("data-viz", "Visualize dataset distribution and sample grids")
-def cmd_data_viz(args):
-    run_script(ROOT_DIR / "scripts" / "visualize_classifier_dataset.py")
-
-
-@register_command("train-baseline", "Train baseline CNN classification model (EXP-001)")
-def cmd_train_baseline(args):
-    run_script(REF_DIR / "train_classifier_baseline.py")
-
-
-@register_command("train-transfer", "Train frozen MobileNetV2 classification model (EXP-002)")
-def cmd_train_transfer(args):
-    run_script(REF_DIR / "train_classifier_transfer.py")
-
-
-@register_command("train-tune", "Train fine-tuned MobileNetV2 classification model (EXP-003)")
-def cmd_train_tune(args):
-    run_script(REF_DIR / "train_classifier_finetune.py")
-
-
-@register_command("train-detection", "Initiate local YOLOv8 training pipeline (legacy)")
-def cmd_train_detection(args):
-    run_script(REF_DIR / "train_detector.py")
-
-
-@register_command("quant-class", "Execute Keras post-training quantization (EXP-004)")
-def cmd_quant_class(args):
-    run_script(REF_DIR / "quantize_classifier.py")
-
-
-@register_command("quant-yolo", "Execute YOLOv8 quantization")
-def cmd_quant_yolo(args):
-    run_script(REF_DIR / "quantize_detector.py")
-
-
-@register_command("field-bench", "Field benchmark: capture real images, test all models, compare accuracy")
-def cmd_field_bench(args):
-    run_script(SCRIPT_DIR / "field_benchmark.py")
-
-
-# ── Commands with arguments ──────────────────────────────────────────
-
-
-def _add_eval_class_args(parser):
-    parser.add_argument("--model", type=str, required=True, help="Model filename in /models")
-    parser.add_argument("--exp", type=str, required=True, help="Experiment folder name")
-
-
-@register_command("eval-class", "Evaluate classification models (EXP-001 - EXP-004)", add_args=_add_eval_class_args)
-def cmd_eval_class(args):
-    run_script(REF_DIR / "evaluate_classifier.py", ["--model", args.model, "--exp", args.exp])
 
 
 def _add_eval_yolo_args(parser):
