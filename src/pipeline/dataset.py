@@ -22,7 +22,6 @@ Usage:
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,6 +38,7 @@ def _import_merge_utils():
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
     import merge_utils
+
     return merge_utils
 
 

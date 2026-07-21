@@ -159,10 +159,12 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
                     y1 = min(ys) * img_h
                     x2 = max(xs) * img_w
                     y2 = max(ys) * img_h
-                objects.append({
-                    "class_id": cls_id,
-                    "bbox": [x1, y1, x2, y2],
-                })
+                objects.append(
+                    {
+                        "class_id": cls_id,
+                        "bbox": [x1, y1, x2, y2],
+                    }
+                )
         samples.append((img_path, objects))
 
     print(
@@ -172,21 +174,11 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
     return samples
 
 
-def xywh_to_xyxy(box: list[float], img_w: int, img_h: int) -> list[float]:
-    """Convert normalized xywh to xyxy in pixel coords."""
-    xc, yc, w, h = box
-    x1 = (xc - w / 2) * img_w
-    y1 = (yc - h / 2) * img_h
-    x2 = (xc + w / 2) * img_w
-    y2 = (yc + h / 2) * img_h
-    return [x1, y1, x2, y2]
-
-
 def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: float = 0.5) -> float:
     """Compute mAP at given IoU threshold using 101-point interpolation."""
     all_detections: list[dict] = []
     num_gt = 0
-    for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts)):
+    for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts, strict=True)):
         num_gt += len(img_gts)
         for d in img_preds:
             d["img_idx"] = img_idx
@@ -246,7 +238,14 @@ class ModelBenchmark:
         self.samples = load_yolo_dataset(self.dataset) if self.dataset else []
 
     @classmethod
-    def from_registry(cls, model_names: list[str], dataset_path: Path | str, conf: float = 0.5, iou: float = 0.7, max_images: int | None = None) -> ModelBenchmark:
+    def from_registry(
+        cls,
+        model_names: list[str],
+        dataset_path: Path | str,
+        conf: float = 0.5,
+        iou: float = 0.7,
+        max_images: int | None = None,
+    ) -> ModelBenchmark:
         """Create benchmark from model names using ModelRegistry."""
         registry = ModelRegistry()
         registry.discover()
@@ -281,11 +280,13 @@ class ModelBenchmark:
                     img_preds: list[dict] = []
                     for det in result.detections:
                         total_detections += 1
-                        img_preds.append({
-                            "class_id": det.class_id,
-                            "confidence": det.confidence,
-                            "bbox_pixel": list(det.bbox),
-                        })
+                        img_preds.append(
+                            {
+                                "class_id": det.class_id,
+                                "confidence": det.confidence,
+                                "bbox_pixel": list(det.bbox),
+                            }
+                        )
 
                     # IoU-based per-class matching (GT bbox already in xyxy pixel)
                     gt_boxes = [obj["bbox"] for obj in gt_objects]
@@ -345,7 +346,9 @@ class ModelBenchmark:
             )
 
             map50 = compute_map(all_preds, all_gts, iou_thresh=0.5)
-            map50_95 = float(np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.96, 0.05)]))
+            map50_95 = float(
+                np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.96, 0.05)])
+            )
 
             results.append(
                 BenchmarkResult(

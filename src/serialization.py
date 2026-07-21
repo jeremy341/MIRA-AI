@@ -6,16 +6,14 @@ and experiment metadata capture.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import platform
 import subprocess
 import sys
 import tempfile
-import warnings
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -113,55 +111,18 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
     return path
 
 
-def load_result(path: str | Path) -> dict:
-    """Load a serialized result from JSON or YAML file.
-
-    Performs basic schema validation and warns on version mismatch.
-    """
-    path = Path(path)
-    with open(path, encoding="utf-8") as f:
-        if path.suffix in (".yaml", ".yml"):
-            data = yaml.safe_load(f)
-        else:
-            data = json.load(f)
-
-    if not isinstance(data, dict):
-        raise ValueError(f"Expected dict at {path}, got {type(data).__name__}")
-
-    schema_version = data.get("__schema_version__", "unknown")
-    if schema_version != CURRENT_SCHEMA_VERSION:
-        warnings.warn(
-            f"Schema version mismatch: file has {schema_version}, "
-            f"expected {CURRENT_SCHEMA_VERSION}. Backward compatibility not guaranteed.",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    return data
-
-
 def serialize_config(config: Any, path: str | Path) -> Path:
     """Serialize configuration to YAML for reproducibility."""
     path = Path(path)
     data = _dataclass_to_dict(config)
     if isinstance(data, dict):
         data["__schema_version__"] = CURRENT_SCHEMA_VERSION
-        data["__serialized_at__"] = datetime.now(timezone.utc).isoformat()
+        data["__serialized_at__"] = datetime.now(UTC).isoformat()
 
     _backup_if_exists(path)
     _atomic_write(path, yaml.dump(data, default_flow_style=False, sort_keys=False))
     logger.debug(f"Serialized config to {path}")
     return path
-
-
-def load_config(path: str | Path) -> dict:
-    """Load a serialized config from YAML file."""
-    path = Path(path)
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    if not isinstance(data, dict):
-        raise ValueError(f"Expected dict at {path}, got {type(data).__name__}")
-    return data
 
 
 def _detect_git_sha() -> str | None:
@@ -209,18 +170,6 @@ def _has_uncommitted_changes() -> bool:
     return False
 
 
-def compute_file_checksum(path: str | Path, algorithm: str = "sha256") -> str:
-    """Compute a checksum for a file."""
-    path = Path(path)
-    if not path.exists():
-        return ""
-    hasher = hashlib.new(algorithm)
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            hasher.update(chunk)
-    return hasher.hexdigest()
-
-
 @dataclass
 class ExperimentRecord:
     """Standard experiment record with reproducibility metadata."""
@@ -230,13 +179,15 @@ class ExperimentRecord:
     git_sha: str | None = None
     uncommitted_changes: bool = False
     python_version: str = field(default_factory=lambda: sys.version)
-    platform: dict[str, str] = field(default_factory=lambda: {
-        "system": platform.system(),
-        "release": platform.release(),
-        "machine": platform.machine(),
-        "processor": platform.processor(),
-    })
-    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    platform: dict[str, str] = field(
+        default_factory=lambda: {
+            "system": platform.system(),
+            "release": platform.release(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+        }
+    )
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     schema_version: str = CURRENT_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:

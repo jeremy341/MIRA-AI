@@ -55,9 +55,7 @@ def _validate_project_config(cfg: dict[str, Any]) -> list[str]:
         if count is not None and (not isinstance(count, int) or count < 1):
             errors.append("'classes.count' must be a positive integer")
         if names and count is not None and len(names) != count:
-            errors.append(
-                f"'classes.count' ({count}) does not match number of names ({len(names)})"
-            )
+            errors.append(f"'classes.count' ({count}) does not match number of names ({len(names)})")
 
     # Training validation
     training = cfg.get("training", {})
@@ -98,15 +96,10 @@ _CONFIG_ERRORS = _validate_project_config(PROJECT_CONFIG)
 if _CONFIG_ERRORS:
     for err in _CONFIG_ERRORS:
         logger.error(f"Config validation error: {err}")
-    raise ConfigError(
-        f"mira.yaml validation failed with {_CONFIG_ERRORS} error(s). "
-        f"See above for details."
-    )
+    raise ConfigError(f"mira.yaml validation failed with {_CONFIG_ERRORS} error(s). See above for details.")
 
 # Directory paths (derived from config)
-REF_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("reference", "reference")
 MODELS_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("models", "models")
-CLASSIFIER_DIR = MODELS_DIR / "classifier"
 DETECTION_DIR = MODELS_DIR / "detection"
 DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
 BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
@@ -232,7 +225,5 @@ def resolve_safe_path(user_path: str | pathlib.Path, base_dir: pathlib.Path | No
     try:
         path.relative_to(base.resolve())
     except ValueError:
-        raise ConfigError(
-            f"Path traversal detected: '{user_path}' resolves outside the project directory."
-        )
+        raise ConfigError(f"Path traversal detected: '{user_path}' resolves outside the project directory.") from None
     return path

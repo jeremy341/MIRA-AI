@@ -88,8 +88,7 @@ class TrainConfig:
         errors = config.validate()
         if errors:
             raise ConfigError(
-                f"Validation failed for '{path}' with {len(errors)} error(s):\n  - "
-                + "\n  - ".join(errors)
+                f"Validation failed for '{path}' with {len(errors)} error(s):\n  - " + "\n  - ".join(errors)
             )
 
         return config
@@ -110,8 +109,7 @@ class TrainingStrategy(ABC):
     """Abstract strategy for training a model type."""
 
     @abstractmethod
-    def train(self, config: TrainConfig) -> TrainResult:
-        ...
+    def train(self, config: TrainConfig) -> TrainResult: ...
 
 
 class YOLOStrategy(TrainingStrategy):
@@ -230,17 +228,19 @@ class ClassifierStrategy(TrainingStrategy):
                 out = keras.layers.Dense(num_classes, activation="softmax")(x)
                 model = keras.Model(inputs=base.input, outputs=out)
             else:
-                model = keras.Sequential([
-                    keras.layers.Input(shape=(config.imgsz, config.imgsz, 3)),
-                    keras.layers.Rescaling(1.0 / 255),
-                    keras.layers.Conv2D(32, 3, activation="relu"),
-                    keras.layers.MaxPooling2D(),
-                    keras.layers.Conv2D(64, 3, activation="relu"),
-                    keras.layers.MaxPooling2D(),
-                    keras.layers.Flatten(),
-                    keras.layers.Dense(128, activation="relu"),
-                    keras.layers.Dense(num_classes, activation="softmax"),
-                ])
+                model = keras.Sequential(
+                    [
+                        keras.layers.Input(shape=(config.imgsz, config.imgsz, 3)),
+                        keras.layers.Rescaling(1.0 / 255),
+                        keras.layers.Conv2D(32, 3, activation="relu"),
+                        keras.layers.MaxPooling2D(),
+                        keras.layers.Conv2D(64, 3, activation="relu"),
+                        keras.layers.MaxPooling2D(),
+                        keras.layers.Flatten(),
+                        keras.layers.Dense(128, activation="relu"),
+                        keras.layers.Dense(num_classes, activation="softmax"),
+                    ]
+                )
 
             model.compile(
                 optimizer=keras.optimizers.Adam(learning_rate=config.lr0),

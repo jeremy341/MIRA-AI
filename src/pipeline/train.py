@@ -12,12 +12,10 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-import yaml
 
 from exceptions import PipelineError
 from logger import logger
 from pipeline.strategies import TrainConfig, TrainResult, get_strategy, register_strategy
-from serialization import serialize_config, serialize_result, experiment_metadata
 
 
 class TrainingPipeline:
@@ -52,11 +50,17 @@ class TrainingPipeline:
         for fmt in formats:
             fmt_lower = fmt.lower().replace("-", "_")
             try:
-                out = model.export(format="tflite", int8=True) if fmt_lower == "tflite_int8" else \
-                      model.export(format="tflite", int8=False) if fmt_lower == "tflite_fp32" else \
-                      model.export(format="onnx") if fmt_lower == "onnx" else \
-                      model.export(format="engine", half=True, imgsz=640, workspace=4) if fmt_lower == "tensorrt" else \
-                      None
+                out = (
+                    model.export(format="tflite", int8=True)
+                    if fmt_lower == "tflite_int8"
+                    else model.export(format="tflite", int8=False)
+                    if fmt_lower == "tflite_fp32"
+                    else model.export(format="onnx")
+                    if fmt_lower == "onnx"
+                    else model.export(format="engine", half=True, imgsz=640, workspace=4)
+                    if fmt_lower == "tensorrt"
+                    else None
+                )
             except Exception as e:
                 logger.error(f"Export to format '{fmt}' failed: {e}")
                 raise PipelineError(f"Model export to format '{fmt}' failed: {e}") from e
@@ -84,7 +88,9 @@ class TrainingPipeline:
         logger.info(f"Experiment saved to {results_dir}")
         return result
 
-    def train_classifier(self, config: TrainConfig, base_model: str = "mobilenetv2", fine_tune: bool = False) -> TrainResult:
+    def train_classifier(
+        self, config: TrainConfig, base_model: str = "mobilenetv2", fine_tune: bool = False
+    ) -> TrainResult:
         config.extra["base_model"] = base_model
         config.extra["fine_tune"] = fine_tune
 

@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 
 
-
 def draw_boxes(
     frame: np.ndarray,
     results,

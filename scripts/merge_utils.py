@@ -1,8 +1,7 @@
 """Shared utilities for MIRA dataset merging.
 
-Provides generic remapping, stats printing, YAML writing, and WaRP dataset
-support used by merge_dataset.py and the individual merge_dataset_model*.py
-wrappers.
+Provides generic remapping, stats printing, and YAML writing used by
+merge_dataset.py and the individual merge_dataset_model*.py wrappers.
 """
 
 import sys
@@ -11,7 +10,6 @@ import random
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATASETS = ROOT / "datasets"
 
 _src_dir = str(ROOT / "src")
 if _src_dir not in sys.path:
@@ -20,61 +18,6 @@ from config import CLASS_NAMES as _CLASS_NAMES_LIST, NUM_CLASSES
 
 CLASS_NAMES = {i: n for i, n in enumerate(_CLASS_NAMES_LIST)}
 MIRA_CLASSES = list(CLASS_NAMES.values())
-
-# WaRP 28 classes (0-indexed) -> 5 MIRA classes
-# Based on datasets/WaRP/Warp-D/classes.txt
-# 0:glass, 1:metal, 2:paper, 3:plastic, 4:trash
-WARP_MAPPING = {
-    # Glass
-    1: 0,
-    2: 0,
-    17: 0,
-    18: 0,
-    25: 0,
-    26: 0,
-    27: 0,
-    # Metal
-    8: 1,
-    # Paper
-    9: 2,
-    10: 2,
-    13: 2,
-    # Plastic
-    0: 3,
-    3: 3,
-    4: 3,
-    5: 3,
-    6: 3,
-    7: 3,
-    11: 3,
-    12: 3,
-    14: 3,
-    15: 3,
-    16: 3,
-    19: 3,
-    20: 3,
-    21: 3,
-    22: 3,
-    23: 3,
-    24: 3,
-    # Trash: none in this dataset
-}
-
-WARP_DIR = DATASETS / "mira_warp" / "Warp-D"
-
-
-def create_warp_split(val_ratio=0.2, seed=42):
-    """Create 80/20 train/val split from WaRP train (no valid/ exists).
-
-    Returns:
-        tuple: (train_stems, val_stems) — list of image stems for each split
-    """
-    warp_train_imgs = WARP_DIR / "train" / "images"
-    all_files = sorted([f.stem for f in warp_train_imgs.glob("*")])
-    random.seed(seed)
-    random.shuffle(all_files)
-    split_idx = int(len(all_files) * (1 - val_ratio))
-    return all_files[:split_idx], all_files[split_idx:]
 
 
 def remap_label_file(lbl_file, mapping):

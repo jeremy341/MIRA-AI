@@ -48,9 +48,7 @@ class _TextFormatter(logging.Formatter):
 
 def _make_handler(stream=None) -> logging.Handler:
     handler: logging.Handler = logging.StreamHandler(stream or sys.stdout)
-    formatter: logging.Formatter = (
-        _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
-    )
+    formatter: logging.Formatter = _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
     handler.setFormatter(formatter)
     return handler
 
@@ -58,9 +56,7 @@ def _make_handler(stream=None) -> logging.Handler:
 def _add_file_handler(logger: logging.Logger, path: str) -> None:
     """Add a rotating file handler to the logger."""
     handler = RotatingFileHandler(path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
-    formatter: logging.Formatter = (
-        _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
-    )
+    formatter: logging.Formatter = _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -84,18 +80,6 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
     # Prevent propagation to root logger to avoid duplicate output
     logger.propagate = False
     return logger
-
-
-def log_context(logger: logging.Logger, **kwargs: Any) -> None:
-    """Attach contextual key-value pairs to the next log record.
-
-    Usage:
-        log_context(logger, experiment="exp014", epoch=50)
-        logger.info("Training epoch complete")
-    """
-    # This is a convenience wrapper; real contextual logging would use
-    # logging adapters or filters. For now we store on the logger instance.
-    logger.context = kwargs  # type: ignore[attr-defined]
 
 
 # Global root logger for backward compatibility
