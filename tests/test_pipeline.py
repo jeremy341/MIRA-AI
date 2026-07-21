@@ -61,18 +61,6 @@ def test_register_command():
     assert commands["test_cmd_pytest"].help_text == "A test command"
 
 
-def test_register_dataset_source():
-    from src.pipeline.registry import get_dataset_sources, register_dataset_source
-
-    @register_dataset_source("test_src_pytest", "Test Source")
-    def _dummy_loader(output_dir, dry_run=False):
-        return 0, 0
-
-    sources = get_dataset_sources()
-    assert "test_src_pytest" in sources
-    assert sources["test_src_pytest"].name == "Test Source"
-
-
 # ── Dataset Registry tests ──────────────────────────────────────────
 
 

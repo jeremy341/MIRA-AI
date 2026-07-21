@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -17,7 +16,6 @@ from hardware import (
     AbstractCamera,
     USBCamera,
     IPCamera,
-    create_camera,
     _FrameBuffer,
 )
 
@@ -37,6 +35,7 @@ def test_frame_buffer_update_and_get():
 def test_frame_buffer_get_returns_copy():
     buf = _FrameBuffer()
     import numpy as np
+
     arr = np.array([1, 2, 3])
     buf.update(True, arr)
     _, frame = buf.get()
@@ -62,54 +61,6 @@ def test_frame_buffer_stop():
     assert buf.running
     buf.stop()
     assert not buf.running
-
-
-# ── create_camera factory tests ──────────────────────────────────────
-
-
-def test_create_camera_int():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
-        mock_instance = MagicMock()
-        mock_instance.isOpened.return_value = True
-        mock_cap.return_value = mock_instance
-        cam = create_camera(0)
-        assert isinstance(cam, USBCamera)
-        cam.release()
-
-
-def test_create_camera_int_str():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
-        mock_instance = MagicMock()
-        mock_instance.isOpened.return_value = True
-        mock_cap.return_value = mock_instance
-        cam = create_camera("1")
-        assert isinstance(cam, USBCamera)
-        cam.release()
-
-
-def test_create_camera_rtsp():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
-        mock_instance = MagicMock()
-        mock_instance.isOpened.return_value = True
-        mock_cap.return_value = mock_instance
-        cam = create_camera("rtsp://example.com/stream")
-        assert isinstance(cam, IPCamera)
-        cam.release()
-
-
-def test_create_camera_http():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
-        mock_instance = MagicMock()
-        mock_instance.isOpened.return_value = True
-        mock_cap.return_value = mock_instance
-        cam = create_camera("http://example.com/stream")
-        assert isinstance(cam, IPCamera)
-        cam.release()
-
-
-def test_create_camera_unknown():
-    with pytest.raises(CameraError):
-        create_camera("/dev/random")
 
 
 # ── USBCamera tests ──────────────────────────────────────────────────

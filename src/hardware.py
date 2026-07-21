@@ -194,7 +194,7 @@ class IPCamera(AbstractCamera):
                 continue
             if not ret:
                 # Attempt reconnection
-                logger.warning(f"IP camera stream lost, attempting reconnection...")
+                logger.warning("IP camera stream lost, attempting reconnection...")
                 for attempt in range(self.RECONNECT_ATTEMPTS):
                     time.sleep(self.RECONNECT_DELAY_SECONDS)
                     self.cap = cv2.VideoCapture(self._rtsp_url)
@@ -234,21 +234,3 @@ class IPCamera(AbstractCamera):
     @property
     def is_frozen(self) -> bool:
         return self._buffer.is_frozen
-
-
-def create_camera(source: str | int = 0, width: int = 640, height: int = 360) -> AbstractCamera:
-    """Factory to create the appropriate camera type.
-
-    Args:
-        source: Camera index (int) for USB, or RTSP URL (str) for IP.
-        width: Desired capture width.
-        height: Desired capture height.
-
-    Returns:
-        A configured AbstractCamera implementation.
-    """
-    if isinstance(source, int) or (isinstance(source, str) and source.isdigit()):
-        return USBCamera(int(source) if isinstance(source, str) else source, width, height)
-    if isinstance(source, str) and (source.startswith("rtsp://") or source.startswith("http://")):
-        return IPCamera(source, width, height)
-    raise CameraError(f"Unknown camera source: {source}")

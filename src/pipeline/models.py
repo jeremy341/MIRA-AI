@@ -118,7 +118,9 @@ class DetectionModel(ABC):
         iou: float = 0.45,
     ) -> InferenceResult: ...
 
-    def _parse_yolo_results(self, results, latency_ms: float, image: str | Path, class_names: list[str] | None = None) -> InferenceResult:
+    def _parse_yolo_results(
+        self, results, latency_ms: float, image: str | Path, class_names: list[str] | None = None
+    ) -> InferenceResult:
         names = class_names or CLASS_NAMES
         detections: list[Detection] = []
         boxes = results[0].boxes
@@ -156,26 +158,29 @@ class YOLOAdapter(DetectionModel):
         from ultralytics import YOLO
         from ultralytics.nn.autobackend import AutoBackend
         from ultralytics.utils.torch_utils import select_device
+
         self._model = YOLO(str(self.path))
-        suffix = self.path.suffix.lower()
         if callable(self._model.model):
             self._backend = self._model.model
-            if hasattr(self._backend, 'eval'):
+            if hasattr(self._backend, "eval"):
                 self._backend.eval()
         else:
             self._backend = AutoBackend(
-                model=str(self.path), device=select_device('cpu'),
-                dnn=False, data=None, fp16=False,
+                model=str(self.path),
+                device=select_device("cpu"),
+                dnn=False,
+                data=None,
+                fp16=False,
             )
-        self._names = self._model.names if hasattr(self._model, 'names') else {}
+        self._names = self._model.names if hasattr(self._model, "names") else {}
         if callable(self._model.model):
-            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, 'args') else 640
+            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, "args") else 640
         else:
             self._imgsz = 640
-            if hasattr(self._backend, 'backend') and hasattr(self._backend.backend, 'get_input_details'):
+            if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "get_input_details"):
                 inp = self._backend.backend.get_input_details()
                 self._imgsz = inp[0]["shape"][-1] if inp else 640
-            elif hasattr(self._backend, 'backend') and hasattr(self._backend.backend, 'session'):
+            elif hasattr(self._backend, "backend") and hasattr(self._backend.backend, "session"):
                 inp = self._backend.backend.session.get_inputs()
                 self._imgsz = inp[0].shape[-1] if inp else 640
         self._loaded = True
@@ -200,9 +205,7 @@ class YOLOAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = nms.non_max_suppression(
-            raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True
-        )[0]
+        preds = nms.non_max_suppression(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
 
         detections: list[Detection] = []
         if len(preds) > 0:
@@ -233,18 +236,22 @@ class YOLOTFLiteAdapter(DetectionModel):
         from ultralytics import YOLO
         from ultralytics.nn.autobackend import AutoBackend
         from ultralytics.utils.torch_utils import select_device
+
         self._model = YOLO(str(self.path), task="detect")
         self._backend = AutoBackend(
-            model=str(self.path), device=select_device('cpu'),
-            dnn=False, data=None, fp16=False,
+            model=str(self.path),
+            device=select_device("cpu"),
+            dnn=False,
+            data=None,
+            fp16=False,
         )
-        self._names = self._model.names if hasattr(self._model, 'names') else {}
+        self._names = self._model.names if hasattr(self._model, "names") else {}
         # Detect correct input size from model
-        if hasattr(self._backend, 'backend') and hasattr(self._backend.backend, 'interpreter'):
+        if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "interpreter"):
             details = self._backend.backend.interpreter.get_input_details()
             self._imgsz = details[0]["shape"][-1]  # H or W dimension
         else:
-            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, 'args') else 640
+            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, "args") else 640
         self._loaded = True
 
     def predict(
@@ -311,11 +318,13 @@ class ThirdPartyAdapter(DetectionModel):
 
     def load(self) -> None:
         import logging
+
         log = logging.getLogger(__name__)
         suffix = self.path.suffix.lower()
         if suffix in (".tflite", ".onnx", ".pt"):
             try:
                 from ultralytics import YOLO
+
                 task = "detect" if suffix == ".tflite" else None
                 self._model = YOLO(str(self.path), task=task)
                 self._loaded = True
@@ -327,7 +336,8 @@ class ThirdPartyAdapter(DetectionModel):
             log.warning(
                 "ThirdPartyAdapter cannot auto-load %s (suffix %s). "
                 "Subclass ThirdPartyAdapter and override load()/predict().",
-                self.path.name, suffix,
+                self.path.name,
+                suffix,
             )
         self._loaded = False
 
@@ -382,6 +392,7 @@ class ThirdPartyAdapter(DetectionModel):
             )
         except Exception as exc:
             import logging
+
             logging.getLogger(__name__).warning("ThirdPartyAdapter.predict failed: %s", exc)
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
@@ -448,8 +459,10 @@ class ModelRegistry:
                     continue
                 label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
-                    "path": p, "model_type": "yolo_pt",
-                    "label": label, "is_third_party": False,
+                    "path": p,
+                    "model_type": "yolo_pt",
+                    "label": label,
+                    "is_third_party": False,
                 }
             elif p.suffix == ".tflite":
                 base_name = stem.replace("_int8", "").replace("_fp32", "")
@@ -459,14 +472,17 @@ class ModelRegistry:
                     continue
                 label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
-                    "path": p, "model_type": "yolo_tflite",
-                    "label": label, "is_third_party": False,
+                    "path": p,
+                    "model_type": "yolo_tflite",
+                    "label": label,
+                    "is_third_party": False,
                 }
 
         return len(self._models)
 
     def _load_sidecar_meta(self, yaml_path: Path) -> dict | None:
         import yaml
+
         try:
             with open(yaml_path) as f:
                 data = yaml.safe_load(f)
@@ -478,6 +494,7 @@ class ModelRegistry:
 
     def _load_descriptor(self, yaml_path: Path) -> bool:
         import yaml
+
         try:
             with open(yaml_path) as f:
                 data = yaml.safe_load(f)
@@ -520,6 +537,7 @@ class ModelRegistry:
                 return round(p.stat().st_size / 1_048_576, 1) if p.exists() else None
             except (OSError, FileNotFoundError):
                 return None
+
         return [
             {
                 "name": name,
@@ -548,13 +566,15 @@ class ModelRegistry:
 
         if info.get("is_third_party"):
             adapter = ThirdPartyAdapter(
-                path=path, name=name,
+                path=path,
+                name=name,
                 model_type=model_type,
                 class_names=info.get("class_names"),
             )
         else:
             try:
                 from pipeline.registry import get_model_adapters
+
                 adapters = get_model_adapters()
                 if model_type in adapters:
                     cls = adapters[model_type].adapter_class
@@ -567,7 +587,7 @@ class ModelRegistry:
                 elif model_type == "yolo_tflite":
                     adapter = YOLOTFLiteAdapter(path=path, name=name)
                 else:
-                    raise ValueError(f"Unknown model_type '{model_type}' for model '{name}'")
+                    raise ValueError(f"Unknown model_type '{model_type}' for model '{name}'") from None
 
         adapter.load()
         self._adapters[name] = adapter

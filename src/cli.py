@@ -1,3 +1,4 @@
+import argparse
 import sys
 from pathlib import Path
 
@@ -41,8 +42,7 @@ def resolve_detection_data_yaml(explicit_path=None):
         if candidate.exists():
             return candidate
     raise FileNotFoundError(
-        "Could not find a YOLO dataset YAML. "
-        "Please specify one with --data or generate a dataset using `mira merge`."
+        "Could not find a YOLO dataset YAML. Please specify one with --data or generate a dataset using `mira merge`."
     )
 
 
@@ -53,7 +53,6 @@ def _pick_model_interactive(title="Available models"):
     models = registry.list_models()
     labels = {m["name"]: m["label"] for m in models}
     return pick_model([m["name"] for m in models], labels=labels, title=title)
-
 
 
 def _add_eval_yolo_args(parser):
@@ -187,15 +186,24 @@ def _add_train_args(parser):
     parser.add_argument("--batch-size", type=int, default=None, help="Batch size (default: 32).")
     parser.add_argument("--name", type=str, default=None, help="Experiment/run name (default: exp).")
     parser.add_argument("--device", type=str, default=None, help="CUDA device or 'cpu' (default: 0).")
-    parser.add_argument("--data-dir", type=str, default=None, help="Data directory for classifier training (default: data/classes).")
-    parser.add_argument("--task", type=str, default="detection", choices=["detection", "classifier"],
-                        help="Training task: detection (YOLO) or classifier (MobileNetV2).")
-    parser.add_argument("--base-model", type=str, default="mobilenetv2",
-                        help="Base model for classifier training (mobilenetv2, custom_cnn).")
-    parser.add_argument("--fine-tune", action="store_true",
-                        help="Enable fine-tuning for classifier training.")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Validate configuration without starting training.")
+    parser.add_argument(
+        "--data-dir", type=str, default=None, help="Data directory for classifier training (default: data/classes)."
+    )
+    parser.add_argument(
+        "--task",
+        type=str,
+        default="detection",
+        choices=["detection", "classifier"],
+        help="Training task: detection (YOLO) or classifier (MobileNetV2).",
+    )
+    parser.add_argument(
+        "--base-model",
+        type=str,
+        default="mobilenetv2",
+        help="Base model for classifier training (mobilenetv2, custom_cnn).",
+    )
+    parser.add_argument("--fine-tune", action="store_true", help="Enable fine-tuning for classifier training.")
+    parser.add_argument("--dry-run", action="store_true", help="Validate configuration without starting training.")
 
 
 @register_command("train", "Train a YOLO detection model via the new pipeline", add_args=_add_train_args)
@@ -370,7 +378,7 @@ def cmd_diagnostics(args):
     from deploy import detect_hardware, check_environment, suggest_model
 
     info = detect_hardware()
-    print(f"\n  Hardware Diagnostics")
+    print("\n  Hardware Diagnostics")
     print(f"  {'=' * 50}")
     print(f"  Platform:     {info.platform} ({info.arch})")
     print(f"  Python:       {info.python_version.split()[0]}")
@@ -379,7 +387,7 @@ def cmd_diagnostics(args):
     if info.is_raspberry_pi:
         print(f"  Model:        Raspberry Pi ({info.pi_model})")
     if info.is_jetson:
-        print(f"  Model:        NVIDIA Jetson")
+        print("  Model:        NVIDIA Jetson")
     print(f"  CUDA:         {'Yes (' + info.cuda_version + ')' if info.has_cuda else 'No'}")
     print(f"  PyTorch:      {'Yes' if info.has_torch else 'No'}")
     print(f"  TensorFlow:   {'Yes' if info.has_tensorflow else 'No'}")
@@ -388,7 +396,7 @@ def cmd_diagnostics(args):
 
     warnings = check_environment()
     if warnings:
-        print(f"\n  Warnings:")
+        print("\n  Warnings:")
         for w in warnings:
             print(f"    ! {w}")
     print()
@@ -410,17 +418,17 @@ def cmd_validate(args):
     print(f"  Labels:         {result.total_labels}")
 
     if result.class_counts:
-        print(f"\n  Class distribution:")
+        print("\n  Class distribution:")
         for cls_id, count in sorted(result.class_counts.items()):
             print(f"    class {cls_id}: {count} instances")
 
     if result.warnings:
-        print(f"\n  Warnings:")
+        print("\n  Warnings:")
         for w in result.warnings:
             print(f"    ! {w}")
 
     if result.errors:
-        print(f"\n  Errors:")
+        print("\n  Errors:")
         for e in result.errors:
             print(f"    ! {e}")
 
@@ -441,7 +449,7 @@ def cmd_validate(args):
 def cmd_doctor(args):
     """Run a comprehensive health check of the MIRA environment."""
     from deploy import detect_hardware, check_environment, suggest_model
-    from config import validate_config, PROJECT_CONFIG
+    from config import validate_config
     from pipeline.models import ModelRegistry
 
     print(f"\n  MIRA Doctor v{__version__}")
@@ -490,6 +498,7 @@ def cmd_doctor(args):
     # Datasets
     print("\n  [5/5] Datasets")
     from pipeline.dataset import DatasetRegistry
+
     ds_registry = DatasetRegistry()
     ds_count = ds_registry.discover()
     available = [s for s in ds_registry.list_sources() if s["exists"]]
@@ -519,6 +528,16 @@ def cmd_config(args):
     print(f"  {'=' * 50}")
     print(json.dumps(dict(cfg), indent=4))
     print()
+
+
+@register_command("dashboard", "Launch the real-time detection dashboard")
+def cmd_dashboard(args):
+    """Start the MIRA dashboard server."""
+    import uvicorn
+    from dashboard.main import app
+
+    print("Starting MIRA Dashboard on http://0.0.0.0:8000")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
 
 
 # ── Main dispatcher ──────────────────────────────────────────────────

@@ -88,7 +88,9 @@ def check_environment() -> list[str]:
         warnings.append("OpenCV (cv2) is not installed. Camera and visualization will not work.")
 
     if info.is_raspberry_pi and not info.has_tflite_runtime and not info.has_tensorflow:
-        warnings.append("Raspberry Pi detected but no TFLite runtime found. Install tflite-runtime for edge deployment.")
+        warnings.append(
+            "Raspberry Pi detected but no TFLite runtime found. Install tflite-runtime for edge deployment."
+        )
 
     if not info.has_torch and not info.has_tensorflow:
         warnings.append("No deep learning framework (torch/tensorflow) found.")
@@ -106,10 +108,14 @@ def _module_available(name: str) -> bool:
 
 def _safe_cpu_count() -> int:
     try:
-        return (len(open("/proc/stat").readlines()) if sys.platform != "win32"
-                else int(subprocess.check_output("wmic cpu get NumberOfCores", shell=True).decode().strip().split("\n")[1]))
+        return (
+            len(open("/proc/stat").readlines())
+            if sys.platform != "win32"
+            else int(subprocess.check_output("wmic cpu get NumberOfCores", shell=True).decode().strip().split("\n")[1])
+        )
     except Exception:
         import os
+
         return os.cpu_count() or 1
 
 
@@ -117,6 +123,7 @@ def _safe_memory_mb() -> int:
     try:
         if sys.platform == "win32":
             import ctypes
+
             kernel32 = ctypes.windll.kernel32
             mem = ctypes.c_ulonglong()
             kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(mem))
@@ -143,8 +150,9 @@ def _detect_raspberry_pi() -> bool:
 def _get_pi_model() -> str:
     try:
         if sys.platform == "linux":
-            result = subprocess.run(["cat", "/sys/firmware/devicetree/base/model"],
-                                    capture_output=True, text=True, timeout=2)
+            result = subprocess.run(
+                ["cat", "/sys/firmware/devicetree/base/model"], capture_output=True, text=True, timeout=2
+            )
             return result.stdout.strip().rstrip("\x00") if result.stdout else ""
     except Exception:
         pass
@@ -162,13 +170,18 @@ def _detect_jetson() -> bool:
 
 def _detect_cuda() -> tuple[bool, str]:
     try:
-        result = subprocess.run(["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
-                                capture_output=True, text=True, timeout=5)
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
         if result.returncode == 0 and result.stdout.strip():
             return True, result.stdout.strip().split("\n")[0]
     except Exception:
         try:
             import torch
+
             if torch.cuda.is_available():
                 return True, torch.version.cuda or ""
         except Exception:

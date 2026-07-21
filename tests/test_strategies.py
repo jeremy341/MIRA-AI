@@ -66,6 +66,7 @@ def test_train_config_validation_invalid_device():
 def test_train_config_from_yaml_valid():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         import yaml
+
         yaml.dump({"name": "test", "epochs": 50, "batch_size": 16}, f)
         f.flush()
         cfg = TrainConfig.from_yaml(f.name)
@@ -78,6 +79,7 @@ def test_train_config_from_yaml_valid():
 def test_train_config_from_yaml_invalid():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         import yaml
+
         yaml.dump({"epochs": -5}, f)
         f.flush()
         with pytest.raises(ConfigError):

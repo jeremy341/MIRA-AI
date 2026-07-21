@@ -1,17 +1,12 @@
 """Plugin registry for MIRA pipeline.
 
-Allows registering new CLI commands, dataset sources, and model adapters
-without editing existing files. Use decorators to register plugins.
+Allows registering CLI commands and model adapters without editing existing files.
 
 Usage:
-    from pipeline.registry import register_command, register_dataset_source, register_model_adapter
+    from pipeline.registry import register_command
 
     @register_command("train", "Train a YOLO or classification model")
     def cmd_train(args):
-        ...
-
-    @register_dataset_source("my_source", "My custom dataset")
-    def load_my_source(registry_dir):
         ...
 """
 
@@ -55,38 +50,6 @@ def get_commands() -> dict[str, CommandEntry]:
     return dict(_COMMANDS)
 
 
-# ── Dataset Source Registry ─────────────────────────────────────────
-
-
-@dataclass
-class DatasetSourceEntry:
-    key: str
-    name: str
-    loader: Callable  # fn(output_dir, dry_run=False) -> (added, skipped)
-
-
-_DATASET_SOURCES: dict[str, DatasetSourceEntry] = {}
-
-
-def register_dataset_source(key: str, name: str):
-    """Decorator to register a dataset source for the merger.
-
-    The decorated function should accept (output_dir, dry_run=False)
-    and return (added_count, skipped_count).
-    """
-
-    def decorator(func):
-        _DATASET_SOURCES[key] = DatasetSourceEntry(key=key, name=name, loader=func)
-        return func
-
-    return decorator
-
-
-def get_dataset_sources() -> dict[str, DatasetSourceEntry]:
-    """Return all registered dataset sources."""
-    return dict(_DATASET_SOURCES)
-
-
 # ── Model Adapter Registry ──────────────────────────────────────────
 
 
@@ -98,22 +61,6 @@ class ModelAdapterEntry:
 
 
 _MODEL_ADAPTERS: dict[str, ModelAdapterEntry] = {}
-
-
-def register_model_adapter(model_type: str, description: str = ""):
-    """Decorator to register a model adapter for a specific model format.
-
-    The decorated class must implement the DetectionModel protocol
-    defined in pipeline.models.
-    """
-
-    def decorator(cls):
-        _MODEL_ADAPTERS[model_type] = ModelAdapterEntry(
-            model_type=model_type, adapter_class=cls, description=description
-        )
-        return cls
-
-    return decorator
 
 
 def init_adapters() -> None:

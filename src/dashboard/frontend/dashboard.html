@@ -1,0 +1,2127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MIRA — Recycling Sorting Robot</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root {
+      /* ── Core surfaces ───────────────────────────────── */
+      --bg:          #f0f4f8;          /* outer page background — soft blue-grey */
+      --surface:     #ffffff;          /* card / panel white */
+      --surface-2:   #f1f5f9;          /* panel header tint */
+
+      /* ── Text ────────────────────────────────────────── */
+      --ink:         #0f172a;          /* primary text */
+      --muted:       #64748b;          /* secondary/dimmed text */
+
+      /* ── Borders ──────────────────────────────────────── */
+      --line:        #cbd5e1;
+      --line-dark:   #94a3b8;
+
+      /* ── Brand Blue (primary) ─────────────────────────── */
+      --blue:        #2563eb;
+      --blue-dark:   #1d4ed8;
+      --blue-light:  #eff6ff;
+
+      /* ── Accent: Cyan (secondary cool accent) ─────────── */
+      --cyan:        #0891b2;
+      --cyan-light:  #ecfeff;
+
+      /* ── Accent: Amber (warm accent, analytics cards) ─── */
+      --accent:      #f59e0b;
+      --accent-dim:  #fffbeb;
+
+      /* ── Semantic ─────────────────────────────────────── */
+      --danger:      #ef4444;
+      --warning:     #f59e0b;
+      --success:     #10b981;
+      --success-dark:#059669;
+
+      /* ── Class colors ─────────────────────────────────── */
+      --glass:       #0e7490;   /* deep cyan — glass */
+      --metal:       #6366f1;   /* indigo — metal */
+      --paper:       #f59e0b;   /* amber — paper */
+      --plastic:     #f43f5e;   /* rose — plastic */
+      --trash:       #64748b;   /* slate — trash */
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: 56px minmax(0, 1fr);
+    }
+
+    /* ── Top bar ────────────────────────────────────────── */
+    .topbar {
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 22px;
+      padding: 0 18px;
+      background: var(--blue);
+      color: #ffffff;
+      border-bottom: 3px solid var(--blue-dark);
+      box-shadow: 0 2px 8px rgba(37,99,235,0.18);
+      min-width: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 27px;
+      height: 27px;
+      position: relative;
+      border: 2px solid rgba(255,255,255,0.7);
+      transform: rotate(45deg);
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      content: "";
+      position: absolute;
+      background: var(--accent);
+    }
+
+    .brand-mark::before {
+      width: 8px;
+      height: 8px;
+      left: 3px;
+      top: 3px;
+    }
+
+    .brand-mark::after {
+      width: 8px;
+      height: 8px;
+      right: 3px;
+      bottom: 3px;
+    }
+
+    .brand-copy {
+      line-height: 1;
+    }
+
+    .brand-name {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      color: #ffffff;
+    }
+
+    .brand-subtitle {
+      display: block;
+      margin-top: 4px;
+      color: rgba(255,255,255,0.65);
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    /* ── Navigation ─────────────────────────────────────── */
+    .navigation {
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+    }
+
+    .nav-button {
+      position: relative;
+      border: 0;
+      background: transparent;
+      color: rgba(255,255,255,0.6);
+      padding: 0 15px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: color 150ms ease;
+    }
+
+    .nav-button::after {
+      content: "";
+      position: absolute;
+      left: 15px;
+      right: 15px;
+      bottom: 0;
+      height: 3px;
+      background: transparent;
+      transition: background 150ms ease;
+    }
+
+    .nav-button.active {
+      color: #ffffff;
+    }
+
+    .nav-button.active::after {
+      background: var(--accent);
+    }
+
+    .nav-button:hover {
+      color: #ffffff;
+    }
+
+    .topbar-spacer {
+      min-width: 0;
+    }
+
+    /* ── System strip ───────────────────────────────────── */
+    .system-strip {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+      font: 500 11px/1 "IBM Plex Mono", monospace;
+      color: rgba(255,255,255,0.75);
+      white-space: nowrap;
+    }
+
+    .system-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .system-label {
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .connection-dot,
+    .stream-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex: none;
+      background: rgba(255,255,255,0.3);
+    }
+
+    .connection-dot.connected {
+      background: #34d399;   /* emerald-400 — readable on blue */
+    }
+
+    .connection-dot.disconnected {
+      background: #fca5a5;   /* red-300 — readable on blue */
+    }
+
+    .stream-dot.streaming {
+      background: #fca5a5;
+      animation: livePulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes livePulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.38;
+      }
+    }
+
+    /* ── Workspace / pages ──────────────────────────────── */
+    .workspace {
+      min-height: 0;
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 12px;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ── Grids ──────────────────────────────────────────── */
+    .dashboard-grid {
+      height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1.72fr) minmax(340px, 0.78fr);
+      grid-template-rows: minmax(0, 0.86fr) minmax(0, 1.14fr);
+      gap: 12px;
+    }
+
+    .analytics-grid {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      grid-template-rows: 76px 242px minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    /* ── Panels ─────────────────────────────────────────── */
+    .panel {
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
+    }
+
+    .camera-panel {
+      grid-row: 1 / 3;
+      display: grid;
+      grid-template-rows: 47px minmax(0, 1fr);
+    }
+
+    .distribution-panel,
+    .recent-panel,
+    .trend-panel,
+    .breakdown-panel,
+    .history-panel {
+      display: grid;
+      grid-template-rows: 43px minmax(0, 1fr);
+    }
+
+    /* ── Panel header ───────────────────────────────────── */
+    .panel-header {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 13px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .panel-title-wrap {
+      min-width: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.035em;
+      color: var(--ink);
+    }
+
+    .panel-kicker {
+      color: var(--muted);
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    /* ── Camera actions ─────────────────────────────────── */
+    .camera-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .live-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      border: 1px solid #fca5a5;
+      color: #dc2626;
+      background: #fff1f2;
+      font: 600 10px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.1em;
+    }
+
+    .live-badge.visible {
+      display: flex;
+    }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .button {
+      min-height: 29px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      padding: 0 11px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--ink);
+      transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    }
+
+    .button:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: var(--line-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(15,23,42,0.1);
+    }
+
+    .button:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+    }
+
+    .button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Start stream button — primary blue */
+    .button.primary {
+      border-color: var(--blue-dark);
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.25);
+    }
+
+    .button.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--blue-dark), #1e3a8a);
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+    }
+
+    /* Stop button — outlined danger */
+    .button.stop {
+      border-color: #fca5a5;
+      color: #dc2626;
+      background: #fff1f2;
+    }
+
+    .button.stop:hover:not(:disabled) {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+    }
+
+    /* Clear history button — subtle outline */
+    .button.danger {
+      border-color: #fca5a5;
+      color: #dc2626;
+      background: transparent;
+    }
+
+    .button.danger:hover:not(:disabled) {
+      background: #fff1f2;
+      border-color: var(--danger);
+    }
+
+    /* ── Camera stage ───────────────────────────────────── */
+    .camera-stage {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background: #0f172a;  /* very dark slate — feed background */
+    }
+
+    .camera-image {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      position: relative;
+      z-index: 1;
+    }
+
+    .camera-image.visible {
+      display: block;
+    }
+
+    .detection-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .camera-placeholder {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      background:
+        linear-gradient(#1e293b 1px, transparent 1px),
+        linear-gradient(90deg, #1e293b 1px, transparent 1px),
+        #0f172a;
+      background-size: 38px 38px;
+    }
+
+    .placeholder-content {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .camera-symbol {
+      width: 60px;
+      height: 42px;
+      position: relative;
+      margin: 0 auto 16px;
+      border: 2px solid #334155;
+    }
+
+    .camera-symbol::before {
+      content: "";
+      position: absolute;
+      width: 19px;
+      height: 19px;
+      border: 2px solid #334155;
+      border-radius: 50%;
+      left: 18px;
+      top: 9px;
+    }
+
+    .camera-symbol::after {
+      content: "";
+      position: absolute;
+      width: 17px;
+      height: 9px;
+      border: 2px solid #334155;
+      border-bottom: 0;
+      top: -11px;
+      left: 8px;
+    }
+
+    .placeholder-title {
+      margin: 0 0 7px;
+      color: #e2e8f0;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .placeholder-text {
+      margin: 0;
+      color: #475569;
+      font: 500 11px/1.5 "IBM Plex Mono", monospace;
+    }
+
+    /* ── Metric rail (overlay on feed) ─────────────────── */
+    .metric-rail {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 4;
+      display: grid;
+      grid-template-columns: repeat(4, auto);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(10px);
+      color: #fff;
+      overflow: hidden;
+    }
+
+    .camera-metric {
+      min-width: 83px;
+      padding: 8px 10px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .camera-metric:last-child {
+      border-right: 0;
+    }
+
+    .camera-metric-label {
+      display: block;
+      color: rgba(255,255,255,0.45);
+      font: 500 8px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .camera-metric-value {
+      display: block;
+      margin-top: 5px;
+      font: 600 13px/1 "IBM Plex Mono", monospace;
+      color: #ffffff;
+    }
+
+    /* Camera state badge */
+    .camera-state {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 4;
+      max-width: calc(100% - 24px);
+      padding: 7px 9px;
+      border-radius: 4px;
+      border-left: 3px solid var(--blue);
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(10px);
+      color: #cbd5e1;
+      font: 500 10px/1.3 "IBM Plex Mono", monospace;
+    }
+
+    /* ── Distribution chart ──────────────────────────────── */
+    .distribution-content {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(130px, 1fr) minmax(130px, 0.86fr);
+      align-items: center;
+      gap: 4px;
+      padding: 8px 12px;
+    }
+
+    .chart-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .chart-empty {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      color: var(--muted);
+      font: 500 11px/1.4 "IBM Plex Mono", monospace;
+      text-align: center;
+      pointer-events: none;
+      padding: 15px;
+    }
+
+    .chart-empty.visible {
+      display: flex;
+    }
+
+    /* ── Legend ─────────────────────────────────────────── */
+    .class-legend {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      font-size: 11px;
+    }
+
+    .legend-swatch {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+    }
+
+    .legend-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-transform: capitalize;
+    }
+
+    .legend-count {
+      font: 600 11px/1 "IBM Plex Mono", monospace;
+    }
+
+    /* ── Recent detections list ─────────────────────────── */
+    .recent-list {
+      min-height: 0;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+
+    .recent-row {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr) 64px 74px;
+      gap: 9px;
+      align-items: center;
+      min-height: 38px;
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      transition: background 120ms ease;
+    }
+
+    .recent-row:hover {
+      background: var(--blue-light);
+    }
+
+    .recent-row:last-child {
+      border-bottom: 0;
+    }
+
+    .class-marker {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .class-name {
+      min-width: 0;
+      font-weight: 600;
+      text-transform: capitalize;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .confidence {
+      font: 600 10px/1 "IBM Plex Mono", monospace;
+      text-align: right;
+    }
+
+    .timestamp {
+      color: var(--muted);
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .empty-state {
+      width: 100%;
+      height: 100%;
+      min-height: 90px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      color: var(--muted);
+      font: 500 11px/1.5 "IBM Plex Mono", monospace;
+      text-align: center;
+    }
+
+    /* ── Summary cards (analytics) ──────────────────────── */
+    .summary-card {
+      grid-column: span 3;
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 5px minmax(0, 1fr);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+      overflow: hidden;
+      transition: box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .summary-card:hover {
+      box-shadow: 0 4px 16px rgba(15,23,42,0.1);
+      transform: translateY(-1px);
+    }
+
+    /* Card accent bars — using your chosen accent palette */
+    .summary-accent {
+      background: var(--blue);         /* card 1: blue */
+    }
+
+    .summary-card:nth-child(2) .summary-accent {
+      background: var(--cyan);         /* card 2: cyan */
+    }
+
+    .summary-card:nth-child(3) .summary-accent {
+      background: var(--success);      /* card 3: emerald */
+    }
+
+    .summary-card:nth-child(4) .summary-accent {
+      background: var(--accent);       /* card 4: amber */
+    }
+
+    .summary-content {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 8px 14px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .summary-value {
+      min-width: 0;
+      margin-top: 7px;
+      font-size: 21px;
+      font-weight: 700;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--ink);
+    }
+
+    .summary-unit {
+      color: var(--muted);
+      font: 500 10px/1 "IBM Plex Mono", monospace;
+    }
+
+    /* ── Chart panels ───────────────────────────────────── */
+    .trend-panel {
+      grid-column: span 8;
+    }
+
+    .breakdown-panel {
+      grid-column: span 4;
+    }
+
+    .history-panel {
+      grid-column: 1 / -1;
+    }
+
+    .chart-body {
+      position: relative;
+      min-height: 0;
+      padding: 10px 13px 9px;
+    }
+
+    /* ── History table ──────────────────────────────────── */
+    .history-wrap {
+      min-height: 0;
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 11px;
+    }
+
+    .history-table th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      height: 31px;
+      padding: 0 12px;
+      background: var(--blue);
+      color: rgba(255,255,255,0.9);
+      border-bottom: 1px solid var(--blue-dark);
+      font: 600 9px/1 "IBM Plex Mono", monospace;
+      text-align: left;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .history-table td {
+      height: 32px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-table tbody tr:hover {
+      background: var(--blue-light);
+    }
+
+    .table-class {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .mono {
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .history-empty {
+      display: none;
+      min-height: 150px;
+    }
+
+    .history-empty.visible {
+      display: flex;
+    }
+
+    /* ── Toasts ─────────────────────────────────────────── */
+    .toast-region {
+      position: fixed;
+      right: 15px;
+      bottom: 15px;
+      z-index: 50;
+      display: grid;
+      gap: 8px;
+      width: min(340px, calc(100vw - 30px));
+      pointer-events: none;
+    }
+
+    .toast {
+      display: grid;
+      grid-template-columns: 5px minmax(0, 1fr) auto;
+      align-items: center;
+      min-height: 48px;
+      background: #ffffff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(15,23,42,0.12);
+      animation: toastIn 0.18s ease-out;
+      pointer-events: auto;
+    }
+
+    .toast-bar {
+      align-self: stretch;
+      background: var(--success);
+      border-radius: 8px 0 0 8px;
+    }
+
+    .toast.error .toast-bar {
+      background: var(--danger);
+    }
+
+    .toast.warning .toast-bar {
+      background: var(--warning);
+    }
+
+    .toast-message {
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .toast-close {
+      align-self: stretch;
+      border: 0;
+      border-left: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      padding: 0 12px;
+      cursor: pointer;
+      border-radius: 0 8px 8px 0;
+      transition: background 150ms ease;
+    }
+
+    .toast-close:hover {
+      background: var(--surface-2);
+    }
+
+    @keyframes toastIn {
+      from {
+        transform: translateX(12px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .system-item.model-info {
+        display: none;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: minmax(0, 1.4fr) minmax(290px, 0.8fr);
+      }
+
+      .metric-rail {
+        grid-template-columns: repeat(2, auto);
+      }
+
+      .camera-metric:nth-child(2) {
+        border-right: 0;
+      }
+
+      .camera-metric:nth-child(-n + 2) {
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand" aria-label="MIRA Recycling Sorting Robot">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-copy">
+          <span class="brand-name">MIRA</span>
+          <span class="brand-subtitle">Recycling Sorting Robot</span>
+        </span>
+      </div>
+
+      <nav class="navigation" aria-label="Hauptnavigation">
+        <button class="nav-button active" type="button" data-page="dashboard">Dashboard</button>
+        <button class="nav-button" type="button" data-page="analytics">Analytics</button>
+      </nav>
+
+      <div class="topbar-spacer"></div>
+
+      <div class="system-strip">
+        <div class="system-item model-info">
+          <span class="system-label">Modell</span>
+          <span id="modelName">YOLO11</span>
+        </div>
+        <div class="system-item">
+          <span id="connectionDot" class="connection-dot disconnected"></span>
+          <span id="connectionText">WebSocket getrennt</span>
+        </div>
+        <div class="system-item">
+          <span id="headerStreamDot" class="stream-dot"></span>
+          <span id="headerStreamText">BEREIT</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section id="dashboardPage" class="page active" aria-label="Dashboard">
+        <div class="dashboard-grid">
+          <article class="panel camera-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h1 class="panel-title">Kamera & Erkennung</h1>
+                <span class="panel-kicker" id="cameraStatusLabel">System bereit</span>
+              </div>
+
+              <div class="camera-actions">
+                <span id="liveBadge" class="live-badge">
+                  <span class="stream-dot streaming"></span>
+                  LIVE
+                </span>
+                <button id="startButton" class="button primary" type="button">Stream starten</button>
+                <button id="stopButton" class="button stop" type="button" disabled>Stoppen</button>
+              </div>
+            </header>
+
+            <div id="cameraStage" class="camera-stage">
+              <div id="cameraPlaceholder" class="camera-placeholder">
+                <div class="placeholder-content">
+                  <div class="camera-symbol" aria-hidden="true"></div>
+                  <p class="placeholder-title">Kein aktiver Kamerastream</p>
+                  <p class="placeholder-text">"Stream starten" drücken, um die Erkennung zu beginnen.</p>
+                </div>
+              </div>
+
+              <img id="cameraImage" class="camera-image" alt="Live-Kamerabild des Sortierroboters" />
+              <canvas id="detectionCanvas" class="detection-canvas"></canvas>
+
+              <div class="metric-rail" aria-label="Live-Metriken">
+                <div class="camera-metric">
+                  <span class="camera-metric-label">FPS</span>
+                  <span id="fpsValue" class="camera-metric-value">—</span>
+                </div>
+                <div class="camera-metric">
+                  <span class="camera-metric-label">Latenz</span>
+                  <span id="latencyValue" class="camera-metric-value">— ms</span>
+                </div>
+                <div class="camera-metric">
+                  <span class="camera-metric-label">Objekte</span>
+                  <span id="detectionCountValue" class="camera-metric-value">0</span>
+                </div>
+                <div class="camera-metric">
+                  <span class="camera-metric-label">Konfidenz</span>
+                  <span id="liveConfidenceValue" class="camera-metric-value">— %</span>
+                </div>
+              </div>
+
+              <div id="cameraState" class="camera-state">Warte auf Stream …</div>
+            </div>
+          </article>
+
+          <article class="panel distribution-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Klassenverteilung</h2>
+                <span class="panel-kicker">Aktuelle Sitzung</span>
+              </div>
+              <span id="distributionTotal" class="panel-kicker">0 Objekte</span>
+            </header>
+
+            <div class="distribution-content">
+              <div class="chart-wrap">
+                <canvas id="distributionChart"></canvas>
+                <div id="distributionEmpty" class="chart-empty visible">Noch keine Erkennungen</div>
+              </div>
+              <div id="classLegend" class="class-legend"></div>
+            </div>
+          </article>
+
+          <article class="panel recent-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Letzte Erkennungen</h2>
+                <span class="panel-kicker">Neueste zuerst</span>
+              </div>
+              <span id="recentCount" class="panel-kicker">0 Einträge</span>
+            </header>
+
+            <div id="recentList" class="recent-list">
+              <div class="empty-state">Noch keine Erkennungen.<br />Warte auf Daten vom Modell.</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="analyticsPage" class="page" aria-label="Analytics">
+        <div class="analytics-grid">
+          <article class="summary-card">
+            <span class="summary-accent"></span>
+            <div class="summary-content">
+              <span class="summary-label">Erkannte Objekte</span>
+              <span id="summaryTotal" class="summary-value">0</span>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-accent"></span>
+            <div class="summary-content">
+              <span class="summary-label">Sitzungsdauer</span>
+              <span id="summaryDuration" class="summary-value mono">00:00</span>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-accent"></span>
+            <div class="summary-content">
+              <span class="summary-label">Häufigste Klasse</span>
+              <span id="summaryTopClass" class="summary-value">—</span>
+            </div>
+          </article>
+
+          <article class="summary-card">
+            <span class="summary-accent"></span>
+            <div class="summary-content">
+              <span class="summary-label">Ø Konfidenz</span>
+              <span id="summaryConfidence" class="summary-value">— <span class="summary-unit">%</span></span>
+            </div>
+          </article>
+
+          <article class="panel trend-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Erkennungstrend</h2>
+                <span class="panel-kicker">Kumulativ über Zeit</span>
+              </div>
+              <span class="panel-kicker">5 Klassen</span>
+            </header>
+            <div class="chart-body">
+              <canvas id="trendChart"></canvas>
+              <div id="trendEmpty" class="chart-empty visible">Noch keine Verlaufsdaten</div>
+            </div>
+          </article>
+
+          <article class="panel breakdown-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Klassenübersicht</h2>
+                <span class="panel-kicker">Nach Anzahl</span>
+              </div>
+            </header>
+            <div class="chart-body">
+              <canvas id="breakdownChart"></canvas>
+              <div id="breakdownEmpty" class="chart-empty visible">Noch keine Klassendaten</div>
+            </div>
+          </article>
+
+          <article class="panel history-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Erkennungshistorie</h2>
+                <span id="historyCount" class="panel-kicker">0 / 50 Einträge</span>
+              </div>
+              <button id="clearHistoryButton" class="button danger" type="button">Historie leeren</button>
+            </header>
+
+            <div id="historyWrap" class="history-wrap">
+              <table class="history-table">
+                <colgroup>
+                  <col style="width: 29%" />
+                  <col style="width: 29%" />
+                  <col style="width: 23%" />
+                  <col style="width: 19%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Zeit</th>
+                    <th>Klasse</th>
+                    <th>Konfidenz</th>
+                    <th>Track-ID</th>
+                  </tr>
+                </thead>
+                <tbody id="historyBody"></tbody>
+              </table>
+              <div id="historyEmpty" class="empty-state history-empty visible">
+                Keine Historie vorhanden. Neue Erkennungen erscheinen automatisch hier.
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const CLASSES = ["glass", "metal", "paper", "plastic", "trash"];
+      const CLASS_LABELS = {
+        glass: "Glas",
+        metal: "Metall",
+        paper: "Papier",
+        plastic: "Kunststoff",
+        trash: "Restmüll"
+      };
+      const CLASS_COLORS = {
+        glass:   "#0e7490",   /* deep cyan */
+        metal:   "#6366f1",   /* indigo */
+        paper:   "#f59e0b",   /* amber */
+        plastic: "#f43f5e",   /* rose */
+        trash:   "#64748b"    /* slate */
+      };
+
+      const state = {
+        streaming: false,
+        busy: false,
+        videoConnected: false,
+        controlConnected: false,
+        latestDetections: [],
+        history: [],
+        classCounts: Object.fromEntries(CLASSES.map(name => [name, 0])),
+        totalDetections: 0,
+        confidenceSum: 0,
+        confidenceSamples: 0,
+        backendAverageConfidence: null,
+        fps: null,
+        latency: null,
+        sessionStartedAt: null,
+        accumulatedSessionMs: 0,
+        trendLabels: [],
+        trendValues: Object.fromEntries(CLASSES.map(name => [name, []])),
+        chartUpdatePending: false,
+        lastChartUpdate: 0,
+        frameLoaded: false
+      };
+
+      let videoSocket = null;
+      let controlSocket = null;
+      let videoReconnectTimer = null;
+      let controlReconnectTimer = null;
+      let pingTimer = null;
+      let boxClearTimer = null;
+
+      const elements = {
+        navButtons: document.querySelectorAll(".nav-button"),
+        pages: document.querySelectorAll(".page"),
+        modelName: document.getElementById("modelName"),
+        connectionDot: document.getElementById("connectionDot"),
+        connectionText: document.getElementById("connectionText"),
+        headerStreamDot: document.getElementById("headerStreamDot"),
+        headerStreamText: document.getElementById("headerStreamText"),
+        cameraStatusLabel: document.getElementById("cameraStatusLabel"),
+        liveBadge: document.getElementById("liveBadge"),
+        startButton: document.getElementById("startButton"),
+        stopButton: document.getElementById("stopButton"),
+        cameraStage: document.getElementById("cameraStage"),
+        cameraImage: document.getElementById("cameraImage"),
+        cameraPlaceholder: document.getElementById("cameraPlaceholder"),
+        detectionCanvas: document.getElementById("detectionCanvas"),
+        fpsValue: document.getElementById("fpsValue"),
+        latencyValue: document.getElementById("latencyValue"),
+        detectionCountValue: document.getElementById("detectionCountValue"),
+        liveConfidenceValue: document.getElementById("liveConfidenceValue"),
+        cameraState: document.getElementById("cameraState"),
+        distributionTotal: document.getElementById("distributionTotal"),
+        distributionEmpty: document.getElementById("distributionEmpty"),
+        classLegend: document.getElementById("classLegend"),
+        recentList: document.getElementById("recentList"),
+        recentCount: document.getElementById("recentCount"),
+        summaryTotal: document.getElementById("summaryTotal"),
+        summaryDuration: document.getElementById("summaryDuration"),
+        summaryTopClass: document.getElementById("summaryTopClass"),
+        summaryConfidence: document.getElementById("summaryConfidence"),
+        trendEmpty: document.getElementById("trendEmpty"),
+        breakdownEmpty: document.getElementById("breakdownEmpty"),
+        historyBody: document.getElementById("historyBody"),
+        historyEmpty: document.getElementById("historyEmpty"),
+        historyCount: document.getElementById("historyCount"),
+        clearHistoryButton: document.getElementById("clearHistoryButton"),
+        toastRegion: document.getElementById("toastRegion")
+      };
+
+      Chart.defaults.font.family = '"IBM Plex Mono", monospace';
+      Chart.defaults.font.size = 9;
+      Chart.defaults.color = "#64748b";
+      Chart.defaults.animation.duration = 0;
+      Chart.defaults.borderColor = "#cbd5e1";
+
+      const distributionChart = new Chart(
+        document.getElementById("distributionChart"),
+        {
+          type: "doughnut",
+          data: {
+            labels: CLASSES.map(name => CLASS_LABELS[name]),
+            datasets: [{
+              data: CLASSES.map(() => 0),
+              backgroundColor: CLASSES.map(name => CLASS_COLORS[name]),
+              borderColor: "#ffffff",
+              borderWidth: 3,
+              hoverOffset: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "66%",
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: context => ` ${context.label}: ${context.raw}`
+                }
+              }
+            }
+          }
+        }
+      );
+
+      const trendChart = new Chart(
+        document.getElementById("trendChart"),
+        {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: CLASSES.map(name => ({
+              label: CLASS_LABELS[name],
+              data: [],
+              borderColor: CLASS_COLORS[name],
+              backgroundColor: CLASS_COLORS[name],
+              pointRadius: 0,
+              pointHoverRadius: 3,
+              borderWidth: 2,
+              tension: 0.18
+            }))
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  maxTicksLimit: 8,
+                  maxRotation: 0
+                }
+              },
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 6
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                align: "start",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 3,
+                  padding: 13,
+                  usePointStyle: false
+                }
+              }
+            }
+          }
+        }
+      );
+
+      const breakdownChart = new Chart(
+        document.getElementById("breakdownChart"),
+        {
+          type: "bar",
+          data: {
+            labels: CLASSES.map(name => CLASS_LABELS[name]),
+            datasets: [{
+              data: CLASSES.map(() => 0),
+              backgroundColor: CLASSES.map(name => CLASS_COLORS[name]),
+              borderWidth: 0,
+              barThickness: 15
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 5
+                }
+              },
+              y: {
+                grid: { display: false }
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: context => ` ${context.raw} Objekte`
+                }
+              }
+            }
+          }
+        }
+      );
+
+      function websocketURL(path) {
+        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+        return `${protocol}//${location.host}${path}`;
+      }
+
+      function normalizeClass(value) {
+        const name = String(value || "trash").toLowerCase();
+        return CLASSES.includes(name) ? name : "trash";
+      }
+
+      function normalizeConfidence(value) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return 0;
+        return Math.max(0, Math.min(1, number));
+      }
+
+      function normalizeDetection(item) {
+        return {
+          className: normalizeClass(item.class_name ?? item.class),
+          confidence: normalizeConfidence(item.confidence),
+          trackId: item.track_id ?? "—",
+          timestamp: item.timestamp || new Date().toISOString(),
+          bbox: Array.isArray(item.bbox) ? item.bbox : null
+        };
+      }
+
+      function formatTime(timestamp, withDate = false) {
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) return "—";
+
+        const options = withDate
+          ? {
+              day: "2-digit",
+              month: "2-digit",
+              year: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit"
+            }
+          : {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit"
+            };
+
+        return new Intl.DateTimeFormat("de-DE", options).format(date);
+      }
+
+      function formatDuration(milliseconds) {
+        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+          return [hours, minutes, seconds]
+            .map(value => String(value).padStart(2, "0"))
+            .join(":");
+        }
+
+        return [minutes, seconds]
+          .map(value => String(value).padStart(2, "0"))
+          .join(":");
+      }
+
+      function currentSessionMs() {
+        const activeMs = state.streaming && state.sessionStartedAt
+          ? Date.now() - state.sessionStartedAt
+          : 0;
+        return state.accumulatedSessionMs + activeMs;
+      }
+
+      function showToast(message, type = "success") {
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+          <span class="toast-bar"></span>
+          <span class="toast-message"></span>
+          <button class="toast-close" type="button" aria-label="Benachrichtigung schließen">×</button>
+        `;
+        toast.querySelector(".toast-message").textContent = message;
+        toast.querySelector(".toast-close").addEventListener("click", () => toast.remove());
+        elements.toastRegion.appendChild(toast);
+
+        window.setTimeout(() => {
+          if (toast.isConnected) toast.remove();
+        }, 4500);
+      }
+
+      async function fetchJSON(url, options = {}, silent = false) {
+        try {
+          const response = await fetch(url, {
+            headers: {
+              "Content-Type": "application/json",
+              ...(options.headers || {})
+            },
+            ...options
+          });
+
+          let data = {};
+          try {
+            data = await response.json();
+          } catch (_) {
+            data = {};
+          }
+
+          if (!response.ok) {
+            throw new Error(data.message || `HTTP ${response.status}`);
+          }
+
+          return data;
+        } catch (error) {
+          if (!silent) {
+            showToast(`API-Fehler: ${error.message}`, "error");
+          }
+          throw error;
+        }
+      }
+
+      function updateConnectionUI() {
+        const connected = state.videoConnected || state.controlConnected;
+        elements.connectionDot.classList.toggle("connected", connected);
+        elements.connectionDot.classList.toggle("disconnected", !connected);
+
+        if (state.videoConnected && state.controlConnected) {
+          elements.connectionText.textContent = "WebSocket verbunden";
+        } else if (connected) {
+          elements.connectionText.textContent = "Teilweise verbunden";
+        } else {
+          elements.connectionText.textContent = "WebSocket getrennt";
+        }
+      }
+
+      function setStreaming(streaming, message = "") {
+        if (state.streaming === streaming) {
+          if (message) {
+            elements.cameraStatusLabel.textContent = message;
+            elements.cameraState.textContent = message;
+          }
+          return;
+        }
+
+        if (streaming) {
+          state.sessionStartedAt = Date.now();
+        } else if (state.sessionStartedAt) {
+          state.accumulatedSessionMs += Date.now() - state.sessionStartedAt;
+          state.sessionStartedAt = null;
+        }
+
+        state.streaming = streaming;
+
+        elements.startButton.disabled = streaming || state.busy;
+        elements.stopButton.disabled = !streaming || state.busy;
+        elements.liveBadge.classList.toggle("visible", streaming);
+        elements.headerStreamDot.classList.toggle("streaming", streaming);
+        elements.headerStreamText.textContent = streaming ? "LIVE" : "BEREIT";
+        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming aktiv" : "System bereit");
+        elements.cameraState.textContent = message || (streaming ? "Warte auf Kameraframe …" : "Warte auf Stream …");
+
+        if (!streaming) {
+          state.frameLoaded = false;
+          state.latestDetections = [];
+          elements.cameraImage.classList.remove("visible");
+          elements.cameraPlaceholder.style.display = "flex";
+          elements.detectionCountValue.textContent = "0";
+          elements.liveConfidenceValue.textContent = "— %";
+          clearBoundingBoxes();
+        }
+      }
+
+      function setBusy(busy) {
+        state.busy = busy;
+        elements.startButton.disabled = busy || state.streaming;
+        elements.stopButton.disabled = busy || !state.streaming;
+        elements.startButton.textContent = busy && !state.streaming ? "Starte …" : "Stream starten";
+        elements.stopButton.textContent = busy && state.streaming ? "Stoppe …" : "Stoppen";
+      }
+
+      function sendControl(payload) {
+        if (!controlSocket || controlSocket.readyState !== WebSocket.OPEN) return false;
+        try {
+          controlSocket.send(JSON.stringify(payload));
+          return true;
+        } catch (error) {
+          showToast(`Steuerkanal: ${error.message}`, "error");
+          return false;
+        }
+      }
+
+      function connectVideoSocket() {
+        clearTimeout(videoReconnectTimer);
+
+        try {
+          videoSocket = new WebSocket(websocketURL("/ws/video"));
+        } catch (error) {
+          state.videoConnected = false;
+          updateConnectionUI();
+          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
+          return;
+        }
+
+        videoSocket.addEventListener("open", () => {
+          state.videoConnected = true;
+          updateConnectionUI();
+
+          clearInterval(pingTimer);
+          pingTimer = setInterval(() => {
+            if (videoSocket && videoSocket.readyState === WebSocket.OPEN) {
+              try {
+                videoSocket.send("ping");
+              } catch (_) {}
+            }
+          }, 15000);
+        });
+
+        videoSocket.addEventListener("message", event => {
+          if (event.data === "pong") return;
+
+          let payload;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (_) {
+            return;
+          }
+
+          handleVideoMessage(payload);
+        });
+
+        videoSocket.addEventListener("error", () => {
+          state.videoConnected = false;
+          updateConnectionUI();
+        });
+
+        videoSocket.addEventListener("close", () => {
+          state.videoConnected = false;
+          updateConnectionUI();
+          clearInterval(pingTimer);
+          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
+        });
+      }
+
+      function connectControlSocket() {
+        clearTimeout(controlReconnectTimer);
+
+        try {
+          controlSocket = new WebSocket(websocketURL("/ws/control"));
+        } catch (error) {
+          state.controlConnected = false;
+          updateConnectionUI();
+          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
+          return;
+        }
+
+        controlSocket.addEventListener("open", () => {
+          state.controlConnected = true;
+          updateConnectionUI();
+          sendControl({ command: "get_status" });
+          sendControl({
+            command: "get_statistics",
+            params: { period: 60 }
+          });
+        });
+
+        controlSocket.addEventListener("message", event => {
+          let payload;
+          try {
+            payload = JSON.parse(event.data);
+          } catch (_) {
+            return;
+          }
+          handleControlMessage(payload);
+        });
+
+        controlSocket.addEventListener("error", () => {
+          state.controlConnected = false;
+          updateConnectionUI();
+        });
+
+        controlSocket.addEventListener("close", () => {
+          state.controlConnected = false;
+          updateConnectionUI();
+          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
+        });
+      }
+
+      function handleVideoMessage(payload) {
+        switch (payload.type) {
+          case "frame":
+            if (typeof payload.frame === "string") {
+              elements.cameraImage.src = payload.frame.startsWith("data:")
+                ? payload.frame
+                : `data:image/jpeg;base64,${payload.frame}`;
+            }
+            break;
+
+          case "detections":
+            processDetections(Array.isArray(payload.detections) ? payload.detections : []);
+            break;
+
+          case "metrics":
+            state.fps = Number(payload.fps);
+            state.latency = Number(payload.inference_latency_ms);
+            elements.fpsValue.textContent = Number.isFinite(state.fps)
+              ? state.fps.toFixed(1)
+              : "—";
+            elements.latencyValue.textContent = Number.isFinite(state.latency)
+              ? `${state.latency.toFixed(1)} ms`
+              : "— ms";
+            break;
+
+          case "status":
+            handleStatus(payload.status, payload.message);
+            break;
+
+          default:
+            break;
+        }
+      }
+
+      function handleControlMessage(payload) {
+        if (payload.type === "status") {
+          handleStatus(payload.status, payload.message);
+          return;
+        }
+
+        if (payload.type === "statistics" && payload.statistics) {
+          applyStatistics(payload.statistics);
+          return;
+        }
+
+        if (payload.type === "error") {
+          showToast(payload.message || "Unbekannter Steuerungsfehler", "error");
+          return;
+        }
+
+        if (payload.type === "response" && payload.success === false) {
+          showToast(payload.message || "Befehl fehlgeschlagen", "error");
+        }
+      }
+
+      function handleStatus(status, message) {
+        const running = ["running", "streaming", "active"].includes(
+          String(status || "").toLowerCase()
+        );
+        const idle = ["idle", "stopped", "ready"].includes(
+          String(status || "").toLowerCase()
+        );
+
+        if (running) setStreaming(true, message || "Streaming aktiv");
+        if (idle) setStreaming(false, message || "System bereit");
+      }
+
+      function processDetections(items) {
+        const detections = items.map(normalizeDetection);
+        state.latestDetections = detections;
+
+        elements.detectionCountValue.textContent = String(detections.length);
+
+        if (detections.length) {
+          const average = detections.reduce((sum, item) => sum + item.confidence, 0) / detections.length;
+          elements.liveConfidenceValue.textContent = `${Math.round(average * 100)} %`;
+        } else {
+          elements.liveConfidenceValue.textContent = "— %";
+        }
+
+        if (!detections.length) {
+          drawBoundingBoxes([]);
+          return;
+        }
+
+        detections.forEach(detection => {
+          state.history.unshift(detection);
+          state.history = state.history.slice(0, 50);
+          state.classCounts[detection.className] += 1;
+          state.totalDetections += 1;
+          state.confidenceSum += detection.confidence;
+          state.confidenceSamples += 1;
+        });
+
+        recordTrendPoint();
+        renderRecent();
+        renderHistory();
+        renderSummary();
+        scheduleChartUpdate();
+        drawBoundingBoxes(detections);
+
+        clearTimeout(boxClearTimer);
+        boxClearTimer = setTimeout(() => drawBoundingBoxes([]), 700);
+      }
+
+      function recordTrendPoint() {
+        const time = formatTime(new Date().toISOString());
+        const lastLabel = state.trendLabels[state.trendLabels.length - 1];
+
+        if (lastLabel === time) {
+          CLASSES.forEach(name => {
+            state.trendValues[name][state.trendValues[name].length - 1] =
+              state.classCounts[name];
+          });
+          return;
+        }
+
+        state.trendLabels.push(time);
+        CLASSES.forEach(name => {
+          state.trendValues[name].push(state.classCounts[name]);
+        });
+
+        if (state.trendLabels.length > 36) {
+          state.trendLabels.shift();
+          CLASSES.forEach(name => state.trendValues[name].shift());
+        }
+      }
+
+      function scheduleChartUpdate() {
+        if (state.chartUpdatePending) return;
+
+        const elapsed = performance.now() - state.lastChartUpdate;
+        const delay = Math.max(0, 250 - elapsed);
+
+        state.chartUpdatePending = true;
+        setTimeout(() => {
+          state.chartUpdatePending = false;
+          state.lastChartUpdate = performance.now();
+          updateCharts();
+        }, delay);
+      }
+
+      function updateCharts() {
+        const values = CLASSES.map(name => state.classCounts[name]);
+        const total = values.reduce((sum, value) => sum + value, 0);
+
+        distributionChart.data.datasets[0].data = values;
+        distributionChart.update("none");
+
+        trendChart.data.labels = [...state.trendLabels];
+        trendChart.data.datasets.forEach((dataset, index) => {
+          dataset.data = [...state.trendValues[CLASSES[index]]];
+        });
+        trendChart.update("none");
+
+        const sorted = CLASSES
+          .map(name => ({
+            name,
+            count: state.classCounts[name]
+          }))
+          .sort((a, b) => b.count - a.count);
+
+        breakdownChart.data.labels = sorted.map(item => CLASS_LABELS[item.name]);
+        breakdownChart.data.datasets[0].data = sorted.map(item => item.count);
+        breakdownChart.data.datasets[0].backgroundColor = sorted.map(
+          item => CLASS_COLORS[item.name]
+        );
+        breakdownChart.update("none");
+
+        elements.distributionTotal.textContent =
+          `${total} ${total === 1 ? "Objekt" : "Objekte"}`;
+        elements.distributionEmpty.classList.toggle("visible", total === 0);
+        elements.trendEmpty.classList.toggle("visible", state.trendLabels.length === 0);
+        elements.breakdownEmpty.classList.toggle("visible", total === 0);
+
+        renderLegend();
+      }
+
+      function renderLegend() {
+        elements.classLegend.innerHTML = CLASSES.map(name => `
+          <div class="legend-item">
+            <span class="legend-swatch" style="background:${CLASS_COLORS[name]}"></span>
+            <span class="legend-name">${CLASS_LABELS[name]}</span>
+            <span class="legend-count">${state.classCounts[name]}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderRecent() {
+        const items = state.history.slice(0, 12);
+        elements.recentCount.textContent = `${state.history.length} Einträge`;
+
+        if (!items.length) {
+          elements.recentList.innerHTML = '<div class="empty-state">Noch keine Erkennungen.<br />Warte auf Daten vom Modell.</div>';
+          return;
+        }
+
+        elements.recentList.innerHTML = items.map(detection => `
+          <div class="recent-row">
+            <span class="class-marker" style="background:${CLASS_COLORS[detection.className]}"></span>
+            <span class="class-name">${CLASS_LABELS[detection.className]}</span>
+            <span class="confidence">${Math.round(detection.confidence * 100)} %</span>
+            <span class="timestamp">${formatTime(detection.timestamp)}</span>
+          </div>
+        `).join("");
+      }
+
+      function renderHistory() {
+        elements.historyCount.textContent = `${state.history.length} / 50 Einträge`;
+
+        if (!state.history.length) {
+          elements.historyBody.innerHTML = "";
+          elements.historyEmpty.classList.add("visible");
+          return;
+        }
+
+        elements.historyEmpty.classList.remove("visible");
+        elements.historyBody.innerHTML = state.history.map(detection => `
+          <tr>
+            <td class="mono">${formatTime(detection.timestamp, true)}</td>
+            <td>
+              <span class="table-class">
+                <span class="legend-swatch" style="background:${CLASS_COLORS[detection.className]}"></span>
+                ${CLASS_LABELS[detection.className]}
+              </span>
+            </td>
+            <td class="mono">${Math.round(detection.confidence * 100)} %</td>
+            <td class="mono">${detection.trackId}</td>
+          </tr>
+        `).join("");
+      }
+
+      function renderSummary() {
+        elements.summaryTotal.textContent = String(state.totalDetections);
+        elements.summaryDuration.textContent = formatDuration(currentSessionMs());
+
+        if (state.totalDetections > 0) {
+          const topClass = Object.entries(state.classCounts)
+            .sort((a, b) => b[1] - a[1])[0];
+          elements.summaryTopClass.textContent = topClass[1] > 0
+            ? CLASS_LABELS[topClass[0]]
+            : "\u2014";
+
+          const avgConfidence = state.confidenceSamples > 0
+            ? Math.round((state.confidenceSum / state.confidenceSamples) * 100)
+            : 0;
+          elements.summaryConfidence.innerHTML = state.confidenceSamples > 0
+            ? `${avgConfidence} <span class="summary-unit">%</span>`
+            : `\u2014 <span class="summary-unit">%</span>`;
+        } else {
+          elements.summaryTopClass.textContent = "\u2014";
+          elements.summaryConfidence.innerHTML = `\u2014 <span class="summary-unit">%</span>`;
+        }
+      }
+
+      function applyStatistics(statistics) {
+        if (statistics.total_detections !== undefined) {
+          state.totalDetections = Number(statistics.total_detections) || 0;
+        }
+        if (statistics.average_confidence !== undefined) {
+          state.backendAverageConfidence = Number(statistics.average_confidence) || null;
+        }
+        if (statistics.class_counts && typeof statistics.class_counts === "object") {
+          CLASSES.forEach(name => {
+            if (statistics.class_counts[name] !== undefined) {
+              state.classCounts[name] = Number(statistics.class_counts[name]) || 0;
+            }
+          });
+        }
+        renderSummary();
+        scheduleChartUpdate();
+      }
+
+      function drawBoundingBoxes(detections) {
+        const canvas = elements.detectionCanvas;
+        const stage = elements.cameraStage;
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = stage.clientWidth;
+        canvas.height = stage.clientHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!detections.length || !state.frameLoaded) return;
+
+        const img = elements.cameraImage;
+        const imgRect = img.getBoundingClientRect();
+        const stageRect = stage.getBoundingClientRect();
+
+        const offsetX = imgRect.left - stageRect.left;
+        const offsetY = imgRect.top - stageRect.top;
+        const scaleX = imgRect.width / (img.naturalWidth || imgRect.width);
+        const scaleY = imgRect.height / (img.naturalHeight || imgRect.height);
+
+        detections.forEach(detection => {
+          if (!detection.bbox || detection.bbox.length < 4) return;
+
+          const [x1, y1, x2, y2] = detection.bbox;
+          const sx = offsetX + x1 * scaleX;
+          const sy = offsetY + y1 * scaleY;
+          const sw = (x2 - x1) * scaleX;
+          const sh = (y2 - y1) * scaleY;
+
+          const color = CLASS_COLORS[detection.className] || "#ffffff";
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(sx, sy, sw, sh);
+
+          const label = `${CLASS_LABELS[detection.className]} ${Math.round(detection.confidence * 100)}%`;
+          ctx.font = "600 10px 'IBM Plex Mono', monospace";
+          const textWidth = ctx.measureText(label).width;
+
+          ctx.fillStyle = color;
+          ctx.fillRect(sx, sy - 18, textWidth + 10, 18);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillText(label, sx + 5, sy - 5);
+        });
+      }
+
+      function clearBoundingBoxes() {
+        const canvas = elements.detectionCanvas;
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function startStream() {
+        if (state.streaming || state.busy) return;
+        setBusy(true);
+        fetchJSON("/api/stream/start", { method: "POST" })
+          .then(data => {
+            showToast(data.message || "Stream gestartet", "success");
+            handleStatus("running", "Stream gestartet");
+          })
+          .catch(() => {})
+          .finally(() => setBusy(false));
+      }
+
+      function stopStream() {
+        if (!state.streaming || state.busy) return;
+        setBusy(true);
+        fetchJSON("/api/stream/stop", { method: "POST" })
+          .then(data => {
+            showToast(data.message || "Stream gestoppt", "success");
+            handleStatus("stopped", "Stream gestoppt");
+          })
+          .catch(() => {})
+          .finally(() => setBusy(false));
+      }
+
+      function switchPage(pageName) {
+        elements.navButtons.forEach(button => {
+          button.classList.toggle("active", button.dataset.page === pageName);
+        });
+        elements.pages.forEach(page => {
+          page.classList.toggle("active", page.id === `${pageName}Page`);
+        });
+      }
+
+      elements.navButtons.forEach(button => {
+        button.addEventListener("click", () => switchPage(button.dataset.page));
+      });
+
+      elements.startButton.addEventListener("click", startStream);
+      elements.stopButton.addEventListener("click", stopStream);
+
+      elements.clearHistoryButton.addEventListener("click", () => {
+        state.history = [];
+        state.classCounts = Object.fromEntries(CLASSES.map(name => [name, 0]));
+        state.totalDetections = 0;
+        state.confidenceSum = 0;
+        state.confidenceSamples = 0;
+        state.trendLabels = [];
+        CLASSES.forEach(name => { state.trendValues[name] = []; });
+
+        renderRecent();
+        renderHistory();
+        renderSummary();
+        scheduleChartUpdate();
+        showToast("Historie gelöscht", "success");
+      });
+
+      let sessionTimer = null;
+
+      function startSessionTimer() {
+        if (sessionTimer) return;
+        sessionTimer = setInterval(() => {
+          if (state.streaming) {
+            elements.summaryDuration.textContent = formatDuration(currentSessionMs());
+          }
+        }, 1000);
+      }
+
+      elements.cameraImage.addEventListener("load", () => {
+        state.frameLoaded = true;
+        elements.cameraImage.classList.add("visible");
+        elements.cameraPlaceholder.style.display = "none";
+
+        if (state.latestDetections.length) {
+          drawBoundingBoxes(state.latestDetections);
+        }
+      });
+
+      renderRecent();
+      renderHistory();
+      renderSummary();
+      startSessionTimer();
+      connectVideoSocket();
+      connectControlSocket();
+    })();
+  </script>
+</body>
+</html>

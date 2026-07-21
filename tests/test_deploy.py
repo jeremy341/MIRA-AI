@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
@@ -17,7 +16,6 @@ from deploy import (
     check_environment,
     _module_available,
     _safe_cpu_count,
-    _safe_memory_mb,
     _detect_raspberry_pi,
     _detect_jetson,
     _detect_cuda,
@@ -111,9 +109,7 @@ def test_suggest_model_none_calls_detect():
 
 def test_check_environment_no_opencv():
     with patch("deploy.detect_hardware") as mock_detect:
-        mock_detect.return_value = HardwareInfo(
-            platform="linux", arch="x86_64", has_opencv=False
-        )
+        mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64", has_opencv=False)
         warnings = check_environment()
         assert any("OpenCV" in w for w in warnings)
 
@@ -129,9 +125,7 @@ def test_check_environment_no_frameworks():
 
 def test_check_environment_healthy():
     with patch("deploy.detect_hardware") as mock_detect:
-        mock_detect.return_value = HardwareInfo(
-            platform="linux", arch="x86_64", has_opencv=True, has_torch=True
-        )
+        mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64", has_opencv=True, has_torch=True)
         warnings = check_environment()
         assert warnings == []
 

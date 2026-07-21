@@ -170,6 +170,7 @@ class InferenceEngine:
 
                 results = self._infer(frame)
                 from config import CLASS_NAMES
+
                 annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
                 self._update_metrics(results)
                 self._draw_status(annotated, results)
