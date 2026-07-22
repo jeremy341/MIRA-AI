@@ -181,7 +181,7 @@ def generate_docker_compose() -> str:
         "      dockerfile: Dockerfile",
         "    volumes:",
         "# Mount your dataset here",
-        "      - ../datasets/mira_all:/data/dataset",
+        "      - ../datasets:/data/dataset",
         "# Mount output directory to save models",
         "      - ../models:/app/models",
         "      - ../runs:/app/runs",

@@ -1,3 +1,5 @@
+"""CLI command for generating cloud training notebooks and Docker infrastructure."""
+
 import sys
 from pathlib import Path
 

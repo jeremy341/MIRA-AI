@@ -1,3 +1,5 @@
+"""CLI command for the interactive training setup wizard."""
+
 import sys
 
 from ..config import PROJECT_CONFIG

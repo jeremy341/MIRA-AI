@@ -1,3 +1,5 @@
+"""CLI commands for merging, listing, and validating YOLO-format datasets."""
+
 from pathlib import Path
 
 from ..pipeline.registry import register_command

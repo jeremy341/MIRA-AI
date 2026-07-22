@@ -2,7 +2,7 @@
 
 Usage:
     python scripts/evaluate.py --model mira_exp014.pt
-    python scripts/evaluate.py --model mira_exp013.pt --data datasets/mira_tnr/dataset.yaml
+    python scripts/evaluate.py --model mira_exp013.pt --data datasets/roboflow_raw/dataset.yaml
     python scripts/evaluate.py --model mira_exp014.pt --conf 0.3 --output results/eval_exp014/
 """
 
@@ -69,7 +69,7 @@ def parse_args() -> argparse.Namespace:
         "--data",
         type=str,
         default=None,
-        help="Path to dataset YAML (auto-discovers mira_tnr if omitted)",
+        help="Path to dataset YAML (auto-discovers first available if omitted)",
     )
     p.add_argument(
         "--conf",
@@ -91,16 +91,9 @@ def parse_args() -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 def discover_default_dataset() -> Path | None:
     """Return the first dataset YAML found in datasets/ with a val split."""
-    candidates = [
-        ROOT_DIR / "datasets" / "mira_tnr" / "dataset.yaml",
-        ROOT_DIR / "datasets" / "mira_tnw" / "dataset.yaml",
-    ]
-    for path in candidates:
-        if path.exists():
-            return path
-
     for yaml_path in sorted((ROOT_DIR / "datasets").rglob("dataset.yaml")):
-        return yaml_path
+        if yaml_path.exists():
+            return yaml_path
 
     return None
 
@@ -147,6 +140,8 @@ def build_confusion_matrix(
 
             for pi in range(len(pred_boxes)):
                 if pred_used[pi]:
+                    continue
+                if gt_cls != pred_cls[pi]:
                     continue
                 iou_val = _iou(gt_box, pred_boxes[pi])
                 if iou_val >= best_iou:

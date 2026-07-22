@@ -2,7 +2,7 @@
 Data models for MIRA Control Center API
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from pydantic import BaseModel, Field
 from enum import StrEnum
@@ -23,7 +23,7 @@ class Detection(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     bbox: list[int]  # [x1, y1, x2, y2]
     track_id: int | None = None
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CameraConfig(BaseModel):
@@ -51,7 +51,7 @@ class ModelConfig(BaseModel):
 class SystemMetrics(BaseModel):
     """System performance metrics"""
 
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     fps: float
     inference_latency_ms: float
     avg_latency_ms: float
@@ -99,5 +99,5 @@ class StatusUpdate(BaseModel):
 
     status: SystemStatus
     message: str
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     details: dict[str, Any] | None = None

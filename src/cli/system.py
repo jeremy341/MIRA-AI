@@ -1,3 +1,5 @@
+"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
+
 from ..config import ROOT_DIR
 from ..version import __version__
 from ..pipeline.registry import register_command
@@ -18,11 +20,11 @@ def cmd_doctor(args):
     print("\n  [1/5] Configuration")
     config_errors = validate_config()
     if config_errors:
-        print(f"    ! {len(config_errors)} config error(s):")
+        print(f"    [!] {len(config_errors)} config error(s):")
         for e in config_errors:
             print(f"      - {e}")
     else:
-        print("    ✓ mira.yaml is valid")
+        print("    [OK] mira.yaml is valid")
 
     # Hardware
     print("\n  [2/5] Hardware")
@@ -31,9 +33,9 @@ def cmd_doctor(args):
     print(f"    Memory: {info.memory_mb} MB")
     print(f"    CPUs: {info.cpu_count}")
     if info.has_cuda:
-        print(f"    ✓ CUDA: {info.cuda_version}")
+        print(f"    [OK] CUDA: {info.cuda_version}")
     else:
-        print("    ⚠ No CUDA detected")
+        print("    [!] No CUDA detected")
     print(f"    Suggested model: {suggest_model(info)}")
 
     # Environment
@@ -43,16 +45,16 @@ def cmd_doctor(args):
         for w in env_warnings:
             print(f"    ! {w}")
     else:
-        print("    ✓ All required libraries available")
+        print("    [OK] All required libraries available")
 
     # Models
     print("\n  [4/5] Models")
     registry = ModelRegistry()
     count = registry.discover()
     if count:
-        print(f"    ✓ {count} model(s) discovered")
+        print(f"    [OK] {count} model(s) discovered")
     else:
-        print("    ⚠ No models found in models/detection/")
+        print("    [!] No models found in models/detection/")
 
     # Datasets
     print("\n  [5/5] Datasets")
@@ -60,11 +62,11 @@ def cmd_doctor(args):
     ds_count = ds_registry.discover()
     available = [s for s in ds_registry.list_sources() if s["exists"]]
     if available:
-        print(f"    ✓ {len(available)}/{ds_count} dataset source(s) available")
+        print(f"    [OK] {len(available)}/{ds_count} dataset source(s) available")
         for s in available:
             print(f"      - {s['key']}: {s['name']}")
     else:
-        print("    ⚠ No dataset sources available")
+        print("    [!] No dataset sources available")
 
     print(f"\n  {'=' * 60}")
     if config_errors or env_warnings:
@@ -196,11 +198,11 @@ def cmd_experiments(args):
     if not yaml_files:
         print("No experiment YAML files found.")
         return
+    import yaml as _yaml
+
     print(f"{'File':<50} {'Description'}")
     print("-" * 80)
     for p in yaml_files:
-        import yaml as _yaml
-
         with open(p, encoding="utf-8") as f:
             data = _yaml.safe_load(f) or {}
         desc = data.get("name", data.get("model", ""))

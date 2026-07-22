@@ -1,6 +1,6 @@
 name: exp014
 model: yolo11n.pt
-dataset: datasets/mira_all/dataset.yaml
+dataset: datasets/roboflow_raw/data.yaml
 epochs: 120
 batch_size: 32
 imgsz: 640

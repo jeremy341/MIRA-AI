@@ -1,3 +1,5 @@
+"""CLI entry point for MIRA — registers and dispatches all subcommands."""
+
 import sys
 
 from ..version import __version__
@@ -10,6 +12,8 @@ from . import system  # noqa: F401
 from . import generate  # noqa: F401
 from . import dashboard as dashboard_module  # noqa: F401
 from . import wizard  # noqa: F401
+
+__all__ = ["main"]
 
 
 def main():
@@ -26,7 +30,7 @@ def main():
 Examples:
   mira live --model mira_exp014_int8.tflite
   mira train --config experiments/exp014_yolo11n_multidataset.yaml
-  mira train --model yolo11n.pt --dataset datasets/mira_v2/dataset.yaml --epochs 50
+  mira train --model yolo11n.pt --dataset datasets/trashnet_labeled/dataset.yaml --epochs 50
   mira merge --sources taco_trashnet roboflow warp --output datasets/mira_merged
   mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite
   mira models
