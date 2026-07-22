@@ -359,10 +359,10 @@ class ModelBenchmark:
                 else 0.0
             )
 
-            map50 = compute_map(all_preds, all_gts, iou_thresh=0.5)
-            map50_95 = float(
-                np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.955, 0.05)])
-            )
+            map_thresholds = np.linspace(0.5, 0.95, 10)
+            map_scores = np.array([compute_map(all_preds, all_gts, iou_thresh=t) for t in map_thresholds])
+            map50 = float(map_scores[0])
+            map50_95 = float(np.mean(map_scores))
 
             results.append(
                 BenchmarkResult(

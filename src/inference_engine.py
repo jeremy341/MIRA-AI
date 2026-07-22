@@ -11,7 +11,15 @@ from typing import Self
 import cv2
 from ultralytics import YOLO
 
-from .config import BYTE_TRACK_CONFIG_PATH, CLASS_NAMES, DETECTION_DIR, get_tflite_imgsz
+from .config import (
+    BYTE_TRACK_CONFIG_PATH,
+    CLASS_NAMES,
+    DEFAULT_CONF,
+    DEFAULT_IMGSZ,
+    DEFAULT_IOU,
+    DETECTION_DIR,
+    get_tflite_imgsz,
+)
 from .hardware import USBCamera
 from .logger import logger
 from .visualize import draw_boxes
@@ -35,12 +43,16 @@ class InferenceEngine:
         cam_width: int = 640,
         cam_height: int = 360,
         target_latency_ms: int = 50,
-        conf_threshold: float = 0.5,
+        conf_threshold: float = None,
         reject_threshold: float = 0.55,
         imgsz: int | None = None,
         enable_tracking: bool = True,
-        iou_threshold: float = 0.45,
+        iou_threshold: float = None,
     ):
+        if conf_threshold is None:
+            conf_threshold = DEFAULT_CONF
+        if iou_threshold is None:
+            iou_threshold = DEFAULT_IOU
         self.model_name = model_name
         self.camera_index = camera_index
         self.cam_width = cam_width
@@ -106,7 +118,7 @@ class InferenceEngine:
             else:
                 logger.info(f"TFLite model: input {self.img_size}x{self.img_size}")
         else:
-            self.img_size = imgsz or 640
+            self.img_size = imgsz or DEFAULT_IMGSZ
             logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
         if self.is_tflite_int8:
@@ -164,6 +176,7 @@ class InferenceEngine:
             f"Press 'q' to exit."
         )
 
+        consecutive_errors = 0
         try:
             while not self._stopped:
                 ret, frame = self.stream.read()
@@ -174,7 +187,16 @@ class InferenceEngine:
                     self.skip_frame = False
                     continue
 
-                results = self._infer(frame)
+                try:
+                    results = self._infer(frame)
+                except Exception as exc:
+                    consecutive_errors += 1
+                    logger.warning("Inference error (%d consecutive): %s", consecutive_errors, exc)
+                    if consecutive_errors >= 30:
+                        logger.error("Too many consecutive inference errors, stopping")
+                        break
+                    continue
+                consecutive_errors = 0
                 annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
                 self._update_metrics(results)
                 self._draw_status(annotated, results)

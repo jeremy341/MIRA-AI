@@ -137,6 +137,8 @@ class YOLOStrategy(TrainingStrategy):
             "project": config.project,
             "name": config.name,
             "exist_ok": config.exist_ok,
+            "seed": config.seed,
+            "deterministic": True,
         }
         if config.extra:
             kwargs.update(config.extra)

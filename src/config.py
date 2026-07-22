@@ -109,9 +109,19 @@ _RAW_CLASSES = PROJECT_CONFIG.get("classes", {})
 CLASS_NAMES: list[str] = _RAW_CLASSES.get("names", ["glass", "metal", "paper", "plastic", "trash"])
 NUM_CLASSES: int = _RAW_CLASSES.get("count", len(CLASS_NAMES))
 
+# Training defaults
+_TRAINING = PROJECT_CONFIG.get("training", {})
+
 # Inference defaults
 _INFERENCE = PROJECT_CONFIG.get("inference", {})
 REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
+
+# Centralized numeric defaults
+DEFAULT_CONF: float = _INFERENCE.get("default_conf", 0.5)
+DEFAULT_IOU: float = _INFERENCE.get("default_iou", 0.45)
+DEFAULT_IMGSZ: int = _TRAINING.get("default_imgsz", 640)
+DEFAULT_MODEL: str = _TRAINING.get("default_model", "yolo11n.pt")
+TFLITE_INT8_CONF: float = 0.25
 
 # Legacy model labels — kept for backward compatibility.
 # New models are discovered dynamically by ModelRegistry.

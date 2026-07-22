@@ -147,6 +147,7 @@ class CameraService:
         """Main streaming and inference loop"""
         last_metrics_time = time.time()
         metrics_interval = 0.5  # Update metrics twice per second
+        consecutive_failures = 0
 
         while self.is_streaming:
             try:
@@ -167,8 +168,15 @@ class CameraService:
                 # Read frame
                 ret, frame = camera.read()
                 if not ret:
+                    consecutive_failures += 1
+                    if consecutive_failures >= 60:
+                        log.error("Camera disconnected after %d consecutive failures", consecutive_failures)
+                        self._update_status(SystemStatus.ERROR, "Camera disconnected")
+                        self.is_streaming = False
+                        break
                     time.sleep(0.01)
                     continue
+                consecutive_failures = 0
 
                 frame_start = time.perf_counter()
 

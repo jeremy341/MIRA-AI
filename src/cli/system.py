@@ -1,6 +1,6 @@
 """CLI commands for diagnostics, config display, model listing, and benchmarking."""
 
-from ..config import ROOT_DIR
+from ..config import DEFAULT_CONF, ROOT_DIR
 from ..version import __version__
 from ..pipeline.registry import register_command
 
@@ -212,7 +212,7 @@ def cmd_experiments(args):
 def _add_benchmark_args(parser):
     parser.add_argument("--models", type=str, nargs="+", required=True, help="Model paths to benchmark.")
     parser.add_argument("--dataset", type=str, default=None, help="Dataset YAML for evaluation (optional).")
-    parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold (default: 0.25).")
+    parser.add_argument("--conf", type=float, default=DEFAULT_CONF, help="Confidence threshold (default: 0.25).")
     parser.add_argument("--max-images", type=int, default=100, help="Max images to evaluate (default: 100).")
     parser.add_argument("--output", type=str, default=None, help="Output path for benchmark report.")
 

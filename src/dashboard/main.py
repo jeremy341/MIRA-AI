@@ -2,10 +2,12 @@
 FastAPI server for MIRA Control Center
 """
 
+import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 
@@ -13,9 +15,27 @@ from .models import CameraConfig, ModelConfig
 from .camera_service import CameraService
 from .websocket_handler import WebSocketHandler
 
+log = logging.getLogger(__name__)
+
+# Initialize services
+camera_service = CameraService()
+websocket_handler = WebSocketHandler(camera_service)
+
+
+@asynccontextmanager
+async def lifespan(application: FastAPI):
+    log.info("MIRA Control Center starting up...")
+    yield
+    log.info("Shutting down MIRA Control Center...")
+    await camera_service.stop()
+
+
 # Initialize FastAPI app
 app = FastAPI(
-    title="MIRA Control Center API", description="Control interface for MIRA recycling sorting system", version="1.0.0"
+    title="MIRA Control Center API",
+    description="Control interface for MIRA recycling sorting system",
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -26,10 +46,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize services
-camera_service = CameraService()
-websocket_handler = WebSocketHandler(camera_service)
 
 # API Routes
 # Serve dashboard frontend
@@ -42,7 +58,7 @@ async def root():
     dashboard_path = FRONTEND_DIR / "dashboard.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path, media_type="text/html")
-    return {"error": "Dashboard not found", "path": str(dashboard_path)}
+    raise HTTPException(status_code=404, detail="Dashboard not found")
 
 
 @app.get("/api/status")
@@ -111,7 +127,7 @@ async def stop_stream():
 
 
 @app.get("/api/statistics")
-async def get_statistics(period: int = 60):
+async def get_statistics(period: int = Query(default=60, ge=1, le=3600)):
     """Get detection statistics for the given period"""
     stats = camera_service.get_statistics(period)
 
@@ -119,7 +135,7 @@ async def get_statistics(period: int = 60):
 
 
 @app.get("/api/metrics/history")
-async def get_metrics_history(limit: int = 100):
+async def get_metrics_history(limit: int = Query(default=100, ge=1, le=1000)):
     """Get historical system metrics"""
     history = list(camera_service.metrics_history)[-limit:]
 
@@ -131,7 +147,7 @@ async def get_metrics_history(limit: int = 100):
 
 
 @app.get("/api/detections/recent")
-async def get_recent_detections(limit: int = 50):
+async def get_recent_detections(limit: int = Query(default=50, ge=1, le=500)):
     """Get recent detections"""
     detections = list(camera_service.detection_history)[-limit:]
 
@@ -232,20 +248,6 @@ async def control_websocket(websocket: WebSocket):
         print("Control WebSocket disconnected")
     except Exception as e:
         await websocket.send_json({"type": "error", "message": f"Error: {str(e)}"})
-
-
-# Startup and shutdown events
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    print("MIRA Control Center starting up...")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
-    print("Shutting down MIRA Control Center...")
-    await camera_service.stop()
 
 
 # Run the server

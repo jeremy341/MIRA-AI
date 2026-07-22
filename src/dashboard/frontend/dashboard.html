@@ -1253,6 +1253,8 @@
       let controlSocket = null;
       let videoReconnectTimer = null;
       let controlReconnectTimer = null;
+      let videoReconnectDelay = 1000;
+      let controlReconnectDelay = 1000;
       let pingTimer = null;
       let boxClearTimer = null;
 
@@ -1427,6 +1429,8 @@
           }
         }
       );
+
+      function esc(s) { const el = document.createElement("span"); el.textContent = s; return el.innerHTML; }
 
       function websocketURL(path) {
         const protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1625,13 +1629,15 @@
         } catch (error) {
           state.videoConnected = false;
           updateConnectionUI();
-          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
+          videoReconnectTimer = setTimeout(connectVideoSocket, videoReconnectDelay);
+          videoReconnectDelay = Math.min(videoReconnectDelay * 1.5, 30000);
           return;
         }
 
         videoSocket.addEventListener("open", () => {
           state.videoConnected = true;
           updateConnectionUI();
+          videoReconnectDelay = 1000;
 
           clearInterval(pingTimer);
           pingTimer = setInterval(() => {
@@ -1665,7 +1671,8 @@
           state.videoConnected = false;
           updateConnectionUI();
           clearInterval(pingTimer);
-          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
+          videoReconnectTimer = setTimeout(connectVideoSocket, videoReconnectDelay);
+          videoReconnectDelay = Math.min(videoReconnectDelay * 1.5, 30000);
         });
       }
 
@@ -1677,13 +1684,15 @@
         } catch (error) {
           state.controlConnected = false;
           updateConnectionUI();
-          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
+          controlReconnectTimer = setTimeout(connectControlSocket, controlReconnectDelay);
+          controlReconnectDelay = Math.min(controlReconnectDelay * 1.5, 30000);
           return;
         }
 
         controlSocket.addEventListener("open", () => {
           state.controlConnected = true;
           updateConnectionUI();
+          controlReconnectDelay = 1000;
           sendControl({ command: "get_status" });
           sendControl({
             command: "get_statistics",
@@ -1709,7 +1718,8 @@
         controlSocket.addEventListener("close", () => {
           state.controlConnected = false;
           updateConnectionUI();
-          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
+          controlReconnectTimer = setTimeout(connectControlSocket, controlReconnectDelay);
+          controlReconnectDelay = Math.min(controlReconnectDelay * 1.5, 30000);
         });
       }
 
@@ -1940,7 +1950,7 @@
               </span>
             </td>
             <td class="mono">${Math.round(detection.confidence * 100)} %</td>
-            <td class="mono">${detection.trackId}</td>
+            <td class="mono">${esc(detection.trackId)}</td>
           </tr>
         `).join("");
       }
