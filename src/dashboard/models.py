@@ -7,6 +7,8 @@ from typing import Any
 from pydantic import BaseModel, Field
 from enum import StrEnum
 
+from ..config import DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU
+
 
 class WasteClass(StrEnum):
     GLASS = "glass"
@@ -30,7 +32,7 @@ class CameraConfig(BaseModel):
     """Camera configuration"""
 
     index: int = 0
-    width: int = 640
+    width: int = DEFAULT_IMGSZ
     height: int = 360
     fps: int = 30
     autofocus: bool = False
@@ -41,9 +43,9 @@ class ModelConfig(BaseModel):
     """Model inference configuration"""
 
     name: str
-    conf_threshold: float = 0.5
+    conf_threshold: float = DEFAULT_CONF
     reject_threshold: float = 0.55
-    iou_threshold: float = 0.45
+    iou_threshold: float = DEFAULT_IOU
     enable_tracking: bool = True
     target_latency_ms: int = 50
 

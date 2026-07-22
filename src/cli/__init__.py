@@ -67,6 +67,7 @@ Examples:
         except Exception as e:
             logger.exception(f"Unexpected error in command '{args.command}': {e}")
             print(f"\nUnexpected error: {e}")
+            print("Try running 'mira doctor' to diagnose common issues.")
             sys.exit(1)
     else:
         parser.print_help()

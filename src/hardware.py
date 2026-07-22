@@ -198,6 +198,8 @@ class IPCamera(AbstractCamera):
                 logger.warning("IP camera stream lost, attempting reconnection...")
                 for attempt in range(self.RECONNECT_ATTEMPTS):
                     time.sleep(self.RECONNECT_DELAY_SECONDS)
+                    old_cap = self.cap
+                    old_cap.release()
                     self.cap = cv2.VideoCapture(self._rtsp_url)
                     if self.cap.isOpened():
                         logger.info(f"IP camera reconnected after {attempt + 1} attempt(s)")

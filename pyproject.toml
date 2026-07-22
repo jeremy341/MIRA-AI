@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mira-ai"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Machine Intelligence for Recycling Automation — Jugend Forscht 2027"
 authors = [{name = "Jeremy Darko"}]
 license = {text = "MIT"}
@@ -15,27 +15,30 @@ dependencies = [
     "ultralytics>=8.0",
     "opencv-python>=4.0",
     "torch>=2.0",
+    "torchvision>=0.15",
     "numpy>=1.24",
     "psutil>=5.0",
     "pyyaml>=6.0",
-    "requests>=2.0",
     "fastapi>=0.100",
     "pydantic>=2.0",
     "uvicorn>=0.20",
-    "jinja2>=3.0",
     "websockets>=10.0",
     "python-multipart>=0.0.5",
-    "matplotlib>=3.5",
-    "scikit-learn>=1.0",
-    "scipy>=1.0",
-    "pandas>=1.5",
-    "rich>=10.0",
-    "tensorflow>=2.10",
     "pillow>=9.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-mock>=3.14"]
+train = [
+    "tensorflow>=2.10",
+]
+analysis = [
+    "matplotlib>=3.5",
+    "pandas>=1.5",
+    "scikit-learn>=1.0",
+    "scipy>=1.0",
+]
+all = ["mira-ai[train,analysis]"]
+dev = ["pytest>=8.0", "pytest-mock>=3.14", "ruff>=0.9.0", "mira-ai[all]"]
 
 [project.urls]
 Repository = "https://github.com/jeremy341/MIRA-AI"
@@ -43,8 +46,14 @@ Repository = "https://github.com/jeremy341/MIRA-AI"
 [project.scripts]
 mira = "src.cli:main"
 
+[tool.setuptools.dynamic]
+version = {attr = "src.version.__version__"}
+
 [tool.setuptools.packages.find]
 include = ["src*"]
+
+[tool.setuptools.package-data]
+"src.dashboard" = ["frontend/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

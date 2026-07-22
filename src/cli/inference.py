@@ -98,7 +98,7 @@ def _add_eval_yolo_args(parser):
     parser.add_argument("--data", type=str, default=None, help="Optional dataset YAML path.")
 
 
-@register_command("eval-yolo", "Evaluate YOLOv8 detection models", add_args=_add_eval_yolo_args)
+@register_command("eval-yolo", "Evaluate YOLO detection models", add_args=_add_eval_yolo_args)
 def cmd_eval_yolo(args):
     model = args.model
     if model is None:
@@ -144,7 +144,7 @@ def _add_live_args(parser):
     )
 
 
-@register_command("live", "Start real-time YOLOv8 webcam tracking stream", add_args=_add_live_args)
+@register_command("live", "Start real-time webcam detection stream", add_args=_add_live_args)
 def cmd_live(args):
     model = args.model
     if model is None:

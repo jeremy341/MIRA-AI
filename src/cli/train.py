@@ -43,7 +43,7 @@ def _add_train_args(parser):
     parser.add_argument("--auto", action="store_true", help="Auto-detect hardware and configure training parameters.")
 
 
-@register_command("train", "Train a YOLO detection model via the new pipeline", add_args=_add_train_args)
+@register_command("train", "Train a YOLO detection or classification model", add_args=_add_train_args)
 def cmd_train(args):
     from ..pipeline.strategies import TrainConfig
     from ..pipeline.train import TrainingPipeline

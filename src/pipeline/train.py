@@ -61,6 +61,8 @@ class TrainingPipeline:
                     if fmt_lower == "tensorrt"
                     else None
                 )
+                if out is None:
+                    logger.warning("Unknown export format '%s', skipping", fmt)
             except Exception as e:
                 logger.error(f"Export to format '{fmt}' failed: {e}")
                 raise PipelineError(f"Model export to format '{fmt}' failed: {e}") from e
@@ -73,16 +75,7 @@ class TrainingPipeline:
         config.project = "runs/train"
         config.name = run_name
 
-        try:
-            result = self.train("detection", config)
-        except PipelineError:
-            raise
-        except Exception as e:
-            logger.error(f"YOLO training failed: {e}")
-            raise PipelineError(
-                f"YOLO training failed: {e}. "
-                f"Check that your dataset YAML is valid and that the 'detection' strategy is registered."
-            ) from e
+        result = self.train("detection", config)
 
         results_dir = Path(config.project) / config.name
         logger.info(f"Experiment saved to {results_dir}")
@@ -98,7 +91,15 @@ class TrainingPipeline:
         config.project = "runs/train"
         config.name = run_name
 
-        result = self.train("classifier", config)
+        try:
+            result = self.train("classifier", config)
+        except PipelineError:
+            raise
+        except Exception as e:
+            logger.error(f"Classifier training failed: {e}")
+            raise PipelineError(
+                f"Classifier training failed: {e}. Check that your data directory contains valid image subfolders."
+            ) from e
         results_dir = Path(config.project) / config.name
         print(f"  Experiment saved to {results_dir}")
         return result

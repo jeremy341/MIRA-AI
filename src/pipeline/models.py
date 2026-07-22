@@ -16,7 +16,7 @@ from typing import Any
 import cv2
 import numpy as np
 
-from ..config import CLASS_NAMES, DETECTION_DIR
+from ..config import CLASS_NAMES, DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU, DETECTION_DIR, TFLITE_INT8_CONF
 from ..logger import get_logger
 
 log = get_logger(__name__)
@@ -125,8 +125,8 @@ class DetectionModel(ABC):
     def predict(
         self,
         image: str | Path,
-        conf: float = 0.25,
-        iou: float = 0.45,
+        conf: float = None,
+        iou: float = None,
     ) -> InferenceResult: ...
 
     def _parse_yolo_results(
@@ -185,23 +185,29 @@ class YOLOAdapter(DetectionModel):
             )
         self._names = self._model.names if hasattr(self._model, "names") else {}
         if callable(self._model.model):
-            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, "args") else 640
+            self._imgsz = (
+                self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
+            )
         else:
-            self._imgsz = 640
+            self._imgsz = DEFAULT_IMGSZ
             if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "get_input_details"):
                 inp = self._backend.backend.get_input_details()
-                self._imgsz = inp[0]["shape"][-1] if inp else 640
+                self._imgsz = inp[0]["shape"][-1] if inp else DEFAULT_IMGSZ
             elif hasattr(self._backend, "backend") and hasattr(self._backend.backend, "session"):
                 inp = self._backend.backend.session.get_inputs()
-                self._imgsz = inp[0].shape[-1] if inp else 640
+                self._imgsz = inp[0].shape[-1] if inp else DEFAULT_IMGSZ
         self._loaded = True
 
     def predict(
         self,
         image: str | Path,
-        conf: float = 0.25,
-        iou: float = 0.45,
+        conf: float = None,
+        iou: float = None,
     ) -> InferenceResult:
+        if conf is None:
+            conf = DEFAULT_CONF
+        if iou is None:
+            iou = DEFAULT_IOU
         if not (0.0 <= conf <= 1.0):
             raise ValueError(f"conf must be in [0, 1], got {conf}")
         if not (0.0 <= iou <= 1.0):
@@ -268,22 +274,28 @@ class YOLOTFLiteAdapter(DetectionModel):
             details = self._backend.backend.interpreter.get_input_details()
             self._imgsz = details[0]["shape"][-1]  # H or W dimension
         else:
-            self._imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, "args") else 640
+            self._imgsz = (
+                self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
+            )
         self._loaded = True
 
     def predict(
         self,
         image: str | Path,
-        conf: float = 0.25,
-        iou: float = 0.45,
+        conf: float = None,
+        iou: float = None,
     ) -> InferenceResult:
+        if conf is None:
+            conf = DEFAULT_CONF
+        if iou is None:
+            iou = DEFAULT_IOU
         if not (0.0 <= conf <= 1.0):
             raise ValueError(f"conf must be in [0, 1], got {conf}")
         if not (0.0 <= iou <= 1.0):
             raise ValueError(f"iou must be in [0, 1], got {iou}")
         if not self._loaded:
             self.load()
-        tflite_conf = min(conf, 0.25) if "int8" in self.path.name.lower() else conf
+        tflite_conf = min(conf, TFLITE_INT8_CONF) if "int8" in self.path.name.lower() else conf
 
         import torch
 
@@ -366,9 +378,13 @@ class ThirdPartyAdapter(DetectionModel):
     def predict(
         self,
         image: str | Path,
-        conf: float = 0.25,
-        iou: float = 0.45,
+        conf: float = None,
+        iou: float = None,
     ) -> InferenceResult:
+        if conf is None:
+            conf = DEFAULT_CONF
+        if iou is None:
+            iou = DEFAULT_IOU
         if not (0.0 <= conf <= 1.0):
             raise ValueError(f"conf must be in [0, 1], got {conf}")
         if not (0.0 <= iou <= 1.0):
@@ -383,7 +399,7 @@ class ThirdPartyAdapter(DetectionModel):
         from ultralytics.utils import nms
 
         try:
-            imgsz = self._model.args.get("imgsz", 640) if hasattr(self._model, "args") else 640
+            imgsz = self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
             im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, imgsz)
 
             device = _get_device(self._model.model) if hasattr(self._model, "model") else torch.device("cpu")
