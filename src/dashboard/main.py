@@ -2,7 +2,7 @@
 FastAPI server for MIRA Control Center
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -21,7 +21,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,7 +51,7 @@ async def get_status():
     return {
         "status": camera_service.status.value,
         "message": camera_service.status_message,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "camera_initialized": camera_service.camera is not None,
         "model_loaded": camera_service.model is not None,
         "streaming": camera_service.is_streaming,
@@ -62,7 +62,7 @@ async def get_status():
 async def get_models():
     """Get list of available detection models"""
     models = camera_service.get_available_models()
-    return {"models": models, "count": len(models), "timestamp": datetime.now().isoformat()}
+    return {"models": models, "count": len(models), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.post("/api/camera/initialize")
@@ -71,7 +71,7 @@ async def initialize_camera(config: CameraConfig):
     success = await camera_service.initialize_camera(config)
 
     if success:
-        return {"success": True, "message": "Camera initialized successfully", "config": config.dict()}
+        return {"success": True, "message": "Camera initialized successfully", "config": config.model_dump()}
     else:
         raise HTTPException(status_code=500, detail="Failed to initialize camera")
 
@@ -85,7 +85,7 @@ async def load_model(model_config: ModelConfig):
         return {
             "success": True,
             "message": f"Model {model_config.name} loaded successfully",
-            "config": model_config.dict(),
+            "config": model_config.model_dump(),
         }
     else:
         raise HTTPException(status_code=500, detail=f"Failed to load model {model_config.name}")
@@ -97,7 +97,7 @@ async def start_stream():
     success = await camera_service.start_streaming()
 
     if success:
-        return {"success": True, "message": "Streaming started", "timestamp": datetime.now().isoformat()}
+        return {"success": True, "message": "Streaming started", "timestamp": datetime.now(timezone.utc).isoformat()}
     else:
         raise HTTPException(status_code=500, detail="Failed to start streaming")
 
@@ -107,7 +107,7 @@ async def stop_stream():
     """Stop video streaming"""
     await camera_service.stop()
 
-    return {"success": True, "message": "Streaming stopped", "timestamp": datetime.now().isoformat()}
+    return {"success": True, "message": "Streaming stopped", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/api/statistics")
@@ -115,7 +115,7 @@ async def get_statistics(period: int = 60):
     """Get detection statistics for the given period"""
     stats = camera_service.get_statistics(period)
 
-    return {"statistics": stats.dict(), "period_seconds": period}
+    return {"statistics": stats.model_dump(), "period_seconds": period}
 
 
 @app.get("/api/metrics/history")
@@ -123,7 +123,11 @@ async def get_metrics_history(limit: int = 100):
     """Get historical system metrics"""
     history = list(camera_service.metrics_history)[-limit:]
 
-    return {"metrics": [m.dict() for m in history], "count": len(history), "timestamp": datetime.now().isoformat()}
+    return {
+        "metrics": [m.model_dump() for m in history],
+        "count": len(history),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @app.get("/api/detections/recent")
@@ -132,9 +136,9 @@ async def get_recent_detections(limit: int = 50):
     detections = list(camera_service.detection_history)[-limit:]
 
     return {
-        "detections": [d.dict() for d in detections],
+        "detections": [d.model_dump() for d in detections],
         "count": len(detections),
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -172,15 +176,17 @@ async def control_websocket(websocket: WebSocket):
                 )
 
             elif command == "load_model":
-                config = ModelConfig(**params)
-                success = await camera_service.load_model(config.name, config)
+                model_config = ModelConfig(**params)
+                success = await camera_service.load_model(model_config.name, model_config)
 
                 await websocket.send_json(
                     {
                         "type": "response",
                         "command": command,
                         "success": success,
-                        "message": f"Model {config.name} loaded" if success else f"Failed to load model {config.name}",
+                        "message": f"Model {model_config.name} loaded"
+                        if success
+                        else f"Failed to load model {model_config.name}",
                     }
                 )
 
@@ -209,7 +215,7 @@ async def control_websocket(websocket: WebSocket):
                         "type": "status",
                         "status": camera_service.status.value,
                         "message": camera_service.status_message,
-                        "timestamp": datetime.now().isoformat(),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
                     }
                 )
 
@@ -217,7 +223,7 @@ async def control_websocket(websocket: WebSocket):
                 period = params.get("period", 60)
                 stats = camera_service.get_statistics(period)
 
-                await websocket.send_json({"type": "statistics", "statistics": stats.dict(), "period": period})
+                await websocket.send_json({"type": "statistics", "statistics": stats.model_dump(), "period": period})
 
             else:
                 await websocket.send_json({"type": "error", "message": f"Unknown command: {command}"})

@@ -102,6 +102,10 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
         result.errors.append("No train or val split found")
         result.is_valid = False
 
+    if result.total_images == 0 and not result.errors:
+        result.warnings.append("Dataset contains 0 images")
+        result.is_valid = False
+
     if result.orphaned_labels:
         result.warnings.append(f"{len(result.orphaned_labels)} label(s) without matching image")
 

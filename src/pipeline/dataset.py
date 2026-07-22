@@ -88,7 +88,9 @@ class DatasetSource:
             raise ValueError(f"Unknown source_format '{data['source_format']}' in {yaml_path.name}")
 
         root = yaml_path.parent.parent.parent  # datasets/registry/ -> project root
-        input_path = root / data["input_path"]
+        input_path = (root / data["input_path"]).resolve()
+        if not str(input_path).startswith(str(root.resolve())):
+            raise ValueError(f"input_path '{data['input_path']}' escapes project root in {yaml_path.name}")
 
         # Parse class_mapping (YAML dicts have string keys)
         class_mapping = None
@@ -256,7 +258,8 @@ class DatasetRegistry:
     def _merge_remapped(self, source: DatasetSource, output: Path, dry_run: bool) -> tuple[int, int]:
         """Copy data with class ID remapping."""
         if dry_run:
-            print(f"  [DRY] Remap: {source.input_path} ({len(source.class_mapping)} mappings)")
+            if source.class_mapping is not None and len(source.class_mapping) > 0:
+                print(f"  [DRY] Remap: {source.input_path} ({len(source.class_mapping)} mappings)")
             return 0, 0
 
         mu = _import_merge_utils()

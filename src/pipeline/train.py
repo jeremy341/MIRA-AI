@@ -9,13 +9,13 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
 from ..exceptions import PipelineError
 from ..logger import logger
-from .strategies import TrainConfig, TrainResult, get_strategy, register_strategy
+from .strategies import TrainConfig, TrainResult, get_strategy, register_strategy as _register_strategy
 
 
 class TrainingPipeline:
@@ -69,7 +69,7 @@ class TrainingPipeline:
         return exported
 
     def train_yolo(self, config: TrainConfig) -> TrainResult:
-        run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        run_name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
         config.project = "runs/train"
         config.name = run_name
 
@@ -94,7 +94,7 @@ class TrainingPipeline:
         config.extra["base_model"] = base_model
         config.extra["fine_tune"] = fine_tune
 
-        run_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        run_name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
         config.project = "runs/train"
         config.name = run_name
 
@@ -106,4 +106,4 @@ class TrainingPipeline:
     @classmethod
     def register_strategy(cls, task: str, strategy_cls):
         """Register a custom training strategy."""
-        register_strategy(task, strategy_cls)
+        _register_strategy(task, strategy_cls)

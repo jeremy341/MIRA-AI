@@ -110,13 +110,22 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
     if dataset_path.is_file() and dataset_path.suffix in (".yaml", ".yml"):
         dataset_path = dataset_path.parent
 
-    for split in ("val", "train"):
-        img_dir = dataset_path / "images" / split
-        lbl_dir = dataset_path / "labels" / split
-        if img_dir.exists() and lbl_dir.exists():
-            break
-    else:
-        raise FileNotFoundError(f"No images/val (or train) directory found in {dataset_path}")
+    split = "val"
+    img_dir = dataset_path / "images" / "val"
+    lbl_dir = dataset_path / "labels" / "val"
+    if not (img_dir.exists() and lbl_dir.exists()):
+        import logging as _logging
+
+        _logging.getLogger(__name__).warning(
+            "Validation split not found in %s — falling back to train split. "
+            "Metrics may be inflated because the model is evaluated on training data.",
+            dataset_path,
+        )
+        split = "train"
+        img_dir = dataset_path / "images" / "train"
+        lbl_dir = dataset_path / "labels" / "train"
+        if not (img_dir.exists() and lbl_dir.exists()):
+            raise FileNotFoundError(f"No images/val (or train) directory found in {dataset_path}")
 
     samples: list[tuple[Path, list[dict]]] = []
     skipped = 0
@@ -330,7 +339,7 @@ class ModelBenchmark:
                     all_preds.append(img_preds)
                     all_gts.append(gt_objects)
 
-                except Exception as exc:
+                except (RuntimeError, ValueError, OSError) as exc:
                     errors.append(f"{img_path.name}: {exc}")
                     all_preds.append([])
                     all_gts.append(gt_objects)
@@ -352,7 +361,7 @@ class ModelBenchmark:
 
             map50 = compute_map(all_preds, all_gts, iou_thresh=0.5)
             map50_95 = float(
-                np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.96, 0.05)])
+                np.mean([compute_map(all_preds, all_gts, iou_thresh=t) for t in np.arange(0.5, 0.955, 0.05)])
             )
 
             results.append(

@@ -6,6 +6,7 @@ can be benchmarked alongside YOLO models.
 
 from __future__ import annotations
 
+import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -14,9 +15,11 @@ from typing import Any
 
 import cv2
 import numpy as np
-import torch
 
 from ..config import CLASS_NAMES, DETECTION_DIR
+from ..logger import get_logger
+
+log = get_logger(__name__)
 
 
 def letterbox_preprocess(
@@ -27,10 +30,14 @@ def letterbox_preprocess(
 
     Returns (tensor, top, bottom, left, right, scale, orig_w, orig_h).
     """
+    import torch
+
     img_bgr = cv2.imread(str(image_path))
     if img_bgr is None:
         raise FileNotFoundError(f"Cannot read image: {image_path}")
     h0, w0 = img_bgr.shape[:2]
+    if h0 == 0 or w0 == 0:
+        raise ValueError(f"Image has zero dimension ({w0}x{h0}): {image_path}")
     r = min(imgsz / h0, imgsz / w0)
     new_h, new_w = int(h0 * r), int(w0 * r)
     dh = imgsz - new_h
@@ -47,14 +54,16 @@ def letterbox_preprocess(
 
 
 def adjust_boxes_to_original(
-    preds: torch.Tensor,
+    preds,
     left: int,
     top: int,
     r: float,
     w0: int,
     h0: int,
-) -> torch.Tensor:
+):
     """Convert letterbox-adjusted box coords back to original image space."""
+    import torch
+
     boxes = preds[:, :4].clone()
     boxes[:, 0] -= left
     boxes[:, 1] -= top
@@ -66,8 +75,10 @@ def adjust_boxes_to_original(
     return boxes
 
 
-def _get_device(backend: Any) -> torch.device:
+def _get_device(backend: Any):
     """Get the torch device from a model backend."""
+    import torch
+
     if hasattr(backend, "device"):
         return backend.device
     if hasattr(backend, "parameters"):
@@ -167,7 +178,7 @@ class YOLOAdapter(DetectionModel):
         else:
             self._backend = AutoBackend(
                 model=str(self.path),
-                device=select_device("cpu"),
+                device=select_device("auto"),
                 dnn=False,
                 data=None,
                 fp16=False,
@@ -191,8 +202,14 @@ class YOLOAdapter(DetectionModel):
         conf: float = 0.25,
         iou: float = 0.45,
     ) -> InferenceResult:
+        if not (0.0 <= conf <= 1.0):
+            raise ValueError(f"conf must be in [0, 1], got {conf}")
+        if not (0.0 <= iou <= 1.0):
+            raise ValueError(f"iou must be in [0, 1], got {iou}")
         if not self._loaded:
             self.load()
+
+        import torch
 
         from ultralytics.utils import nms
 
@@ -260,9 +277,15 @@ class YOLOTFLiteAdapter(DetectionModel):
         conf: float = 0.25,
         iou: float = 0.45,
     ) -> InferenceResult:
+        if not (0.0 <= conf <= 1.0):
+            raise ValueError(f"conf must be in [0, 1], got {conf}")
+        if not (0.0 <= iou <= 1.0):
+            raise ValueError(f"iou must be in [0, 1], got {iou}")
         if not self._loaded:
             self.load()
         tflite_conf = min(conf, 0.25) if "int8" in self.path.name.lower() else conf
+
+        import torch
 
         from ultralytics.utils import nms
 
@@ -317,7 +340,6 @@ class ThirdPartyAdapter(DetectionModel):
         self._model = None
 
     def load(self) -> None:
-        import logging
 
         log = logging.getLogger(__name__)
         suffix = self.path.suffix.lower()
@@ -347,10 +369,16 @@ class ThirdPartyAdapter(DetectionModel):
         conf: float = 0.25,
         iou: float = 0.45,
     ) -> InferenceResult:
+        if not (0.0 <= conf <= 1.0):
+            raise ValueError(f"conf must be in [0, 1], got {conf}")
+        if not (0.0 <= iou <= 1.0):
+            raise ValueError(f"iou must be in [0, 1], got {iou}")
         if not self._loaded:
             self.load()
         if self._model is None:
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
+
+        import torch
 
         from ultralytics.utils import nms
 
@@ -391,9 +419,7 @@ class ThirdPartyAdapter(DetectionModel):
                 image_path=str(image),
             )
         except Exception as exc:
-            import logging
-
-            logging.getLogger(__name__).exception("ThirdPartyAdapter.predict failed for %s: %s", image, exc)
+            log.exception("ThirdPartyAdapter.predict failed for %s: %s", image, exc)
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
 
@@ -406,6 +432,9 @@ class ModelRegistry:
     def discover(self) -> int:
         self._models.clear()
         self._adapters.clear()
+
+        if not self.detection_dir.exists():
+            return 0
 
         loaded_sidecars: set[str] = set()
         sidecar_meta: dict[str, dict] = {}
@@ -482,19 +511,20 @@ class ModelRegistry:
         import yaml
 
         try:
-            with open(yaml_path) as f:
+            with open(yaml_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
             if not data or not isinstance(data, dict):
                 return None
             return data
-        except Exception:
+        except Exception as exc:
+            log.warning("Failed to load sidecar %s: %s", yaml_path.name, exc)
             return None
 
     def _load_descriptor(self, yaml_path: Path) -> bool:
         import yaml
 
         try:
-            with open(yaml_path) as f:
+            with open(yaml_path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except Exception:
             return False
@@ -502,10 +532,14 @@ class ModelRegistry:
         if not data or not isinstance(data, dict):
             return False
 
+        # Support both "type" and "model_type" as the type field
+        if "model_type" in data and "type" not in data:
+            data["type"] = data["model_type"]
+
         required = ["name", "type"]
         missing = [f for f in required if f not in data]
         if missing:
-            print(f"Warning: Model descriptor {yaml_path.name} missing fields: {missing}")
+            log.warning("Model descriptor %s missing fields: %s", yaml_path.name, missing)
             return False
 
         name = data.get("name", yaml_path.stem)

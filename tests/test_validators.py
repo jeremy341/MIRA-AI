@@ -118,8 +118,9 @@ def test_empty_dataset():
         (path / "images" / "train").mkdir(parents=True)
         (path / "labels" / "train").mkdir(parents=True)
         result = validate_yolo_dataset(path)
-        assert result.is_valid  # structure is valid, just empty
+        assert not result.is_valid  # empty dataset is not valid
         assert result.total_images == 0
+        assert any("0 images" in w for w in result.warnings)
 
 
 # ── dataset_summary tests ────────────────────────────────────────────

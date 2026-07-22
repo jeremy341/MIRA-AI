@@ -1,6 +1,6 @@
 name: exp009
 model: yolov8n.pt
-dataset: datasets/mira_all/dataset.yaml
+dataset: datasets/roboflow_raw/data.yaml
 epochs: 150
 batch_size: 32
 imgsz: 640

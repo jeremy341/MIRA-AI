@@ -139,15 +139,21 @@ class InferenceEngine:
         self._released = True
         self._stopped = True
         try:
+            if hasattr(self, "model") and self.model is not None:
+                del self.model
+                self.model = None
+        except Exception as exc:
+            logger.warning("Exception while releasing model: %s", exc)
+        try:
             if hasattr(self, "stream") and self.stream is not None:
                 self.stream.release()
         except Exception as exc:
-            logger.warning(f"Exception while releasing camera: {exc}")
+            logger.warning("Exception while releasing camera: %s", exc)
         finally:
             try:
                 cv2.destroyAllWindows()
             except Exception as exc:
-                logger.warning(f"Exception while destroying cv2 windows: {exc}")
+                logger.warning("Exception while destroying cv2 windows: %s", exc)
 
     def run(self):
         """Start the real-time inference loop."""

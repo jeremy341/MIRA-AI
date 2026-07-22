@@ -1,3 +1,5 @@
+"""CLI commands for model evaluation, live webcam inference, and model downloads."""
+
 import sys
 from pathlib import Path
 
@@ -105,7 +107,12 @@ def cmd_eval_yolo(args):
             sys.exit(0)
     model_path = DETECTION_DIR / model
     if not model_path.exists():
-        raise FileNotFoundError(f"Model file not found at {model_path}")
+        from ..logger import get_logger
+
+        logger = get_logger(__name__)
+        logger.error(f"Model file not found at {model_path}")
+        print(f"Error: Model file not found at {model_path}")
+        sys.exit(1)
     from ultralytics import YOLO
 
     data_path = resolve_detection_data_yaml(args.data)
@@ -149,7 +156,11 @@ def cmd_live(args):
         sys.exit(1)
     from ..inference_engine import InferenceEngine
 
-    w, h = map(int, args.resolution.split("x"))
+    try:
+        w, h = map(int, args.resolution.split("x"))
+    except ValueError:
+        print(f"Error: Invalid resolution format '{args.resolution}'. Expected format: WIDTHxHEIGHT (e.g. 640x360).")
+        sys.exit(1)
     engine = InferenceEngine(
         model_name=model,
         camera_index=args.camera,
@@ -241,6 +252,7 @@ def cmd_download(args):
 
 def _download_with_progress(url: str, dest: Path):
     """Download a file with a progress indicator."""
+    import hashlib
     import urllib.request
 
     req = urllib.request.Request(url, headers={"User-Agent": "MIRA-AI/1.0"})
@@ -249,6 +261,7 @@ def _download_with_progress(url: str, dest: Path):
         total = int(total) if total else None
         downloaded = 0
         block_size = 8192
+        sha256 = hashlib.sha256()
 
         with open(dest, "wb") as f:
             while True:
@@ -256,6 +269,7 @@ def _download_with_progress(url: str, dest: Path):
                 if not chunk:
                     break
                 f.write(chunk)
+                sha256.update(chunk)
                 downloaded += len(chunk)
                 if total:
                     pct = downloaded * 100 / total
@@ -266,3 +280,4 @@ def _download_with_progress(url: str, dest: Path):
                 else:
                     print(f"\r    Downloaded {downloaded} bytes", end="", flush=True)
         print()
+        print(f"    SHA-256: {sha256.hexdigest()}")

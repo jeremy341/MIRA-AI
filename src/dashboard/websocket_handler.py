@@ -4,7 +4,7 @@ WebSocket handlers for real-time video streaming
 
 import asyncio
 import base64
-from datetime import datetime
+from datetime import datetime, timezone
 
 import cv2
 import numpy as np
@@ -22,6 +22,7 @@ class WebSocketHandler:
         self.connections = set()
         self.frame_buffer = None
         self.latest_detections = []
+        self._event_loop: asyncio.AbstractEventLoop | None = None
 
         # Register callbacks
         camera_service.on_detection = self._on_detections
@@ -31,6 +32,7 @@ class WebSocketHandler:
     async def handle_video_stream(self, websocket):
         """Handle video streaming WebSocket connection"""
         self.connections.add(websocket)
+        self._event_loop = asyncio.get_running_loop()
         try:
             await websocket.send_json({"type": "status", "status": "connected", "message": "Video stream connected"})
 
@@ -93,10 +95,15 @@ class WebSocketHandler:
     async def _on_status_change(self, status, message):
         """Callback when system status changes"""
         await self._broadcast(
-            {"type": "status", "status": status.value, "message": message, "timestamp": datetime.now().isoformat()}
+            {
+                "type": "status",
+                "status": status.value,
+                "message": message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
         )
 
-    def update_frame(self, frame: np.ndarray, detections: list[Detection] = None):
+    def update_frame(self, frame: np.ndarray, detections: list[Detection] | None = None):
         """Update the current frame with detections drawn"""
         if frame is None:
             return
@@ -139,6 +146,9 @@ class WebSocketHandler:
         # Store frame for new connections
         self.frame_buffer = annotated_frame
 
+        if not self.connections:
+            return
+
         # Convert frame to JPEG
         _, buffer = cv2.imencode(".jpg", annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
@@ -146,10 +156,11 @@ class WebSocketHandler:
         frame_data = base64.b64encode(buffer).decode("utf-8")
 
         # Create message
-        message = {"type": "frame", "frame": frame_data, "timestamp": datetime.now().isoformat()}
+        message = {"type": "frame", "frame": frame_data, "timestamp": datetime.now(timezone.utc).isoformat()}
 
         # Broadcast to all connections
-        asyncio.create_task(self._broadcast(message))
+        if self._event_loop is not None:
+            asyncio.run_coroutine_threadsafe(self._broadcast(message), self._event_loop)
 
     async def _send_frame(self, websocket, frame: np.ndarray):
         """Send a single frame to a websocket"""
@@ -160,7 +171,9 @@ class WebSocketHandler:
 
         frame_data = base64.b64encode(buffer).decode("utf-8")
 
-        await websocket.send_json({"type": "frame", "frame": frame_data, "timestamp": datetime.now().isoformat()})
+        await websocket.send_json(
+            {"type": "frame", "frame": frame_data, "timestamp": datetime.now(timezone.utc).isoformat()}
+        )
 
     async def _handle_config(self, websocket, config_json: str):
         """Handle configuration updates from client"""

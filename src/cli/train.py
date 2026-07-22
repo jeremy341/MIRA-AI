@@ -1,3 +1,5 @@
+"""CLI commands for training, exporting, and auto-detecting training parameters."""
+
 import sys
 from pathlib import Path
 
@@ -13,7 +15,9 @@ def _add_train_args(parser):
         default=None,
         help="Base model name or path (default: yolo11n.pt).",
     )
-    parser.add_argument("--dataset", type=str, default=None, help="Path to dataset YAML (default: '').")
+    parser.add_argument(
+        "--dataset", type=str, default=None, help="Path to dataset YAML (default: auto-detect from registry)."
+    )
     parser.add_argument("--epochs", type=int, default=None, help="Number of training epochs (default: 120).")
     parser.add_argument("--batch-size", type=int, default=None, help="Batch size (default: 32).")
     parser.add_argument("--name", type=str, default=None, help="Experiment/run name (default: exp).")

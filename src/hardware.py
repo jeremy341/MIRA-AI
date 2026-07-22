@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Self
 
 import cv2
+import numpy as np
 
 from .config import setup_camera_properties
 from .exceptions import CameraError
@@ -56,7 +57,7 @@ class _FrameBuffer:
 
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _ret: bool = False
-    _frame: object | None = None
+    _frame: np.ndarray | None = None
     _last_update: float = 0.0
     _running: bool = True
 

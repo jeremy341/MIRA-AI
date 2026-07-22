@@ -69,14 +69,18 @@ def suggest_model(info: HardwareInfo | None = None) -> str:
         info = detect_hardware()
 
     if info.is_raspberry_pi:
-        return "tflite_int8"
+        if info.has_tflite_runtime or info.has_tensorflow:
+            return "tflite_int8"
+        return "tflite_fp32"
     if info.is_jetson:
         return "tensorrt"
     if info.has_cuda and info.has_torch:
         return "pt"
     if info.has_cuda:
         return "pt"
-    return "tflite_fp32"
+    if info.has_tflite_runtime or info.has_tensorflow:
+        return "tflite_fp32"
+    return "pt"
 
 
 def check_environment() -> list[str]:
@@ -86,6 +90,9 @@ def check_environment() -> list[str]:
 
     if not info.has_opencv:
         warnings.append("OpenCV (cv2) is not installed. Camera and visualization will not work.")
+
+    if not _module_available("ultralytics"):
+        warnings.append("ultralytics is not installed. Model inference will not work.")
 
     if info.is_raspberry_pi and not info.has_tflite_runtime and not info.has_tensorflow:
         warnings.append(
@@ -102,32 +109,23 @@ def _module_available(name: str) -> bool:
     try:
         __import__(name)
         return True
-    except ImportError:
+    except (ImportError, AttributeError, OSError, ValueError):
         return False
 
 
 def _safe_cpu_count() -> int:
-    try:
-        if sys.platform == "win32":
-            result = subprocess.run(
-                ["wmic", "cpu", "get", "NumberOfCores"],
-                capture_output=True, text=True, timeout=5, check=False,
-            )
-            if result.returncode == 0:
-                lines = result.stdout.strip().split("\n")
-                if len(lines) >= 2:
-                    return int(lines[1].strip())
-        else:
-            import os
-            return os.cpu_count() or 1
-    except Exception:
-        pass
     import os
 
     return os.cpu_count() or 1
 
 
 def _safe_memory_mb() -> int:
+    try:
+        import psutil
+
+        return psutil.virtual_memory().total // (1024 * 1024)
+    except (ImportError, OSError):
+        pass
     try:
         if sys.platform == "win32":
             import ctypes
@@ -140,7 +138,7 @@ def _safe_memory_mb() -> int:
             for line in f:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) // 1024
-    except Exception:
+    except (OSError, ValueError):
         pass
     return 0
 
@@ -151,7 +149,7 @@ def _detect_raspberry_pi() -> bool:
             with open("/proc/cpuinfo") as f:
                 content = f.read()
                 return "Raspberry Pi" in content or "BCM" in content
-    except Exception:
+    except OSError:
         pass
     return False
 
@@ -162,7 +160,7 @@ def _get_pi_model() -> str:
             model_path = Path("/sys/firmware/devicetree/base/model")
             if model_path.exists():
                 return model_path.read_text(encoding="utf-8").strip().rstrip("\x00")
-    except Exception:
+    except (OSError, ValueError):
         pass
     return ""
 
@@ -171,7 +169,7 @@ def _detect_jetson() -> bool:
     try:
         if sys.platform == "linux":
             return Path("/etc/nv_tegra_release").exists()
-    except Exception:
+    except OSError:
         pass
     return False
 
@@ -186,12 +184,12 @@ def _detect_cuda() -> tuple[bool, str]:
         )
         if result.returncode == 0 and result.stdout.strip():
             return True, result.stdout.strip().split("\n")[0]
-    except Exception:
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         try:
             import torch
 
             if torch.cuda.is_available():
                 return True, torch.version.cuda or ""
-        except Exception:
+        except (ImportError, AttributeError):
             pass
     return False, ""

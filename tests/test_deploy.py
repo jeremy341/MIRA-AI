@@ -74,7 +74,7 @@ def test_detect_cuda_no_cuda():
 
 
 def test_suggest_model_raspberry_pi():
-    info = HardwareInfo(platform="linux", arch="armv7l", is_raspberry_pi=True)
+    info = HardwareInfo(platform="linux", arch="armv7l", is_raspberry_pi=True, has_tflite_runtime=True)
     assert suggest_model(info) == "tflite_int8"
 
 
@@ -90,14 +90,14 @@ def test_suggest_model_cuda():
 
 def test_suggest_model_cpu_only():
     info = HardwareInfo(platform="linux", arch="x86_64")
-    assert suggest_model(info) == "tflite_fp32"
+    assert suggest_model(info) == "pt"
 
 
 def test_suggest_model_none_calls_detect():
     with patch("src.deploy.detect_hardware") as mock_detect:
         mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64")
         result = suggest_model()
-        assert result == "tflite_fp32"
+        assert result == "pt"
         mock_detect.assert_called_once()
 
 

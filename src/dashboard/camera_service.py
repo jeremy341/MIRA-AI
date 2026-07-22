@@ -3,17 +3,21 @@ Camera service managing inference pipeline
 """
 
 import asyncio
+from ..logger import get_logger
+import sys
 import threading
 import time
 import cv2
 from typing import Any
 from collections import deque, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import psutil
 
 from ultralytics import YOLO
-from ..config import DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
+from ..config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
 from .models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus
+
+log = get_logger(__name__)
 
 
 class CameraService:
@@ -38,7 +42,7 @@ class CameraService:
 
         # Statistics
         self.detection_history = deque(maxlen=1000)
-        self.class_history = defaultdict(list)
+        self.class_history = defaultdict(lambda: deque(maxlen=1000))
         self.metrics_history = deque(maxlen=100)
 
         # Performance tracking
@@ -59,9 +63,11 @@ class CameraService:
         self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
 
         try:
-            self.camera = cv2.VideoCapture(config.index, cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else 0)
+            cap_flags = cv2.CAP_DSHOW if sys.platform == "win32" else 0
+            self.camera = cv2.VideoCapture(config.index, cap_flags)
 
             if not self.camera.isOpened():
+                self.camera = None
                 raise RuntimeError(f"Failed to open camera index {config.index}")
 
             setup_camera_properties(self.camera, config.width, config.height, config.fps)
@@ -75,6 +81,9 @@ class CameraService:
             return True
 
         except Exception as e:
+            if self.camera is not None:
+                self.camera.release()
+                self.camera = None
             self._update_status(SystemStatus.ERROR, f"Camera error: {str(e)}")
             return False
 
@@ -88,6 +97,11 @@ class CameraService:
                 if not model_path.exists():
                     raise FileNotFoundError(f"Model not found: {model_name}")
 
+                # Release old model if exists
+                if self.model is not None:
+                    del self.model
+                    self.model = None
+
                 # Load model
                 if model_path.suffix == ".tflite":
                     task_type = "detect"
@@ -96,7 +110,7 @@ class CameraService:
                 else:
                     task_type = None
                     self.is_tflite_int8 = False
-                    self.img_size = getattr(config, 'imgsz', 640)
+                    self.img_size = getattr(config, "imgsz", 640)
 
                 self.model = YOLO(str(model_path), task=task_type)
 
@@ -136,8 +150,14 @@ class CameraService:
 
         while self.is_streaming:
             try:
-                if not self.camera or not self.model:
-                    break
+                with self._lock:
+                    if not self.camera or not self.model:
+                        break
+                    camera = self.camera
+                    model = self.model
+                    model_config = self.model_config
+                    is_tflite_int8 = self.is_tflite_int8
+                    img_size = self.img_size
 
                 # Skip frame if latency is too high
                 if self.skip_frame:
@@ -145,7 +165,7 @@ class CameraService:
                     continue
 
                 # Read frame
-                ret, frame = self.camera.read()
+                ret, frame = camera.read()
                 if not ret:
                     time.sleep(0.01)
                     continue
@@ -153,31 +173,31 @@ class CameraService:
                 frame_start = time.perf_counter()
 
                 # Run inference
-                if self.is_tflite_int8:
-                    results = self.model.predict(
+                if is_tflite_int8:
+                    results = model.predict(
                         frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
+                        imgsz=img_size,
+                        conf=model_config.conf_threshold,
                         verbose=False,
                         half=False,
                     )
-                elif self.model_config.enable_tracking:
-                    results = self.model.track(
+                elif model_config.enable_tracking:
+                    results = model.track(
                         frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
-                        iou=self.model_config.iou_threshold,
+                        imgsz=img_size,
+                        conf=model_config.conf_threshold,
+                        iou=model_config.iou_threshold,
                         persist=True,
                         verbose=False,
                         tracker=str(BYTE_TRACK_CONFIG_PATH),
                         half=False,
                     )
                 else:
-                    results = self.model.predict(
+                    results = model.predict(
                         frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
-                        iou=self.model_config.iou_threshold,
+                        imgsz=img_size,
+                        conf=model_config.conf_threshold,
+                        iou=model_config.iou_threshold,
                         verbose=False,
                         half=False,
                     )
@@ -194,23 +214,23 @@ class CameraService:
                 current_time = time.time()
                 if current_time - last_metrics_time >= metrics_interval:
                     metrics = self._calculate_system_metrics()
-                    if self.on_metrics:
+                    if self.on_metrics and self._event_loop is not None:
                         asyncio.run_coroutine_threadsafe(self.on_metrics(metrics), self._event_loop)
                     last_metrics_time = current_time
 
                 # Notify about detections
-                if detections and self.on_detection:
+                if detections and self.on_detection and self._event_loop is not None:
                     asyncio.run_coroutine_threadsafe(self.on_detection(detections), self._event_loop)
 
                 # Store in history
                 self._update_history(detections)
 
                 # Control frame skipping based on latency
-                avg_latency = sum(self.latency_history) / len(self.latency_history)
-                self.skip_frame = avg_latency > self.model_config.target_latency_ms
+                avg_latency = sum(self.latency_history) / len(self.latency_history) if self.latency_history else 0
+                self.skip_frame = avg_latency > model_config.target_latency_ms
 
             except Exception as e:
-                print(f"Streaming error: {e}")
+                log.error("Streaming error: %s", e)
                 time.sleep(0.1)
 
     def _process_results(self, results):
@@ -249,8 +269,7 @@ class CameraService:
 
     def _class_id_to_name(self, class_id: int) -> str:
         """Map class ID to name"""
-        class_names = ["glass", "metal", "paper", "plastic", "trash"]
-        return class_names[class_id] if class_id < len(class_names) else "unknown"
+        return CLASS_NAMES[class_id] if class_id < len(CLASS_NAMES) else "unknown"
 
     def _update_performance_metrics(self, inference_time: float, detections: list[Detection]):
         """Update performance tracking metrics"""
@@ -283,13 +302,16 @@ class CameraService:
         cpu_percent = psutil.cpu_percent()
         memory_percent = psutil.virtual_memory().percent
 
-        # Try to get temperature (Raspberry Pi specific)
+        # Try to get temperature
         temperature = None
         try:
-            with open("/sys/class/thermal/thermal_zone0/temp") as f:
-                temp_millic = int(f.read().strip())
-                temperature = temp_millic / 1000.0
-        except (OSError, ValueError):
+            temps = psutil.sensors_temperatures()
+            if temps:
+                for _name, entries in temps.items():
+                    if entries:
+                        temperature = entries[0].current
+                        break
+        except (AttributeError, Exception):
             pass
 
         # Calculate detections per second
@@ -335,11 +357,16 @@ class CameraService:
                 self.camera.release()
                 self.camera = None
 
+            # Release model to free GPU/memory
+            if self.model is not None:
+                del self.model
+                self.model = None
+
             self._update_status(SystemStatus.IDLE, "System stopped")
 
     def get_statistics(self, period_seconds: int = 60) -> Statistics:
         """Get statistics for the given time period"""
-        cutoff_time = datetime.now() - timedelta(seconds=period_seconds)
+        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=period_seconds)
 
         recent_detections = [d for d in self.detection_history if d.timestamp >= cutoff_time]
 
@@ -356,7 +383,7 @@ class CameraService:
 
         return Statistics(
             period_start=cutoff_time,
-            period_end=datetime.now(),
+            period_end=datetime.now(timezone.utc),
             total_detections=len(recent_detections),
             class_counts=dict(class_counts),
             avg_confidence=dict(avg_confidence),
