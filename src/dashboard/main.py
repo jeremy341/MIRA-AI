@@ -9,9 +9,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 
-from models import CameraConfig, ModelConfig
-from camera_service import CameraService
-from websocket_handler import WebSocketHandler
+from .models import CameraConfig, ModelConfig
+from .camera_service import CameraService
+from .websocket_handler import WebSocketHandler
 
 # Initialize FastAPI app
 app = FastAPI(

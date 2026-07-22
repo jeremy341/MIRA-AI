@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from config import ROOT_DIR
-from pipeline.registry import register_command
+from ..config import ROOT_DIR
+from ..pipeline.registry import register_command
 
 
 def _add_train_args(parser):
@@ -41,8 +41,8 @@ def _add_train_args(parser):
 
 @register_command("train", "Train a YOLO detection model via the new pipeline", add_args=_add_train_args)
 def cmd_train(args):
-    from pipeline.strategies import TrainConfig
-    from pipeline.train import TrainingPipeline
+    from ..pipeline.strategies import TrainConfig
+    from ..pipeline.train import TrainingPipeline
 
     if args.config:
         config = TrainConfig.from_yaml(args.config)
@@ -65,7 +65,7 @@ def cmd_train(args):
         config.data_dir = args.data_dir
 
     if args.auto:
-        from deploy import detect_hardware
+        from ..deploy import detect_hardware
 
         hw = detect_hardware()
         print("\n  Auto-detecting hardware...")
@@ -82,7 +82,7 @@ def cmd_train(args):
             print("  CPU only — device=cpu, batch_size=8")
 
         if args.model is None:
-            from pipeline.models import ModelRegistry
+            from ..pipeline.models import ModelRegistry
 
             registry = ModelRegistry()
             registry.discover()
@@ -93,7 +93,7 @@ def cmd_train(args):
                 print(f"  Base model: {config.model}")
 
         if args.dataset is None:
-            from pipeline.dataset import DatasetRegistry
+            from ..pipeline.dataset import DatasetRegistry
 
             ds_registry = DatasetRegistry()
             ds_registry.discover()
@@ -157,7 +157,7 @@ def _add_export_args(parser):
 
 @register_command("export", "Export a trained .pt model to TFLite / ONNX", add_args=_add_export_args)
 def cmd_export(args):
-    from pipeline.train import TrainingPipeline
+    from ..pipeline.train import TrainingPipeline
 
     model_path = Path(args.model)
     if not model_path.is_absolute():

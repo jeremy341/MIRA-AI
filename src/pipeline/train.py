@@ -13,9 +13,9 @@ from datetime import datetime
 from pathlib import Path
 
 
-from exceptions import PipelineError
-from logger import logger
-from pipeline.strategies import TrainConfig, TrainResult, get_strategy, register_strategy
+from ..exceptions import PipelineError
+from ..logger import logger
+from .strategies import TrainConfig, TrainResult, get_strategy, register_strategy
 
 
 class TrainingPipeline:

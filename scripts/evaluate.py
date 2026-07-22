@@ -148,8 +148,6 @@ def build_confusion_matrix(
             for pi in range(len(pred_boxes)):
                 if pred_used[pi]:
                     continue
-                if pred_cls[pi] != gt_cls:
-                    continue
                 iou_val = _iou(gt_box, pred_boxes[pi])
                 if iou_val >= best_iou:
                     best_iou = iou_val

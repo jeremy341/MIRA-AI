@@ -9,9 +9,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install ruff
+      - run: pip install ruff mypy
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
+      - run: mypy src/ --ignore-missing-imports --follow-imports=skip --exclude 'src/dashboard/'
 
   test:
     runs-on: ubuntu-latest
@@ -20,5 +21,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest pytest-mock numpy pyyaml
-      - run: pytest tests/ -v
+      - run: pip install pytest pytest-mock numpy pyyaml ultralytics
+      - run: pytest tests/ -v --tb=short

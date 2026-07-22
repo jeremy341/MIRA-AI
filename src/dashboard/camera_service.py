@@ -12,8 +12,8 @@ from datetime import datetime, timedelta
 import psutil
 
 from ultralytics import YOLO
-from config import DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
-from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus
+from ..config import DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
+from .models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus
 
 
 class CameraService:
@@ -21,6 +21,7 @@ class CameraService:
 
     def __init__(self):
         self._lock = threading.Lock()
+        self._event_loop: asyncio.AbstractEventLoop | None = None
         self.status = SystemStatus.IDLE
         self.status_message = "System ready"
 
@@ -52,31 +53,30 @@ class CameraService:
 
     async def initialize_camera(self, config):
         """Initialize camera with configuration"""
-        with self._lock:
-            if self.status == SystemStatus.RUNNING:
-                await self.stop()
+        if self.status == SystemStatus.RUNNING:
+            await self.stop()
 
-            self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
+        self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
 
-            try:
-                self.camera = cv2.VideoCapture(config.index, cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else 0)
+        try:
+            self.camera = cv2.VideoCapture(config.index, cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else 0)
 
-                if not self.camera.isOpened():
-                    raise RuntimeError(f"Failed to open camera index {config.index}")
+            if not self.camera.isOpened():
+                raise RuntimeError(f"Failed to open camera index {config.index}")
 
-                setup_camera_properties(self.camera, config.width, config.height, config.fps)
+            setup_camera_properties(self.camera, config.width, config.height, config.fps)
 
-                # Warmup camera
-                for _ in range(10):
-                    self.camera.read()
+            # Warmup camera
+            for _ in range(10):
+                self.camera.read()
 
-                self.camera_config = config
-                self._update_status(SystemStatus.IDLE, "Camera ready")
-                return True
+            self.camera_config = config
+            self._update_status(SystemStatus.IDLE, "Camera ready")
+            return True
 
-            except Exception as e:
-                self._update_status(SystemStatus.ERROR, f"Camera error: {str(e)}")
-                return False
+        except Exception as e:
+            self._update_status(SystemStatus.ERROR, f"Camera error: {str(e)}")
+            return False
 
     async def load_model(self, model_name: str, config):
         """Load detection model"""
@@ -96,7 +96,7 @@ class CameraService:
                 else:
                     task_type = None
                     self.is_tflite_int8 = False
-                    self.img_size = config.get("imgsz", 640)
+                    self.img_size = getattr(config, 'imgsz', 640)
 
                 self.model = YOLO(str(model_path), task=task_type)
 
@@ -118,6 +118,8 @@ class CameraService:
             if not self.camera or not self.model:
                 self._update_status(SystemStatus.ERROR, "Camera or model not initialized")
                 return False
+
+            self._event_loop = asyncio.get_running_loop()
 
             self.is_streaming = True
             self._update_status(SystemStatus.RUNNING, "Streaming started")
@@ -193,12 +195,12 @@ class CameraService:
                 if current_time - last_metrics_time >= metrics_interval:
                     metrics = self._calculate_system_metrics()
                     if self.on_metrics:
-                        asyncio.run_coroutine_threadsafe(self.on_metrics(metrics), asyncio.get_event_loop())
+                        asyncio.run_coroutine_threadsafe(self.on_metrics(metrics), self._event_loop)
                     last_metrics_time = current_time
 
                 # Notify about detections
                 if detections and self.on_detection:
-                    asyncio.run_coroutine_threadsafe(self.on_detection(detections), asyncio.get_event_loop())
+                    asyncio.run_coroutine_threadsafe(self.on_detection(detections), self._event_loop)
 
                 # Store in history
                 self._update_history(detections)
@@ -321,8 +323,8 @@ class CameraService:
         self.status = status
         self.status_message = message
 
-        if self.on_status_change:
-            asyncio.run_coroutine_threadsafe(self.on_status_change(status, message), asyncio.get_event_loop())
+        if self.on_status_change and self._event_loop is not None:
+            asyncio.run_coroutine_threadsafe(self.on_status_change(status, message), self._event_loop)
 
     async def stop(self):
         """Stop streaming and cleanup"""

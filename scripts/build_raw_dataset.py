@@ -144,7 +144,14 @@ def write_split(samples, img_dir, lbl_dir, split_name):
             if img_info is None:
                 continue
             img_w, img_h = img_info["width"], img_info["height"]
-            shutil.copy2(src, img_dir / f"{stem}.jpg")
+            dst_img = img_dir / f"{stem}.jpg"
+            dst_lbl = lbl_dir / f"{stem}.txt"
+            suffix = 1
+            while dst_img.exists():
+                dst_img = img_dir / f"{stem}_{suffix}.jpg"
+                dst_lbl = lbl_dir / f"{stem}_{suffix}.txt"
+                suffix += 1
+            shutil.copy2(src, dst_img)
             lines = []
             for class_id, bbox in anns:
                 x, y, w, h = bbox
@@ -153,7 +160,7 @@ def write_split(samples, img_dir, lbl_dir, split_name):
                 wn = w / img_w
                 hn = h / img_h
                 lines.append(f"{class_id} {xc:.6f} {yc:.6f} {wn:.6f} {hn:.6f}")
-            with open(lbl_dir / f"{stem}.txt", "w") as f:
+            with open(dst_lbl, "w") as f:
                 f.write("\n".join(lines))
         else:
             _, src, class_id, stem = item

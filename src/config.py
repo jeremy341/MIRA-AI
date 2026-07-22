@@ -8,8 +8,8 @@ from typing import Any
 
 import yaml
 
-from exceptions import CameraError, ConfigError
-from logger import get_logger
+from .exceptions import CameraError, ConfigError
+from .logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -113,21 +113,10 @@ NUM_CLASSES: int = _RAW_CLASSES.get("count", len(CLASS_NAMES))
 _INFERENCE = PROJECT_CONFIG.get("inference", {})
 REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
 
-DETECTION_MODEL_LABELS: dict[str, str] = {
-    "mira_exp006.pt": "EXP-006 (YOLOv8n, multi-dataset)",
-    "mira_exp006_int8.tflite": "EXP-006 INT8 (YOLOv8n, multi-dataset)",
-    "mira_exp009_int8.tflite": "EXP-009 INT8 (YOLOv8n, multi-dataset)",
-    "mira_exp011.pt": "EXP-011 (YOLOv8n, TACO-only)",
-    "mira_exp011_int8.tflite": "EXP-011 INT8 (YOLOv8n, TACO-only)",
-    "mira_exp013.pt": "EXP-013 (YOLO11n, TACO+TrashNet)",
-    "mira_exp013_int8.tflite": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
-    "mira_exp014.pt": "EXP-014 (YOLO11n, +Roboflow)",
-    "mira_exp014_int8.tflite": "EXP-014 INT8 (YOLO11n, +Roboflow)",
-    "mira_exp015.pt": "EXP-015 (YOLO11n, +WaRP+TrashNet)",
-    "mira_exp015_int8.tflite": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
-    "mira_exp016.pt": "EXP-016 (YOLO11n, +WaRP)",
-    "mira_exp016_int8.tflite": "EXP-016 INT8 (YOLO11n, +WaRP)",
-}
+# Legacy model labels — kept for backward compatibility.
+# New models are discovered dynamically by ModelRegistry.
+# To add a label for a model, create a YAML sidecar file in models/detection/.
+DETECTION_MODEL_LABELS: dict[str, str] = {}
 
 _PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 

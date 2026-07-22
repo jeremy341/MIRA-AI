@@ -60,6 +60,10 @@ def test_register_command():
     assert "test_cmd_pytest" in commands
     assert commands["test_cmd_pytest"].help_text == "A test command"
 
+    # Clean up to avoid polluting global state
+    _COMMANDS = get_commands()
+    _COMMANDS.pop("test_cmd_pytest", None)
+
 
 # ── Dataset Registry tests ──────────────────────────────────────────
 

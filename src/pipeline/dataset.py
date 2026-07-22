@@ -22,24 +22,40 @@ Usage:
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from logger import get_logger
+from ..logger import get_logger
 
 logger = get_logger(__name__)
 
 
 def _import_merge_utils():
     """Lazy-import merge_utils from scripts/ directory."""
+    import importlib
+    import sys
+
     scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
     if scripts_dir not in sys.path:
         sys.path.insert(0, scripts_dir)
-    import merge_utils
+    return importlib.import_module("merge_utils")
 
-    return merge_utils
+
+def _derive_label_path(img_rel: str) -> str:
+    """Derive the label directory path from an image directory path.
+
+    Handles common patterns: 'images/train' -> 'labels/train',
+    'train/images' -> 'train/labels', etc.
+    """
+    parts = Path(img_rel).parts
+    new_parts = []
+    for part in parts:
+        if part == "images":
+            new_parts.append("labels")
+        else:
+            new_parts.append(part)
+    return str(Path(*new_parts)) if new_parts else img_rel
 
 
 @dataclass
@@ -225,9 +241,8 @@ class DatasetRegistry:
         total = 0
         for split_name, split_rel in source.splits.items():
             img_src = source.input_path / split_rel
-            lbl_rel = split_rel.replace("images", "labels")
-            lbl_src = source.input_path / lbl_rel
-            dst_split = "val" if split_name == "valid" else split_name
+            lbl_src = source.input_path / _derive_label_path(split_rel)
+            dst_split = "val" if split_name in ("valid", "test") else split_name
             if img_src.exists():
                 a, _ = mu.copy_passthrough(
                     img_src,
@@ -251,8 +266,7 @@ class DatasetRegistry:
 
         for split_name, split_rel in source.splits.items():
             img_src = source.input_path / split_rel
-            lbl_rel = split_rel.replace("images", "labels")
-            lbl_src = source.input_path / lbl_rel
+            lbl_src = source.input_path / _derive_label_path(split_rel)
 
             if not lbl_src.exists():
                 continue

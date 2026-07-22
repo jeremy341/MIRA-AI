@@ -1,8 +1,8 @@
 import sys
 from pathlib import Path
 
-from config import ROOT_DIR
-from pipeline.registry import register_command
+from ..config import ROOT_DIR
+from ..pipeline.registry import register_command
 
 
 def _add_generate_args(parser):

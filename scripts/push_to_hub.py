@@ -21,10 +21,9 @@ def _find_model_variants(model_path: Path) -> dict[str, Path]:
     if model_path.exists():
         variants["pt"] = model_path
 
-    for suffix in [".tflite", "_int8.tflite", ".onnx"]:
+    for suffix, key in [(".tflite", "tflite"), ("_int8.tflite", "int8tflite"), (".onnx", "onnx")]:
         candidate = parent / f"{stem}{suffix}"
         if candidate.exists():
-            key = suffix.lstrip(".")
             variants[key] = candidate
 
     return variants

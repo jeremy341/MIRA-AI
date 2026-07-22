@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import torch
 
-from config import CLASS_NAMES, DETECTION_DIR, DETECTION_MODEL_LABELS
+from ..config import CLASS_NAMES, DETECTION_DIR
 
 
 def letterbox_preprocess(
@@ -393,7 +393,7 @@ class ThirdPartyAdapter(DetectionModel):
         except Exception as exc:
             import logging
 
-            logging.getLogger(__name__).warning("ThirdPartyAdapter.predict failed: %s", exc)
+            logging.getLogger(__name__).exception("ThirdPartyAdapter.predict failed for %s: %s", image, exc)
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
 
@@ -457,11 +457,10 @@ class ModelRegistry:
             if p.suffix.lower() in (".pt", ".pth"):
                 if f"{p.name}" in self._models:
                     continue
-                label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
                     "path": p,
                     "model_type": "yolo_pt",
-                    "label": label,
+                    "label": p.stem,
                     "is_third_party": False,
                 }
             elif p.suffix == ".tflite":
@@ -470,11 +469,10 @@ class ModelRegistry:
                     continue
                 if f"{p.name}" in self._models:
                     continue
-                label = DETECTION_MODEL_LABELS.get(p.name, p.stem)
                 self._models[p.name] = {
                     "path": p,
                     "model_type": "yolo_tflite",
-                    "label": label,
+                    "label": p.stem,
                     "is_third_party": False,
                 }
 
@@ -573,7 +571,7 @@ class ModelRegistry:
             )
         else:
             try:
-                from pipeline.registry import get_model_adapters
+                from .registry import get_model_adapters
 
                 adapters = get_model_adapters()
                 if model_type in adapters:

@@ -11,12 +11,34 @@ license = {text = "MIT"}
 readme = "README.md"
 keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
 requires-python = ">=3.11"
+dependencies = [
+    "ultralytics>=8.0",
+    "opencv-python>=4.0",
+    "torch>=2.0",
+    "numpy>=1.24",
+    "psutil>=5.0",
+    "pyyaml>=6.0",
+    "requests>=2.0",
+    "fastapi>=0.100",
+    "pydantic>=2.0",
+    "uvicorn>=0.20",
+    "jinja2>=3.0",
+    "websockets>=10.0",
+    "python-multipart>=0.0.5",
+    "matplotlib>=3.5",
+    "scikit-learn>=1.0",
+    "scipy>=1.0",
+    "pandas>=1.5",
+    "rich>=10.0",
+    "tensorflow>=2.10",
+    "pillow>=9.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-mock>=3.14"]
 
 [project.urls]
-Repository = "https://github.com/jeremydarko/MIRA-AI"
+Repository = "https://github.com/jeremy341/MIRA-AI"
 
 [project.scripts]
 mira = "src.cli:main"

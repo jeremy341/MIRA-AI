@@ -1,27 +1,22 @@
 import sys
-from pathlib import Path
 
-_src_dir = str(Path(__file__).resolve().parent.parent)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
+from ..version import __version__
+from ..pipeline.registry import get_commands
 
-from version import __version__
-from pipeline.registry import get_commands
-
-from cli import train  # noqa: F401
-from cli import inference  # noqa: F401
-from cli import data as data_module  # noqa: F401
-from cli import system  # noqa: F401
-from cli import generate  # noqa: F401
-from cli import dashboard as dashboard_module  # noqa: F401
-from cli import wizard  # noqa: F401
+from . import train  # noqa: F401
+from . import inference  # noqa: F401
+from . import data as data_module  # noqa: F401
+from . import system  # noqa: F401
+from . import generate  # noqa: F401
+from . import dashboard as dashboard_module  # noqa: F401
+from . import wizard  # noqa: F401
 
 
 def main():
     import argparse
 
-    from exceptions import MiraError
-    from logger import get_logger
+    from ..exceptions import MiraError
+    from ..logger import get_logger
 
     logger = get_logger(__name__)
 

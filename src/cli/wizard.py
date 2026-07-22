@@ -1,7 +1,7 @@
 import sys
 
-from config import PROJECT_CONFIG
-from pipeline.registry import register_command
+from ..config import PROJECT_CONFIG
+from ..pipeline.registry import register_command
 
 
 def _add_wizard_args(parser):
@@ -10,8 +10,8 @@ def _add_wizard_args(parser):
 
 @register_command("wizard", "Interactive training setup wizard", add_args=_add_wizard_args)
 def cmd_wizard(args):
-    from deploy import detect_hardware
-    from pipeline.dataset import DatasetRegistry
+    from ..deploy import detect_hardware
+    from ..pipeline.dataset import DatasetRegistry
 
     print()
     print("=" * 50)
@@ -70,10 +70,14 @@ def cmd_wizard(args):
     print("\nStep 4: Training parameters")
     hw = detect_hardware()
     gpu_status = "GPU available" if hw.has_cuda else "CPU only"
-    print(f"  Auto-detected: {gpu_status} {'GPU' if hw.has_cuda else 'CPU'}")
+    print(f"  Auto-detected: {gpu_status}")
 
     epochs_input = input(f"  Epochs [{default_epochs}]: ").strip()
-    epochs = int(epochs_input) if epochs_input else default_epochs
+    try:
+        epochs = int(epochs_input) if epochs_input else default_epochs
+    except ValueError:
+        print(f"  Invalid number, using default: {default_epochs}")
+        epochs = default_epochs
 
     if hw.has_cuda:
         default_batch_gpu = default_batch
@@ -81,7 +85,11 @@ def cmd_wizard(args):
         default_batch_gpu = 8
 
     batch_input = input(f"  Batch size [{default_batch_gpu}]: ").strip()
-    batch_size = int(batch_input) if batch_input else default_batch_gpu
+    try:
+        batch_size = int(batch_input) if batch_input else default_batch_gpu
+    except ValueError:
+        print(f"  Invalid number, using default: {default_batch_gpu}")
+        batch_size = default_batch_gpu
 
     device = "0" if hw.has_cuda else "cpu"
 
@@ -125,11 +133,12 @@ def cmd_wizard(args):
         device=device,
         data_dir=None,
         task=task,
-        base_model="mobilenetv2",
+        base_model=base_model,
         fine_tune=False,
         dry_run=False,
+        auto=False,
     )
 
-    from cli.train import cmd_train
+    from .train import cmd_train
 
     cmd_train(train_args)

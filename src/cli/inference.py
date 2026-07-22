@@ -1,11 +1,11 @@
 import sys
 from pathlib import Path
 
-from config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
-from exceptions import ConfigError
-from model_picker import pick_model
-from pipeline.models import ModelRegistry
-from pipeline.registry import register_command
+from ..config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
+from ..exceptions import ConfigError
+from ..model_picker import pick_model
+from ..pipeline.models import ModelRegistry
+from ..pipeline.registry import register_command
 
 AVAILABLE_MODELS = {
     "mira_exp014.pt": {
@@ -147,7 +147,7 @@ def cmd_live(args):
     if "classifier" in model.lower():
         print(f"ERROR: '{model}' is a classifier model, not a detector.")
         sys.exit(1)
-    from inference_engine import InferenceEngine
+    from ..inference_engine import InferenceEngine
 
     w, h = map(int, args.resolution.split("x"))
     engine = InferenceEngine(

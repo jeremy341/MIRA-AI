@@ -1,15 +1,15 @@
-from config import ROOT_DIR
-from version import __version__
-from pipeline.registry import register_command
+from ..config import ROOT_DIR
+from ..version import __version__
+from ..pipeline.registry import register_command
 
 
 @register_command("doctor", "Run comprehensive environment and project health check")
 def cmd_doctor(args):
     """Run a comprehensive health check of the MIRA environment."""
-    from config import validate_config
-    from deploy import check_environment, detect_hardware, suggest_model
-    from pipeline.dataset import DatasetRegistry
-    from pipeline.models import ModelRegistry
+    from ..config import validate_config
+    from ..deploy import check_environment, detect_hardware, suggest_model
+    from ..pipeline.dataset import DatasetRegistry
+    from ..pipeline.models import ModelRegistry
 
     print(f"\n  MIRA Doctor v{__version__}")
     print(f"  {'=' * 60}")
@@ -76,7 +76,7 @@ def cmd_doctor(args):
 
 @register_command("diagnostics", "Check hardware capabilities and environment")
 def cmd_diagnostics(args):
-    from deploy import check_environment, detect_hardware, suggest_model
+    from ..deploy import check_environment, detect_hardware, suggest_model
 
     info = detect_hardware()
     print("\n  Hardware Diagnostics")
@@ -114,7 +114,7 @@ def cmd_config(args):
     """Display the current mira.yaml configuration."""
     import json
 
-    from config import DETECTION_DIR, MODELS_DIR, PROJECT_CONFIG, ROOT_DIR, get_project_config, validate_config
+    from ..config import DETECTION_DIR, MODELS_DIR, PROJECT_CONFIG, ROOT_DIR, get_project_config, validate_config
 
     if args.validate:
         errors = validate_config()
@@ -170,7 +170,7 @@ def cmd_config(args):
 
 @register_command("models", "List all discovered model files in the models/ directory")
 def cmd_models(args):
-    from pipeline.models import ModelRegistry
+    from ..pipeline.models import ModelRegistry
 
     registry = ModelRegistry()
     registry.discover()
@@ -217,9 +217,9 @@ def _add_benchmark_args(parser):
 
 @register_command("benchmark", "Benchmark multiple models for accuracy and latency", add_args=_add_benchmark_args)
 def cmd_benchmark(args):
-    from pipeline.benchmark import ModelBenchmark
+    from ..pipeline.benchmark import ModelBenchmark
 
-    from cli.inference import resolve_detection_data_yaml
+    from .inference import resolve_detection_data_yaml
 
     dataset = resolve_detection_data_yaml(args.dataset)
 

@@ -6,62 +6,57 @@ A comprehensive plan to restructure the MIRA-AI codebase, improve the CLI, add a
 
 ---
 
-## Phase A — Codebase Restructure
+## Phase A — Codebase Restructure ✅
 
 **Goal:** Clean up the code so it's maintainable and publishable
 
-1. **Split `cli.py` into modules** — Move commands into `src/cli/{train,inference,data,system,generate}.py`
-2. **Add `src/__main__.py`** — Enable `python -m src`
-3. **Prune deprecated commands** — Remove `data-build`, 6 legacy wrappers that shell out to `reference/` scripts
-4. **Integrate dashboard** — Move `dashboard_output/ -> src/dashboard/`, fix imports, add `mira dashboard` command
-5. **Fix packaging** — Update `pyproject.toml` to include `src/dashboard`, add `scripts` as package
-6. **Clean `.gitignore`** — Add patterns for generated notebooks, Gradio cache, Hugging Face cache
+1. ✅ **Split `cli.py` into modules** — Commands moved into `src/cli/{train,inference,data,system,generate,dashboard,wizard}.py`
+2. ✅ **Add `src/__main__.py`** — `python -m src` works
+3. ✅ **Prune deprecated commands** — Legacy wrappers removed
+4. ✅ **Integrate dashboard** — `src/dashboard/` integrated, `mira dashboard` command works
+5. ✅ **Fix packaging** — `pyproject.toml` includes `src*`
+6. ✅ **Clean `.gitignore`** — Patterns for generated notebooks, cache files
 
 ---
 
-## Phase B — CLI Improvements
+## Phase B — CLI Improvements ✅
 
 **Goal:** Make training accessible without coding
 
-7. **Build `mira wizard`** — Interactive step-by-step training wizard using `questionary` / `prompt_toolkit`
-8. **Add `mira download`** — Download pretrained models from Hugging Face Hub
-9. **Add `mira train --wizard`** — Alias to launch wizard from train command
-10. **Improve `mira train` defaults** — Auto-detect GPU, suggest batch size based on VRAM
-11. **Add tab completion** — Shell completion for `mira <TAB>` via `argcomplete` / `shtab`
+7. ✅ **Build `mira wizard`** — Interactive step-by-step training wizard
+8. ✅ **Add `mira download`** — Download pretrained models from Hugging Face Hub
+9. ✅ **Add `mira train --auto`** — Auto-detect GPU, suggest batch size
+10. ✅ **Improve `mira train` defaults** — Auto-detect GPU, batch size based on VRAM
+11. ⬜ **Add tab completion** — Shell completion for `mira <TAB>` (future enhancement)
 
 ---
 
-## Phase C — Cloud Training Generation
+## Phase C — Cloud Training Generation ✅
 
 **Goal:** One command -> ready-to-upload training notebook
 
-12. **`mira generate kaggle`** — Renders training logic into a `.ipynb` with setup cells, dataset download, config injection, export
-13. **`mira generate colab`** — Same but for Google Colab (different mount paths)
-14. **`mira generate docker`** — Generates a `Dockerfile` + `docker-compose.yml` for local GPU training
-15. **`mira push`** — Upload trained model to Hugging Face Hub with auto-generated model card
+12. ✅ **`mira generate kaggle`** — Renders training logic into a `.ipynb`
+13. ✅ **`mira generate colab`** — Same but for Google Colab
+14. ✅ **`mira generate docker`** — Generates `Dockerfile` + `docker-compose.yml`
+15. ⬜ **`mira push`** — Upload trained model to Hugging Face Hub (future enhancement)
 
 ---
 
-## Phase D — Gradio Web UI
+## Phase D — Gradio Web UI ⬜
 
 **Goal:** Visual training config + inference demo
 
-16. **`src/gui/app.py`** — Gradio `Blocks` with tabs:
-    - **Train**: Model picker, dataset picker, epochs slider, start/stop, live loss plot
-    - **Inference**: Image upload + webcam, confidence slider, detection overlay
-    - **Datasets**: List/merge sources, validate, view stats
-    - **Export**: Pick model, pick format, download
-    - **Generate**: Platform selector -> download generated notebook
-17. **`mira gui`** — Launches `gradio app.py` with browser auto-open
-18. **Dashboard stays as-is** — `mira dashboard` for real-time camera monitoring
+16. ⬜ **`src/gui/app.py`** — Gradio `Blocks` with tabs (future enhancement)
+17. ⬜ **`mira gui`** — Launches `gradio app.py` (future enhancement)
+18. ✅ **Dashboard stays as-is** — `mira dashboard` for real-time camera monitoring
 
 ---
 
 ## Phase E — Release Polish
 
-19. **Hugging Face org** — Create `huggingface.co/jeremy341/mira-ai-models`, upload pretrained weights
-20. **Update README** — New badges: "Open in Colab", "Run on Hugging Face Spaces", "Download models"
-21. **Replace cloud datasets** — Upload sample datasets to Hugging Face Datasets, update `docs/datasets.md`
+19. ✅ **Hugging Face org** — Models available at `huggingface.co/jeremy341/MIRA-AI`
+20. ⬜ **Update README** — Add "Open in Colab", "Run on Hugging Face Spaces" badges
+21. ⬜ **Replace cloud datasets** — Upload sample datasets to Hugging Face Datasets
 
 ---
 

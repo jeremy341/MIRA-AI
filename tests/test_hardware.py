@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import sys
 import time
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from exceptions import CameraError
-from hardware import (
+from src.exceptions import CameraError
+from src.hardware import (
     AbstractCamera,
     USBCamera,
     IPCamera,
@@ -25,7 +21,7 @@ from hardware import (
 
 def test_frame_buffer_update_and_get():
     buf = _FrameBuffer()
-    fake_frame = object()
+    fake_frame = MagicMock()
     buf.update(True, fake_frame)
     ret, frame = buf.get()
     assert ret is True
@@ -67,9 +63,10 @@ def test_frame_buffer_stop():
 
 
 def test_usbcamera_init_success():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
+        mock_instance.read.return_value = (True, object())
         mock_cap.return_value = mock_instance
         cam = USBCamera(0, 640, 360)
         assert cam.width() == 640
@@ -78,7 +75,7 @@ def test_usbcamera_init_success():
 
 
 def test_usbcamera_init_failure():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = False
         mock_cap.return_value = mock_instance
@@ -87,7 +84,7 @@ def test_usbcamera_init_failure():
 
 
 def test_usbcamera_is_alive():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
         mock_instance.read.return_value = (True, object())
@@ -99,9 +96,10 @@ def test_usbcamera_is_alive():
 
 
 def test_usbcamera_release_idempotent():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
+        mock_instance.read.return_value = (True, object())
         mock_cap.return_value = mock_instance
         cam = USBCamera(0)
         cam.release()
@@ -110,9 +108,10 @@ def test_usbcamera_release_idempotent():
 
 
 def test_usbcamera_context_manager():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
+        mock_instance.read.return_value = (True, object())
         mock_cap.return_value = mock_instance
         with USBCamera(0) as cam:
             assert isinstance(cam, USBCamera)
@@ -122,7 +121,7 @@ def test_usbcamera_context_manager():
 
 
 def test_ipcamera_init_success():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
         mock_cap.return_value = mock_instance
@@ -132,7 +131,7 @@ def test_ipcamera_init_success():
 
 
 def test_ipcamera_reconnection():
-    with patch("hardware.cv2.VideoCapture") as mock_cap:
+    with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
         mock_instance.isOpened.return_value = True
         # First read succeeds, subsequent reads fail to trigger reconnection

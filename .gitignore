@@ -78,6 +78,17 @@ secrets.*
 credentials.*
 config.local.*
 
+# --- Model files (regenerable artifacts, pushed to HuggingFace) ---
+models/**/*.pt
+models/**/*.onnx
+models/**/*.tflite
+models/**/*.keras
+
+# --- Experiment results (regenerable plots, CSVs, args) ---
+results/
+!results/experiments_log.md
+!results/field_benchmark_results.md
+
 # --- Dev / setup files (not for distribution) ---
 .clinerules
 setup/
