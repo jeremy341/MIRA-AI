@@ -25,7 +25,7 @@ A lightweight, edge-AI-optimized computer vision system for automated recycling 
 - **18 trained models** committed via Git LFS — ready to use without retraining
 - **Research Pipeline** — YAML-driven config, plugin CLI registry, dataset registry, model adapters, configurable training
 - **Third-party model support** — drop `.pt`/`.tflite`/`.pth` + optional YAML descriptor in `models/detection/` for instant benchmarking
-- **B&W Control Center** — Flask+SocketIO dashboard with real-time inventory chart
+- **B&W Control Center** — FastAPI+WebSocket dashboard with real-time inventory chart
 - **Edge-optimized** — INT8 quantized models as small as **2.6 MB** (classifier) and **2.9 MB** (detector)
 - **Multi-dataset fusion** — TACO + TrashNet + Roboflow + WaRP, tested in 4 combinations
 
@@ -120,7 +120,7 @@ pip install -r requirements.txt
 | Command | Description |
 |---|---|
 | `.\mira live` | Interactive model picker — arrow keys to choose, Enter to confirm |
-| `.\mira dashboard` | Launch Flask+SocketIO web control center |
+| `.\mira dashboard` | Launch FastAPI+WebSocket web control center |
 | `.\mira data-viz` | Visualize dataset class distribution and sample grids |
 | `.\mira train-baseline` | Train the 3-layer custom CNN (EXP-001) |
 | `.\mira train-transfer` | Train MobileNetV2 with frozen base (EXP-002) |
@@ -477,7 +477,7 @@ py scripts/merge_dataset_model4.py
 <!-- ============================================================ -->
 <!-- ![MIRA Control Center](assets/dashboard-screenshot.png) -->
 
-The MIRA Control Center is a Flask+SocketIO web dashboard with a B&W monochrome design.
+The MIRA Control Center is a FastAPI+WebSocket web dashboard with a B&W monochrome design.
 
 ### Features
 
@@ -691,16 +691,6 @@ MIRA-AI/
 │   ├── label_trashnet_with_sam.py  # SAM-assisted bounding box labeling
 │   ├── class_mappings.py           # Class name remapping tables
 │   └── build_raw_dataset.py        # Raw dataset builder
-│
-├── reference/                      # Training, evaluation, and quantization scripts
-│   ├── train_classifier_baseline.py   # EXP-001: Custom CNN
-│   ├── train_classifier_transfer.py   # EXP-002: MobileNetV2 frozen
-│   ├── train_classifier_finetune.py   # EXP-003: MobileNetV2 fine-tuned
-│   ├── quantize_classifier.py         # EXP-004: INT8 quantization
-│   ├── evaluate_classifier.py         # Classification evaluation
-│   ├── train_detector.py              # YOLO training pipeline
-│   ├── quantize_detector.py           # YOLO INT8 export
-│   └── ...
 │
 ├── models/                         # All trained model exports (Git LFS)
 │   ├── classifier/                 # Stage A: Keras + TFLite

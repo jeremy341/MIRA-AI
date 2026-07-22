@@ -11,7 +11,7 @@ import numpy as np
 from typing import Any
 from websockets.exceptions import ConnectionClosed
 
-from models import Detection, SystemMetrics
+from .models import Detection, SystemMetrics
 
 
 class WebSocketHandler:

@@ -11,10 +11,10 @@ from typing import Self
 import cv2
 from ultralytics import YOLO
 
-from config import BYTE_TRACK_CONFIG_PATH, DETECTION_DIR, get_tflite_imgsz
-from hardware import USBCamera
-from logger import logger
-from visualize import draw_boxes
+from .config import BYTE_TRACK_CONFIG_PATH, CLASS_NAMES, DETECTION_DIR, get_tflite_imgsz
+from .hardware import USBCamera
+from .logger import logger
+from .visualize import draw_boxes
 
 
 class InferenceEngine:
@@ -169,8 +169,6 @@ class InferenceEngine:
                     continue
 
                 results = self._infer(frame)
-                from config import CLASS_NAMES
-
                 annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
                 self._update_metrics(results)
                 self._draw_status(annotated, results)

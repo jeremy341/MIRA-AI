@@ -13,8 +13,8 @@ from pathlib import Path
 
 import numpy as np
 
-from config import CLASS_NAMES
-from pipeline.models import DetectionModel, ModelRegistry
+from ..config import CLASS_NAMES
+from .models import DetectionModel, ModelRegistry
 
 
 @dataclass
@@ -137,7 +137,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
             img_w, img_h = img.size
 
         objects: list[dict] = []
-        with open(lbl_path) as f:
+        with open(lbl_path, encoding="utf-8") as f:
             for line in f:
                 parts = line.strip().split()
                 if len(parts) < 5:
@@ -181,8 +181,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
     for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts, strict=True)):
         num_gt += len(img_gts)
         for d in img_preds:
-            d["img_idx"] = img_idx
-            all_detections.append(d)
+            all_detections.append({**d, "img_idx": img_idx})
     all_detections.sort(key=lambda x: x["confidence"], reverse=True)
 
     tp = np.zeros(len(all_detections))
@@ -197,7 +196,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
             if j in gt_used[img_idx]:
                 continue
             iou = compute_iou(det["bbox_pixel"], gt["bbox"])
-            if iou > best_iou:
+            if iou >= best_iou:
                 best_iou = iou
                 best_gt = j
         if best_gt >= 0 and det["class_id"] == gts[img_idx][best_gt]["class_id"]:
@@ -311,7 +310,10 @@ class ModelBenchmark:
                             pred_matched[best_pi] = True
 
                     for gi, matched in enumerate(gt_matched):
-                        cls_name = CLASS_NAMES[gt_objects[gi]["class_id"]]
+                        cid = gt_objects[gi]["class_id"]
+                        cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
+                        if cls_name not in per_class:
+                            per_class[cls_name] = PerClassMetrics()
                         if matched:
                             per_class[cls_name].tp += 1
                         else:
@@ -319,7 +321,10 @@ class ModelBenchmark:
 
                     for pi, matched in enumerate(pred_matched):
                         if not matched:
-                            cls_name = CLASS_NAMES[img_preds[pi]["class_id"]]
+                            cid = img_preds[pi]["class_id"]
+                            cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
+                            if cls_name not in per_class:
+                                per_class[cls_name] = PerClassMetrics()
                             per_class[cls_name].fp += 1
 
                     all_preds.append(img_preds)
@@ -377,7 +382,7 @@ class ModelBenchmark:
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         data = [r.to_dict() for r in results]
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         print(f"  Results exported to {output_path}")
 

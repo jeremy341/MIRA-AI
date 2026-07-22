@@ -65,7 +65,7 @@ _MODEL_ADAPTERS: dict[str, ModelAdapterEntry] = {}
 
 def init_adapters() -> None:
     """Register built-in model adapters."""
-    from pipeline.models import YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
+    from .models import YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
 
     for key, desc, cls in [
         ("yolo_pt", "Ultralytics YOLO .pt models", YOLOAdapter),

@@ -108,15 +108,23 @@ def _module_available(name: str) -> bool:
 
 def _safe_cpu_count() -> int:
     try:
-        return (
-            len(open("/proc/stat").readlines())
-            if sys.platform != "win32"
-            else int(subprocess.check_output("wmic cpu get NumberOfCores", shell=True).decode().strip().split("\n")[1])
-        )
+        if sys.platform == "win32":
+            result = subprocess.run(
+                ["wmic", "cpu", "get", "NumberOfCores"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if result.returncode == 0:
+                lines = result.stdout.strip().split("\n")
+                if len(lines) >= 2:
+                    return int(lines[1].strip())
+        else:
+            import os
+            return os.cpu_count() or 1
     except Exception:
-        import os
+        pass
+    import os
 
-        return os.cpu_count() or 1
+    return os.cpu_count() or 1
 
 
 def _safe_memory_mb() -> int:
@@ -141,7 +149,8 @@ def _detect_raspberry_pi() -> bool:
     try:
         if sys.platform == "linux":
             with open("/proc/cpuinfo") as f:
-                return "Raspberry Pi" in f.read() or "BCM" in f.read()
+                content = f.read()
+                return "Raspberry Pi" in content or "BCM" in content
     except Exception:
         pass
     return False
@@ -150,10 +159,9 @@ def _detect_raspberry_pi() -> bool:
 def _get_pi_model() -> str:
     try:
         if sys.platform == "linux":
-            result = subprocess.run(
-                ["cat", "/sys/firmware/devicetree/base/model"], capture_output=True, text=True, timeout=2
-            )
-            return result.stdout.strip().rstrip("\x00") if result.stdout else ""
+            model_path = Path("/sys/firmware/devicetree/base/model")
+            if model_path.exists():
+                return model_path.read_text(encoding="utf-8").strip().rstrip("\x00")
     except Exception:
         pass
     return ""

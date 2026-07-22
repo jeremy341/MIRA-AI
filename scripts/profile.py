@@ -54,7 +54,6 @@ def _peak_gpu_memory_mb() -> float | None:
     """Return peak GPU memory usage in MB, or None if CUDA unavailable."""
     if not _CUDA_AVAILABLE:
         return None
-    torch.cuda.reset_peak_memory_stats()
     return torch.cuda.max_memory_allocated() / 1_048_576
 
 

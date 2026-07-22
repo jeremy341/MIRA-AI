@@ -46,10 +46,14 @@ def copy_passthrough(src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_dir):
     Returns:
         tuple: (added, skipped) counts
     """
+    dst_img_dir.mkdir(parents=True, exist_ok=True)
+    dst_lbl_dir.mkdir(parents=True, exist_ok=True)
     added = 0
-    for img in src_img_dir.glob("*"):
-        shutil.copy2(img, dst_img_dir / img.name)
-        added += 1
+    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
+    for img in src_img_dir.iterdir():
+        if img.suffix.lower() in image_exts:
+            shutil.copy2(img, dst_img_dir / img.name)
+            added += 1
     for lbl in src_lbl_dir.glob("*"):
         shutil.copy2(lbl, dst_lbl_dir / lbl.name)
     return added, 0
@@ -74,10 +78,13 @@ def copy_remapped_images(stems, src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_d
             skipped += 1
             print(f"  Warning: {stem} skipped — no valid classes after remap")
             continue
-        img_file = src_img_dir / f"{stem}.jpg"
-        if not img_file.exists():
-            img_file = src_img_dir / f"{stem}.png"
-        if img_file.exists():
+        for ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"):
+            img_file = src_img_dir / f"{stem}{ext}"
+            if img_file.exists():
+                break
+        else:
+            img_file = None
+        if img_file is not None:
             shutil.copy2(img_file, dst_img_dir / img_file.name)
             with open(dst_lbl_dir / lbl_file.name, "w") as f:
                 f.writelines(new_lines)
@@ -93,7 +100,8 @@ def create_split_from_train(src_img_dir, val_ratio=0.2, seed=42):
     Returns:
         tuple: (train_stems, val_stems)
     """
-    all_files = sorted([f.stem for f in src_img_dir.glob("*")])
+    image_exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
+    all_files = sorted([f.stem for f in src_img_dir.iterdir() if f.suffix.lower() in image_exts])
     random.seed(seed)
     random.shuffle(all_files)
     split_idx = int(len(all_files) * (1 - val_ratio))

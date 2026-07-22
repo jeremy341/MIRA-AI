@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 import tempfile
 from pathlib import Path
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from pipeline.validators import validate_yolo_dataset, dataset_summary
+from src.pipeline.validators import validate_yolo_dataset, dataset_summary
 
 
 # ── Helpers ──────────────────────────────────────────────────────────

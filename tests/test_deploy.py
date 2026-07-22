@@ -3,13 +3,10 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from deploy import (
+from src.deploy import (
     HardwareInfo,
     detect_hardware,
     suggest_model,
@@ -97,7 +94,7 @@ def test_suggest_model_cpu_only():
 
 
 def test_suggest_model_none_calls_detect():
-    with patch("deploy.detect_hardware") as mock_detect:
+    with patch("src.deploy.detect_hardware") as mock_detect:
         mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64")
         result = suggest_model()
         assert result == "tflite_fp32"
@@ -108,14 +105,14 @@ def test_suggest_model_none_calls_detect():
 
 
 def test_check_environment_no_opencv():
-    with patch("deploy.detect_hardware") as mock_detect:
+    with patch("src.deploy.detect_hardware") as mock_detect:
         mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64", has_opencv=False)
         warnings = check_environment()
         assert any("OpenCV" in w for w in warnings)
 
 
 def test_check_environment_no_frameworks():
-    with patch("deploy.detect_hardware") as mock_detect:
+    with patch("src.deploy.detect_hardware") as mock_detect:
         mock_detect.return_value = HardwareInfo(
             platform="linux", arch="x86_64", has_opencv=True, has_torch=False, has_tensorflow=False
         )
@@ -124,7 +121,7 @@ def test_check_environment_no_frameworks():
 
 
 def test_check_environment_healthy():
-    with patch("deploy.detect_hardware") as mock_detect:
+    with patch("src.deploy.detect_hardware") as mock_detect:
         mock_detect.return_value = HardwareInfo(platform="linux", arch="x86_64", has_opencv=True, has_torch=True)
         warnings = check_environment()
         assert warnings == []
@@ -145,13 +142,15 @@ def test_module_available_missing():
 
 
 def test_detect_raspberry_pi_true():
-    with patch("builtins.open", patch.mock_open(read_data="Hardware\t: Raspberry Pi 4")):
+    m = mock_open(read_data="Hardware\t: Raspberry Pi 4")
+    with patch("builtins.open", m):
         with patch("sys.platform", "linux"):
             assert _detect_raspberry_pi()
 
 
 def test_detect_raspberry_pi_false():
-    with patch("builtins.open", patch.mock_open(read_data="Intel CPU")):
+    m = mock_open(read_data="Intel CPU")
+    with patch("builtins.open", m):
         with patch("sys.platform", "linux"):
             assert not _detect_raspberry_pi()
 

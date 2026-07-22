@@ -10,14 +10,14 @@ import sys
 import threading
 import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Self
 
 import cv2
 
-from config import setup_camera_properties
-from exceptions import CameraError
-from logger import get_logger
+from .config import setup_camera_properties
+from .exceptions import CameraError
+from .logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -54,7 +54,7 @@ class AbstractCamera(ABC):
 class _FrameBuffer:
     """Thread-safe single-frame buffer with freeze detection."""
 
-    _lock: threading.Lock = threading.Lock()
+    _lock: threading.Lock = field(default_factory=threading.Lock)
     _ret: bool = False
     _frame: object | None = None
     _last_update: float = 0.0

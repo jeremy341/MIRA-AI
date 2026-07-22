@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from exceptions import ConfigError
-from pipeline.strategies import (
+from src.exceptions import ConfigError
+from src.pipeline.strategies import (
     TrainConfig,
     TrainResult,
     YOLOStrategy,

@@ -12,10 +12,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from config import PROJECT_CONFIG, ROOT_DIR, MODELS_DIR
-from exceptions import ConfigError
-from logger import get_logger
-from serialization import serialize_result, serialize_config, experiment_metadata
+from ..config import PROJECT_CONFIG, ROOT_DIR, MODELS_DIR
+from ..exceptions import ConfigError
+from ..logger import get_logger
+from ..serialization import serialize_result, serialize_config, experiment_metadata
 
 logger = get_logger(__name__)
 
@@ -283,6 +283,7 @@ class ClassifierStrategy(TrainingStrategy):
 # ── Strategy Registry ────────────────────────────────────────────────
 
 _STRATEGIES: dict[str, type[TrainingStrategy]] = {}
+_DEFAULTS_LOADED = False
 
 
 def register_strategy(name: str, strategy_cls: type[TrainingStrategy]):
@@ -292,8 +293,7 @@ def register_strategy(name: str, strategy_cls: type[TrainingStrategy]):
 
 def get_strategy(name: str) -> TrainingStrategy:
     """Get a training strategy by name."""
-    if not _STRATEGIES:
-        _init_defaults()
+    _ensure_defaults()
     cls = _STRATEGIES.get(name)
     if cls is None:
         raise KeyError(f"Unknown training strategy '{name}'. Available: {list(_STRATEGIES.keys())}")
@@ -302,9 +302,15 @@ def get_strategy(name: str) -> TrainingStrategy:
 
 def list_strategies() -> list[str]:
     """List all registered strategy names."""
-    if not _STRATEGIES:
-        _init_defaults()
+    _ensure_defaults()
     return list(_STRATEGIES.keys())
+
+
+def _ensure_defaults():
+    global _DEFAULTS_LOADED
+    if not _DEFAULTS_LOADED:
+        _init_defaults()
+        _DEFAULTS_LOADED = True
 
 
 def _init_defaults():
