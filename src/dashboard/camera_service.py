@@ -173,6 +173,9 @@ class CameraService:
                         log.error("Camera disconnected after %d consecutive failures", consecutive_failures)
                         self._update_status(SystemStatus.ERROR, "Camera disconnected")
                         self.is_streaming = False
+                        if self.camera:
+                            self.camera.release()
+                            self.camera = None
                         break
                     time.sleep(0.01)
                     continue
@@ -213,7 +216,7 @@ class CameraService:
                 inference_time = (time.perf_counter() - frame_start) * 1000
 
                 # Process detections
-                detections = self._process_results(results)
+                detections = self._process_results(results, model_config)
 
                 # Update performance metrics
                 self._update_performance_metrics(inference_time, detections)
@@ -241,7 +244,7 @@ class CameraService:
                 log.error("Streaming error: %s", e)
                 time.sleep(0.1)
 
-    def _process_results(self, results):
+    def _process_results(self, results, model_config):
         """Process YOLO results into Detection objects"""
         detections = []
 
@@ -254,7 +257,7 @@ class CameraService:
 
         for box in boxes:
             conf = float(box.conf[0])
-            if conf < self.model_config.conf_threshold:
+            if conf < model_config.conf_threshold:
                 continue
 
             cls_id = int(box.cls[0])
@@ -358,19 +361,18 @@ class CameraService:
 
     async def stop(self):
         """Stop streaming and cleanup"""
-        with self._lock:
-            self.is_streaming = False
+        self.is_streaming = False
 
+        with self._lock:
             if self.camera:
                 self.camera.release()
                 self.camera = None
 
-            # Release model to free GPU/memory
             if self.model is not None:
                 del self.model
                 self.model = None
 
-            self._update_status(SystemStatus.IDLE, "System stopped")
+        self._update_status(SystemStatus.IDLE, "System stopped")
 
     def get_statistics(self, period_seconds: int = 60) -> Statistics:
         """Get statistics for the given time period"""

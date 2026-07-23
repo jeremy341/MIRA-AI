@@ -51,7 +51,9 @@ def draw_boxes(
         text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
 
         label_y1 = max(0, y1 - 25)
-        cv2.rectangle(frame, (x1, label_y1), (x1 + text_size[0], y1), color, -1)
-        cv2.putText(frame, label, (x1, y1 - 5), font, font_scale, (0, 0, 0), thickness)
+        label_x2 = min(w, x1 + text_size[0])
+        cv2.rectangle(frame, (x1, label_y1), (label_x2, y1), color, -1)
+        text_y = max(text_size[1], y1 - 5)
+        cv2.putText(frame, label, (x1, text_y), font, font_scale, (0, 0, 0), thickness)
 
     return frame

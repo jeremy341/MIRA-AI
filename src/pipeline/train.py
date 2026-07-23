@@ -71,9 +71,9 @@ class TrainingPipeline:
         return exported
 
     def train_yolo(self, config: TrainConfig) -> TrainResult:
-        run_name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
         config.project = "runs/train"
-        config.name = run_name
+        if config.name is None or config.name == "exp":
+            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
         result = self.train("detection", config)
 
@@ -87,9 +87,9 @@ class TrainingPipeline:
         config.extra["base_model"] = base_model
         config.extra["fine_tune"] = fine_tune
 
-        run_name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
         config.project = "runs/train"
-        config.name = run_name
+        if config.name is None or config.name == "exp":
+            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
         try:
             result = self.train("classifier", config)

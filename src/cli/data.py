@@ -1,5 +1,6 @@
 """CLI commands for merging, listing, and validating YOLO-format datasets."""
 
+import sys
 from pathlib import Path
 
 from ..pipeline.registry import register_command
@@ -84,4 +85,7 @@ def cmd_validate(args):
         if len(result.orphaned_labels) > 5:
             print(f"    ... and {len(result.orphaned_labels) - 5} more")
 
-    print()
+        print()
+
+    if not result.is_valid:
+        sys.exit(1)
