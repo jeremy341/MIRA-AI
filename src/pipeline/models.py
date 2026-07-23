@@ -24,6 +24,7 @@ from ..config import (
     TFLITE_INT8_CONF,
     get_tflite_imgsz,
 )
+from ..exceptions import ModelError
 from ..logger import get_logger
 
 log = get_logger(__name__)
@@ -177,6 +178,8 @@ class YOLOAdapter(DetectionModel):
         from ultralytics.nn.autobackend import AutoBackend
         from ultralytics.utils.torch_utils import select_device
 
+        if not self.path.exists():
+            raise ModelError(f"Model file not found: {self.path}")
         self._model = YOLO(str(self.path))
         if callable(self._model.model):
             self._backend = self._model.model
@@ -399,6 +402,7 @@ class ThirdPartyAdapter(DetectionModel):
         if not self._loaded:
             self.load()
         if self._model is None:
+            log.warning("ThirdPartyAdapter.predict() called before load() — returning empty result")
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
         import torch
@@ -441,8 +445,9 @@ class ThirdPartyAdapter(DetectionModel):
                 model_name=self.name,
                 image_path=str(image),
             )
-        except Exception as exc:
-            log.exception("ThirdPartyAdapter.predict failed for %s: %s", image, exc)
+        except Exception as e:
+            log.error(f"Prediction failed: {type(e).__name__}: {e}")
+            log.exception("ThirdPartyAdapter.predict failed for %s", image)
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
 

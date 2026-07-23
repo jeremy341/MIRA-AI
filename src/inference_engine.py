@@ -45,11 +45,11 @@ class InferenceEngine:
         cam_width: int = 640,
         cam_height: int = 360,
         target_latency_ms: int = 50,
-        conf_threshold: float = None,
+        conf_threshold: float | None = None,
         reject_threshold: float = REJECT_THRESHOLD,
         imgsz: int | None = None,
         enable_tracking: bool = True,
-        iou_threshold: float = None,
+        iou_threshold: float | None = None,
     ):
         if conf_threshold is None:
             conf_threshold = DEFAULT_CONF
@@ -71,12 +71,18 @@ class InferenceEngine:
 
         # Resolve and load model (guard against path traversal)
         self.model_path = (DETECTION_DIR / model_name).resolve()
-        if not str(self.model_path).startswith(str(DETECTION_DIR.resolve())):
+        try:
+            self.model_path.relative_to(DETECTION_DIR.resolve())
+        except ValueError:
             raise ConfigError(f"Model path escapes detection directory: {model_name}")
         self._load_model(imgsz)
 
         # Initialize camera
-        self.stream = USBCamera(camera_index, cam_width, cam_height)
+        try:
+            self.stream = USBCamera(camera_index, cam_width, cam_height)
+        except Exception:
+            self._cleanup()
+            raise
 
         # Tracking state
         self.prev_time = time.perf_counter()
@@ -110,7 +116,7 @@ class InferenceEngine:
                 f"Model '{self.model_name}' is a classifier, not a detector. Use a detection model for live detection."
             )
 
-        task_type = "detect" if self.model_path.suffix == ".tflite" else None
+        task_type = "detect"
         try:
             self.model = YOLO(str(self.model_path), task=task_type)
         except Exception as e:

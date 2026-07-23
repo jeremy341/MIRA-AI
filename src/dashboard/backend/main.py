@@ -27,7 +27,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to specific origins
+    allow_origins=["http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,7 +47,7 @@ async def root():
     dashboard_path = FRONTEND_DIR / "dashboard.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path, media_type="text/html")
-    return {"error": "Dashboard not found", "path": str(dashboard_path)}
+    return {"error": "Dashboard not found"}
 
 @app.get("/api/status")
 async def get_status():
@@ -266,6 +266,7 @@ async def control_websocket(websocket: WebSocket):
 async def startup_event():
     """Initialize services on startup"""
     print("MIRA Control Center starting up...")
+    camera_service._loop = asyncio.get_running_loop()
     await websocket_handler.start()
 
 @app.on_event("shutdown")
@@ -281,8 +282,8 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "main:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=8000,
-        reload=True,
+        reload=False,
         log_level="info"
     )

@@ -395,7 +395,7 @@ def main() -> None:
 
     # Load validation samples
     logger.info("Loading validation dataset ...")
-    samples = load_yolo_dataset(data_path)
+    samples, evaluated_on_train = load_yolo_dataset(data_path)
     logger.info("Loaded %d images", len(samples))
 
     # Run benchmark via ModelBenchmark

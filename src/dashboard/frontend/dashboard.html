@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIRA â Recycling Sorting Robot</title>
+  <title>MIRA â€” Recycling Sorting Robot</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -828,97 +828,408 @@
       }
     }
 
-    .settings-grid {
+    /* =============================================
+       SETTINGS PAGE — Premium Redesign
+       ============================================= */
+    .settings-page-wrap {
       height: 100%;
-      min-height: 0;
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    .settings-content {
-      padding: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
       overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line-dark) transparent;
+      padding: 16px;
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
+    .settings-layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 14px;
+      max-width: 1100px;
+      margin: 0 auto;
     }
 
-    .form-group label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .form-control {
-      height: 32px;
-      padding: 0 10px;
+    .settings-card {
       background: var(--surface);
+      border: 1px solid var(--line-dark);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .settings-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .settings-card-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: var(--green);
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .settings-card-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .settings-card-title-wrap {
+      min-width: 0;
+    }
+
+    .settings-card-title {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+    }
+
+    .settings-card-sub {
+      display: block;
+      margin-top: 2px;
+      font: 500 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .settings-card-body {
+      padding: 6px 0;
+    }
+
+    /* Field rows */
+    .settings-field {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--line);
+      transition: background 0.12s ease;
+    }
+
+    .settings-field:last-child {
+      border-bottom: 0;
+    }
+
+    .settings-field:hover {
+      background: var(--surface-2);
+    }
+
+    .settings-field-full {
+      grid-template-columns: 1fr;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .field-hint {
+      display: block;
+      margin-top: 3px;
+      font: 400 10px/1.4 "IBM Plex Mono", monospace;
+      color: var(--muted);
+    }
+
+    /* Divider with label */
+    .settings-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px 4px;
+      font: 600 9px/1 "IBM Plex Mono", monospace;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .settings-divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    /* Number input */
+    .field-input {
+      width: 80px;
+      height: 30px;
+      padding: 0 8px;
+      background: var(--bg);
       border: 1px solid var(--line-dark);
       border-radius: 3px;
       color: var(--ink);
-      font-size: 13px;
-      font-family: inherit;
+      font: 600 12px/1 "IBM Plex Mono", monospace;
+      text-align: right;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
-    .form-control:focus {
+    .field-input:focus {
       outline: none;
-      border-color: var(--accent);
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(40,92,69,0.15);
     }
 
-    .checkbox-group {
+    .field-input:user-invalid {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(197,61,54,0.15);
+    }
+
+    /* Segmented resolution picker */
+    .seg-group {
+      display: flex;
+      border: 1px solid var(--line-dark);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .seg-group input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .seg-group label {
+      flex: 1;
+      text-align: center;
+      padding: 5px 10px;
+      font: 600 10px/1.2 "IBM Plex Mono", monospace;
+      cursor: pointer;
+      background: var(--bg);
+      border-right: 1px solid var(--line-dark);
+      color: var(--muted);
+      transition: background 0.12s ease, color 0.12s ease;
+      user-select: none;
+    }
+
+    .seg-group label:last-of-type {
+      border-right: 0;
+    }
+
+    .seg-group input[type="radio"]:checked + label {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .seg-group label:hover {
+      background: var(--surface-2);
+    }
+
+    .seg-group input[type="radio"]:checked + label:hover {
+      background: var(--green);
+    }
+
+    /* Toggle switch */
+    .toggle-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .toggle-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .toggle-track {
+      display: block;
+      width: 38px;
+      height: 20px;
+      background: var(--line-dark);
+      border-radius: 20px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s ease;
+    }
+
+    .toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    }
+
+    .toggle-input:checked ~ .toggle-track {
+      background: var(--green);
+    }
+
+    .toggle-input:checked ~ .toggle-track::after {
+      transform: translateX(18px);
+    }
+
+    .toggle-input:focus-visible ~ .toggle-track {
+      outline: 2px solid var(--green);
+      outline-offset: 2px;
+    }
+
+    /* Slider */
+    .slider-wrap {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 4px;
+      gap: 10px;
+      width: 100%;
     }
 
-    .checkbox-group label {
-      margin-top: 0;
-      text-transform: none;
-      letter-spacing: 0;
-      color: var(--ink);
-      font-size: 13px;
-      font-weight: 500;
+    .field-slider {
+      flex: 1;
+      height: 4px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: var(--line-dark);
+      border-radius: 4px;
       cursor: pointer;
+      accent-color: var(--green);
+      outline: none;
     }
 
-    .checkbox-group input[type="checkbox"] {
+    .field-slider:focus-visible {
+      box-shadow: 0 0 0 3px rgba(40,92,69,0.2);
+      border-radius: 4px;
+    }
+
+    .field-slider::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
       width: 16px;
       height: 16px;
-      cursor: pointer;
-      accent-color: var(--green);
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      transition: transform 0.15s ease;
     }
 
-    .range-wrap {
+    .field-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .slider-val {
+      font: 700 11px/1 "IBM Plex Mono", monospace;
+      color: var(--ink);
+      min-width: 36px;
+      text-align: right;
+      background: var(--bg);
+      border: 1px solid var(--line-dark);
+      border-radius: 3px;
+      padding: 3px 6px;
+    }
+
+    /* Select dropdown */
+    .field-select {
+      width: 100%;
+      height: 32px;
+      padding: 0 28px 0 10px;
+      background: var(--bg);
+      border: 1px solid var(--line-dark);
+      border-radius: 3px;
+      color: var(--ink);
+      font: 600 12px/1 "IBM Plex Mono", monospace;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2369736d' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      cursor: pointer;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .field-select:focus {
+      outline: none;
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(40,92,69,0.15);
+    }
+
+    /* Settings action footer */
+    .settings-footer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+
+    .settings-btn {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: center;
+      gap: 7px;
+      height: 34px;
+      border: 1px solid var(--line-dark);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--ink);
+      font: 600 11px/1 "Space Grotesk", sans-serif;
+      letter-spacing: 0.03em;
+      cursor: pointer;
+      transition: background 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
     }
 
-    .range-wrap input[type="range"] {
-      flex: 1;
-      accent-color: var(--green);
+    .settings-btn:hover:not(:disabled) {
+      background: var(--surface-2);
+      border-color: var(--line-dark);
     }
 
-    .range-value {
-      font: 600 12px/1 "IBM Plex Mono", monospace;
-      min-width: 32px;
-      text-align: right;
+    .settings-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    .settings-btn.primary {
+      background: var(--green);
+      border-color: var(--green-dark);
+      color: #fff;
+    }
+
+    .settings-btn.primary:hover:not(:disabled) {
+      background: var(--green-dark);
+    }
+
+    .settings-btn svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .settings-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     @media (max-width: 900px) {
-      .settings-grid {
+      .settings-layout {
         grid-template-columns: 1fr;
-        overflow-y: auto;
       }
 
       .system-item.model-info {
@@ -954,26 +1265,26 @@
         </span>
       </div>
 
-      <nav class="navigation" aria-label="Hauptnavigation">
+      <nav class="navigation" aria-label="Main Navigation">
         <button class="nav-button active" type="button" data-page="dashboard">Dashboard</button>
-        <button class="nav-button" type="button" data-page="analytics">Analytics</button>
-        <button class="nav-button" type="button" data-page="settings">Settings</button>
+        <button class="nav-button" type="button" data-page="analytics">Analytics (Analysen)</button>
+        <button class="nav-button" type="button" data-page="settings">Settings (Einstellungen)</button>
       </nav>
 
       <div class="topbar-spacer"></div>
 
       <div class="system-strip">
         <div class="system-item model-info">
-          <span class="system-label">Modell</span>
+          <span class="system-label">Model (Modell)</span>
           <span id="modelName">YOLO11</span>
         </div>
         <div class="system-item">
           <span id="connectionDot" class="connection-dot disconnected"></span>
-          <span id="connectionText">WebSocket getrennt</span>
+          <span id="connectionText">WebSocket disconnected (getrennt)</span>
         </div>
         <div class="system-item">
           <span id="headerStreamDot" class="stream-dot"></span>
-          <span id="headerStreamText">BEREIT</span>
+          <span id="headerStreamText">READY (BEREIT)</span>
         </div>
       </div>
     </header>
@@ -984,8 +1295,8 @@
           <article class="panel camera-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h1 class="panel-title">Kamera &amp; Erkennung</h1>
-                <span class="panel-kicker" id="cameraStatusLabel">System bereit</span>
+                <h1 class="panel-title">Camera &amp; Detection (Kamera &amp; Erkennung)</h1>
+                <span class="panel-kicker" id="cameraStatusLabel">System ready (bereit)</span>
               </div>
 
               <div class="camera-actions">
@@ -993,8 +1304,8 @@
                   <span class="stream-dot streaming"></span>
                   LIVE
                 </span>
-                <button id="startButton" class="button primary" type="button">Stream starten</button>
-                <button id="stopButton" class="button stop" type="button" disabled>Stoppen</button>
+                <button id="startButton" class="button primary" type="button">Start Stream (Stream starten)</button>
+                <button id="stopButton" class="button stop" type="button" disabled>Stop (Stoppen)</button>
               </div>
             </header>
 
@@ -1002,50 +1313,50 @@
               <div id="cameraPlaceholder" class="camera-placeholder">
                 <div class="placeholder-content">
                   <div class="camera-symbol" aria-hidden="true"></div>
-                  <p class="placeholder-title">Kein aktiver Kamerastream</p>
-                  <p class="placeholder-text">âStream startenâ drÃ¼cken, um die Erkennung zu beginnen.</p>
+                  <p class="placeholder-title">No active camera stream (Kein aktiver Kamerastream)</p>
+                  <p class="placeholder-text">Press "Start Stream" to begin detection ("Stream starten" drücken).</p>
                 </div>
               </div>
 
-              <img id="cameraImage" class="camera-image" alt="Live-Kamerabild des Sortierroboters" />
+              <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot (Live-Kamerabild des Sortierroboters)" />
               <canvas id="detectionCanvas" class="detection-canvas"></canvas>
 
-              <div class="metric-rail" aria-label="Live-Metriken">
+              <div class="metric-rail" aria-label="Live Metrics (Live-Metriken)">
                 <div class="camera-metric">
                   <span class="camera-metric-label">FPS</span>
-                  <span id="fpsValue" class="camera-metric-value">â</span>
+                  <span id="fpsValue" class="camera-metric-value">â€”</span>
                 </div>
                 <div class="camera-metric">
-                  <span class="camera-metric-label">Latenz</span>
-                  <span id="latencyValue" class="camera-metric-value">â ms</span>
+                  <span class="camera-metric-label">Latency (Latenz)</span>
+                  <span id="latencyValue" class="camera-metric-value">â€” ms</span>
                 </div>
                 <div class="camera-metric">
-                  <span class="camera-metric-label">Objekte</span>
+                  <span class="camera-metric-label">Objects (Objekte)</span>
                   <span id="detectionCountValue" class="camera-metric-value">0</span>
                 </div>
                 <div class="camera-metric">
-                  <span class="camera-metric-label">Konfidenz</span>
-                  <span id="liveConfidenceValue" class="camera-metric-value">â %</span>
+                  <span class="camera-metric-label">Confidence (Konfidenz)</span>
+                  <span id="liveConfidenceValue" class="camera-metric-value">â€” %</span>
                 </div>
               </div>
 
-              <div id="cameraState" class="camera-state">Warte auf Stream â¦</div>
+              <div id="cameraState" class="camera-state">Waiting for streamâ€¦ (Warte auf Streamâ€¦)</div>
             </div>
           </article>
 
           <article class="panel distribution-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Klassenverteilung</h2>
-                <span class="panel-kicker">Aktuelle Sitzung</span>
+                <h2 class="panel-title">Class Distribution (Klassenverteilung)</h2>
+                <span class="panel-kicker">Current Session (Aktuelle Sitzung)</span>
               </div>
-              <span id="distributionTotal" class="panel-kicker">0 Objekte</span>
+              <span id="distributionTotal" class="panel-kicker">0 Objects (Objekte)</span>
             </header>
 
             <div class="distribution-content">
               <div class="chart-wrap">
                 <canvas id="distributionChart"></canvas>
-                <div id="distributionEmpty" class="chart-empty visible">Noch keine Erkennungen</div>
+                <div id="distributionEmpty" class="chart-empty visible">No detections yet (Noch keine Erkennungen)</div>
               </div>
               <div id="classLegend" class="class-legend"></div>
             </div>
@@ -1054,14 +1365,14 @@
           <article class="panel recent-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Letzte Erkennungen</h2>
-                <span class="panel-kicker">Neueste zuerst</span>
+                <h2 class="panel-title">Recent Detections (Letzte Erkennungen)</h2>
+                <span class="panel-kicker">Newest first (Neueste zuerst)</span>
               </div>
-              <span id="recentCount" class="panel-kicker">0 EintrÃ¤ge</span>
+              <span id="recentCount" class="panel-kicker">0 Entries (Einträge)</span>
             </header>
 
             <div id="recentList" class="recent-list">
-              <div class="empty-state">Noch keine Erkennungen.<br />Warte auf Daten vom Modell.</div>
+              <div class="empty-state">No detections yet (Noch keine Erkennungen).<br />Waiting for model data (Warte auf Daten vom Modell).</div>
             </div>
           </article>
         </div>
@@ -1072,7 +1383,7 @@
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Erkannte Objekte</span>
+              <span class="summary-label">Detected Objects (Erkannte Objekte)</span>
               <span id="summaryTotal" class="summary-value">0</span>
             </div>
           </article>
@@ -1080,7 +1391,7 @@
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Sitzungsdauer</span>
+              <span class="summary-label">Session Duration (Sitzungsdauer)</span>
               <span id="summaryDuration" class="summary-value mono">00:00</span>
             </div>
           </article>
@@ -1088,53 +1399,53 @@
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">HÃ¤ufigste Klasse</span>
-              <span id="summaryTopClass" class="summary-value">â</span>
+              <span class="summary-label">Most Common Class (Häufigste Klasse)</span>
+              <span id="summaryTopClass" class="summary-value">â€”</span>
             </div>
           </article>
 
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Ã Konfidenz</span>
-              <span id="summaryConfidence" class="summary-value">â <span class="summary-unit">%</span></span>
+              <span class="summary-label">Avg. Confidence (Ø Konfidenz)</span>
+              <span id="summaryConfidence" class="summary-value">â€” <span class="summary-unit">%</span></span>
             </div>
           </article>
 
           <article class="panel trend-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Erkennungstrend</h2>
-                <span class="panel-kicker">Kumulativ Ã¼ber Zeit</span>
+                <h2 class="panel-title">Detection Trend (Erkennungstrend)</h2>
+                <span class="panel-kicker">Cumulative over time (Kumulativ über Zeit)</span>
               </div>
-              <span class="panel-kicker">5 Klassen</span>
+              <span class="panel-kicker">5 Classes (Klassen)</span>
             </header>
             <div class="chart-body">
               <canvas id="trendChart"></canvas>
-              <div id="trendEmpty" class="chart-empty visible">Noch keine Verlaufsdaten</div>
+              <div id="trendEmpty" class="chart-empty visible">No trend data yet (Noch keine Verlaufsdaten)</div>
             </div>
           </article>
 
           <article class="panel breakdown-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">KlassenÃ¼bersicht</h2>
-                <span class="panel-kicker">Nach Anzahl</span>
+                <h2 class="panel-title">Class Breakdown (Klassenübersicht)</h2>
+                <span class="panel-kicker">By count (Nach Anzahl)</span>
               </div>
             </header>
             <div class="chart-body">
               <canvas id="breakdownChart"></canvas>
-              <div id="breakdownEmpty" class="chart-empty visible">Noch keine Klassendaten</div>
+              <div id="breakdownEmpty" class="chart-empty visible">No class data yet (Noch keine Klassendaten)</div>
             </div>
           </article>
 
           <article class="panel history-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Erkennungshistorie</h2>
-                <span id="historyCount" class="panel-kicker">0 / 50 EintrÃ¤ge</span>
+                <h2 class="panel-title">Detection History (Erkennungshistorie)</h2>
+                <span id="historyCount" class="panel-kicker">0 / 50 Entries (Einträge)</span>
               </div>
-              <button id="clearHistoryButton" class="button danger" type="button">Historie leeren</button>
+              <button id="clearHistoryButton" class="button danger" type="button">Clear History (Historie leeren)</button>
             </header>
 
             <div id="historyWrap" class="history-wrap">
@@ -1147,108 +1458,214 @@
                 </colgroup>
                 <thead>
                   <tr>
-                    <th>Zeit</th>
-                    <th>Klasse</th>
-                    <th>Konfidenz</th>
-                    <th>Track-ID</th>
+                    <th>Time (Zeit)</th>
+                    <th>Class (Klasse)</th>
+                    <th>Confidence (Konfidenz)</th>
+                    <th>Track ID</th>
                   </tr>
                 </thead>
                 <tbody id="historyBody"></tbody>
               </table>
               <div id="historyEmpty" class="empty-state history-empty visible">
-                Keine Historie vorhanden. Neue Erkennungen erscheinen automatisch hier.
+                No history available (Keine Historie vorhanden). New detections appear here automatically.
               </div>
             </div>
           </article>
         </div>
       </section>
 
-      <section id="settingsPage" class="page" aria-label="Settings">
-        <div class="settings-grid">
-          <article class="panel settings-panel">
-            <header class="panel-header">
-              <div class="panel-title-wrap">
-                <h2 class="panel-title">Kamera-Einstellungen</h2>
-                <span class="panel-kicker">Hardware &amp; Stream</span>
-              </div>
-            </header>
-            <form id="cameraSettingsForm" class="settings-content">
-              <div class="form-group">
-                <label for="cameraIndex">Kamera-Index</label>
-                <input type="number" id="cameraIndex" class="form-control" min="0" max="10" value="0" required />
-              </div>
-              <div class="form-group">
-                <label for="cameraResolution">Auflösung</label>
-                <select id="cameraResolution" class="form-control">
-                  <option value="640x360" selected>640 x 360 (Standard)</option>
-                  <option value="640x480">640 x 480</option>
-                  <option value="1280x720">1280 x 720 (HD)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="cameraFps">Framerate (FPS)</label>
-                <input type="number" id="cameraFps" class="form-control" min="1" max="60" value="30" required />
-              </div>
-              <div class="form-group checkbox-group">
-                <input type="checkbox" id="cameraAutofocus" />
-                <label for="cameraAutofocus">Autofokus aktivieren</label>
-              </div>
-              <div class="form-group checkbox-group">
-                <input type="checkbox" id="cameraAutoExposure" checked />
-                <label for="cameraAutoExposure">Belichtungsautomatik</label>
-              </div>
-              <div style="flex: 1;"></div>
-              <button class="button primary" type="submit" style="height: 34px; font-size: 12px; margin-top: auto;">Einstellungen anwenden</button>
-            </form>
-          </article>
+      <section id="settingsPage" class="page" aria-label="Settings (Einstellungen)">
+        <div class="settings-page-wrap">
+          <div class="settings-layout">
 
-          <article class="panel settings-panel">
-            <header class="panel-header">
-              <div class="panel-title-wrap">
-                <h2 class="panel-title">Modell-Einstellungen</h2>
-                <span class="panel-kicker">KI-Inferenz</span>
-              </div>
-            </header>
-            <form id="modelSettingsForm" class="settings-content">
-              <div class="form-group">
-                <label for="modelSelect">Erkennungsmodell</label>
-                <select id="modelSelect" class="form-control">
-                  <!-- Dynamically populated -->
-                  <option value="yolov11n.pt">YOLO11n.pt (Standard)</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="modelConf">Konfidenzschwellenwert (Confidence)</label>
-                <div class="range-wrap">
-                  <input type="range" id="modelConf" min="0.0" max="1.0" step="0.05" value="0.5" />
-                  <span id="modelConfVal" class="range-value">0.50</span>
+            <!-- ── Camera Settings Card ── -->
+            <article class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/><circle cx="12" cy="13" r="3"/></svg>
+                </span>
+                <div class="settings-card-title-wrap">
+                  <h2 class="settings-card-title">Camera Settings (Kamera-Einstellungen)</h2>
+                  <span class="settings-card-sub">Hardware &amp; Stream</span>
                 </div>
-              </div>
-              <div class="form-group">
-                <label for="modelReject">Reject-Schwellenwert (Müll-Filter)</label>
-                <div class="range-wrap">
-                  <input type="range" id="modelReject" min="0.0" max="1.0" step="0.05" value="0.55" />
-                  <span id="modelRejectVal" class="range-value">0.55</span>
+              </header>
+
+              <form id="cameraSettingsForm">
+                <div class="settings-card-body">
+
+                  <div class="settings-divider">Device</div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Camera Index (Kamera-Index)</span>
+                      <span class="field-hint">0 = built-in, 1+ = external USB cameras</span>
+                    </div>
+                    <input type="number" id="cameraIndex" class="field-input" min="0" max="10" value="0" required />
+                  </div>
+
+                  <div class="settings-divider">Resolution (Aufl&#246;sung)</div>
+
+                  <div class="settings-field settings-field-full">
+                    <div>
+                      <span class="field-label">Output Resolution</span>
+                      <span class="field-hint">Width &times; Height in pixels &mdash; higher = more detail, lower = faster</span>
+                    </div>
+                    <div class="seg-group" role="group" aria-label="Resolution" style="margin-top: 10px;">
+                      <input type="radio" name="cameraRes" id="res360" value="640x360" checked />
+                      <label for="res360">640&times;360</label>
+                      <input type="radio" name="cameraRes" id="res480" value="640x480" />
+                      <label for="res480">640&times;480</label>
+                      <input type="radio" name="cameraRes" id="res720" value="1280x720" />
+                      <label for="res720">1280&times;720 HD</label>
+                    </div>
+                  </div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Framerate (FPS)</span>
+                      <span class="field-hint">Frames per second &mdash; recommended: 24&ndash;30</span>
+                    </div>
+                    <input type="number" id="cameraFps" class="field-input" min="1" max="60" value="30" required />
+                  </div>
+
+                  <div class="settings-divider">Optics (Optik)</div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Autofocus (Autofokus)</span>
+                      <span class="field-hint">Let the camera continuously auto-focus</span>
+                    </div>
+                    <label class="toggle-wrap" aria-label="Enable Autofocus">
+                      <input type="checkbox" id="cameraAutofocus" class="toggle-input" />
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Auto Exposure (Belichtungsautomatik)</span>
+                      <span class="field-hint">Automatic brightness &amp; exposure control</span>
+                    </div>
+                    <label class="toggle-wrap" aria-label="Enable Auto Exposure">
+                      <input type="checkbox" id="cameraAutoExposure" class="toggle-input" checked />
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+
                 </div>
-              </div>
-              <div class="form-group">
-                <label for="modelIou">IOU-Schwellenwert</label>
-                <div class="range-wrap">
-                  <input type="range" id="modelIou" min="0.0" max="1.0" step="0.05" value="0.45" />
-                  <span id="modelIouVal" class="range-value">0.45</span>
+
+                <footer class="settings-footer">
+                  <button type="reset" class="settings-btn">
+                    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Reset to Defaults
+                  </button>
+                  <button type="submit" class="settings-btn primary">
+                    <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                    Apply Settings (Anwenden)
+                  </button>
+                </footer>
+              </form>
+            </article>
+
+            <!-- ── Model Settings Card ── -->
+            <article class="settings-card">
+              <header class="settings-card-header">
+                <span class="settings-card-icon" style="background: var(--accent);" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M18.66 5.34l-1.41 1.41"/></svg>
+                </span>
+                <div class="settings-card-title-wrap">
+                  <h2 class="settings-card-title">Model Settings (Modell-Einstellungen)</h2>
+                  <span class="settings-card-sub">AI Inference (KI-Inferenz)</span>
                 </div>
-              </div>
-              <div class="form-group checkbox-group">
-                <input type="checkbox" id="modelTracking" checked />
-                <label for="modelTracking">Objekt-Tracking aktivieren</label>
-              </div>
-              <div class="form-group">
-                <label for="modelLatency">Ziel-Latenz (ms)</label>
-                <input type="number" id="modelLatency" class="form-control" min="5" max="500" value="50" required />
-              </div>
-              <button class="button primary" type="submit" style="height: 34px; font-size: 12px; margin-top: auto;">Modell laden &amp; konfigurieren</button>
-            </form>
-          </article>
+              </header>
+
+              <form id="modelSettingsForm">
+                <div class="settings-card-body">
+
+                  <div class="settings-divider">Model (Modell)</div>
+
+                  <div class="settings-field settings-field-full">
+                    <div>
+                      <span class="field-label">Detection Model (Erkennungsmodell)</span>
+                      <span class="field-hint">YOLO model to use for waste classification &mdash; &#9733; = recommended for device</span>
+                    </div>
+                    <select id="modelSelect" class="field-select" style="margin-top: 10px;">
+                      <option value="yolov11n.pt">YOLO11n.pt (Standard)</option>
+                    </select>
+                  </div>
+
+                  <div class="settings-divider">Detection Thresholds (Schwellenwerte)</div>
+
+                  <div class="settings-field settings-field-full">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                      <span class="field-label">Confidence Threshold (Konfidenzschwellenwert)</span>
+                    </div>
+                    <span class="field-hint">Minimum score for a detection to be accepted</span>
+                    <div class="slider-wrap" style="margin-top: 10px;">
+                      <input type="range" id="modelConf" class="field-slider" min="0" max="1" step="0.05" value="0.5" />
+                      <span id="modelConfVal" class="slider-val">0.50</span>
+                    </div>
+                  </div>
+
+                  <div class="settings-field settings-field-full">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                      <span class="field-label">Reject Threshold &mdash; Trash Filter (Müll-Filter)</span>
+                    </div>
+                    <span class="field-hint">Scores below this are discarded as trash/noise</span>
+                    <div class="slider-wrap" style="margin-top: 10px;">
+                      <input type="range" id="modelReject" class="field-slider" min="0" max="1" step="0.05" value="0.55" />
+                      <span id="modelRejectVal" class="slider-val">0.55</span>
+                    </div>
+                  </div>
+
+                  <div class="settings-field settings-field-full">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                      <span class="field-label">IOU Threshold (IOU-Schwellenwert)</span>
+                    </div>
+                    <span class="field-hint">Non-max suppression overlap threshold for duplicate removal</span>
+                    <div class="slider-wrap" style="margin-top: 10px;">
+                      <input type="range" id="modelIou" class="field-slider" min="0" max="1" step="0.05" value="0.45" />
+                      <span id="modelIouVal" class="slider-val">0.45</span>
+                    </div>
+                  </div>
+
+                  <div class="settings-divider">Tracking &amp; Performance</div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Object Tracking (Objekt-Tracking)</span>
+                      <span class="field-hint">Assign persistent IDs across frames using ByteTrack</span>
+                    </div>
+                    <label class="toggle-wrap" aria-label="Enable Object Tracking">
+                      <input type="checkbox" id="modelTracking" class="toggle-input" checked />
+                      <span class="toggle-track"></span>
+                    </label>
+                  </div>
+
+                  <div class="settings-field">
+                    <div>
+                      <span class="field-label">Target Latency in ms (Ziel-Latenz)</span>
+                      <span class="field-hint">Pipeline tries to stay within this frame budget</span>
+                    </div>
+                    <input type="number" id="modelLatency" class="field-input" min="5" max="500" value="50" required />
+                  </div>
+
+                </div>
+
+                <footer class="settings-footer">
+                  <button type="reset" class="settings-btn">
+                    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    Reset to Defaults
+                  </button>
+                  <button type="submit" class="settings-btn primary">
+                    <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                    Load &amp; Apply (Laden)
+                  </button>
+                </footer>
+              </form>
+            </article>
+
+          </div>
         </div>
       </section>
     </main>
@@ -1262,11 +1679,11 @@
 
       const CLASSES = ["glass", "metal", "paper", "plastic", "trash"];
       const CLASS_LABELS = {
-        glass: "Glas",
-        metal: "Metall",
-        paper: "Papier",
-        plastic: "Kunststoff",
-        trash: "RestmÃ¼ll"
+        glass: "Glass (Glas)",
+        metal: "Metal (Metall)",
+        paper: "Paper (Papier)",
+        plastic: "Plastic (Kunststoff)",
+        trash: "Trash (Restmüll)"
       };
       const CLASS_COLORS = {
         glass: "#2d8c8c",
@@ -1470,7 +1887,7 @@
               legend: { display: false },
               tooltip: {
                 callbacks: {
-                  label: context => ` ${context.raw} Objekte`
+                  label: context => ` ${context.raw} Objects (Objekte)`
                 }
               }
             }
@@ -1498,7 +1915,7 @@
         return {
           className: normalizeClass(item.class_name ?? item.class),
           confidence: normalizeConfidence(item.confidence),
-          trackId: item.track_id ?? "â",
+          trackId: item.track_id ?? "â€”",
           timestamp: item.timestamp || new Date().toISOString(),
           bbox: Array.isArray(item.bbox) ? item.bbox : null
         };
@@ -1506,7 +1923,7 @@
 
       function formatTime(timestamp, withDate = false) {
         const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) return "â";
+        if (Number.isNaN(date.getTime())) return "â€”";
 
         const options = withDate
           ? {
@@ -1556,7 +1973,7 @@
         toast.innerHTML = `
           <span class="toast-bar"></span>
           <span class="toast-message"></span>
-          <button class="toast-close" type="button" aria-label="Benachrichtigung schlieÃen">Ã</button>
+          <button class="toast-close" type="button" aria-label="Close notification (Benachrichtigung schließen)">Ã—</button>
         `;
         toast.querySelector(".toast-message").textContent = message;
         toast.querySelector(".toast-close").addEventListener("click", () => toast.remove());
@@ -1591,7 +2008,7 @@
           return data;
         } catch (error) {
           if (!silent) {
-            showToast(`API-Fehler: ${error.message}`, "error");
+            showToast(`API Error (API-Fehler): ${error.message}`, "error");
           }
           throw error;
         }
@@ -1603,11 +2020,11 @@
         elements.connectionDot.classList.toggle("disconnected", !connected);
 
         if (state.videoConnected && state.controlConnected) {
-          elements.connectionText.textContent = "WebSocket verbunden";
+          elements.connectionText.textContent = "WebSocket connected (verbunden)";
         } else if (connected) {
-          elements.connectionText.textContent = "Teilweise verbunden";
+          elements.connectionText.textContent = "Partially connected (Teilweise verbunden)";
         } else {
-          elements.connectionText.textContent = "WebSocket getrennt";
+          elements.connectionText.textContent = "WebSocket disconnected (getrennt)";
         }
       }
 
@@ -1633,9 +2050,9 @@
         elements.stopButton.disabled = !streaming || state.busy;
         elements.liveBadge.classList.toggle("visible", streaming);
         elements.headerStreamDot.classList.toggle("streaming", streaming);
-        elements.headerStreamText.textContent = streaming ? "LIVE" : "BEREIT";
-        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming aktiv" : "System bereit");
-        elements.cameraState.textContent = message || (streaming ? "Warte auf Kameraframe â¦" : "Warte auf Stream â¦");
+        elements.headerStreamText.textContent = streaming ? "LIVE" : "READY (BEREIT)";
+        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming active (aktiv)" : "System ready (bereit)");
+        elements.cameraState.textContent = message || (streaming ? "Waiting for camera frameâ€¦ (Warte auf Kameraframeâ€¦)" : "Waiting for streamâ€¦ (Warte auf Streamâ€¦)");
 
         if (!streaming) {
           state.frameLoaded = false;
@@ -1643,7 +2060,7 @@
           elements.cameraImage.classList.remove("visible");
           elements.cameraPlaceholder.style.display = "flex";
           elements.detectionCountValue.textContent = "0";
-          elements.liveConfidenceValue.textContent = "â %";
+          elements.liveConfidenceValue.textContent = "â€” %";
           clearBoundingBoxes();
         }
       }
@@ -1652,8 +2069,8 @@
         state.busy = busy;
         elements.startButton.disabled = busy || state.streaming;
         elements.stopButton.disabled = busy || !state.streaming;
-        elements.startButton.textContent = busy && !state.streaming ? "Starte â¦" : "Stream starten";
-        elements.stopButton.textContent = busy && state.streaming ? "Stoppe â¦" : "Stoppen";
+        elements.startButton.textContent = busy && !state.streaming ? "Startingâ€¦ (Starteâ€¦)" : "Start Stream (Stream starten)";
+        elements.stopButton.textContent = busy && state.streaming ? "Stoppingâ€¦ (Stoppeâ€¦)" : "Stop (Stoppen)";
       }
 
       function sendControl(payload) {
@@ -1662,7 +2079,7 @@
           controlSocket.send(JSON.stringify(payload));
           return true;
         } catch (error) {
-          showToast(`Steuerkanal: ${error.message}`, "error");
+          showToast(`Control channel error (Steuerkanal): ${error.message}`, "error");
           return false;
         }
       }
@@ -1809,12 +2226,12 @@
         }
 
         if (payload.type === "error") {
-          showToast(payload.message || "Unbekannter Steuerungsfehler", "error");
+          showToast(payload.message || "Unknown control error (Unbekannter Steuerungsfehler)", "error");
           return;
         }
 
         if (payload.type === "response" && payload.success === false) {
-          showToast(payload.message || "Befehl fehlgeschlagen", "error");
+          showToast(payload.message || "Command failed (Befehl fehlgeschlagen)", "error");
         }
       }
 
@@ -1826,8 +2243,8 @@
           String(status || "").toLowerCase()
         );
 
-        if (running) setStreaming(true, message || "Streaming aktiv");
-        if (idle) setStreaming(false, message || "System bereit");
+        if (running) setStreaming(true, message || "Streaming active (aktiv)");
+        if (idle) setStreaming(false, message || "System ready (bereit)");
       }
 
       function processDetections(items) {
@@ -1933,7 +2350,7 @@
         breakdownChart.update("none");
 
         elements.distributionTotal.textContent =
-          `${total} ${total === 1 ? "Objekt" : "Objekte"}`;
+          `${total} ${total === 1 ? "Object (Objekt)" : "Objects (Objekte)"}`;
         elements.distributionEmpty.classList.toggle("visible", total === 0);
         elements.trendEmpty.classList.toggle("visible", state.trendLabels.length === 0);
         elements.breakdownEmpty.classList.toggle("visible", total === 0);
@@ -1953,10 +2370,10 @@
 
       function renderRecent() {
         const items = state.history.slice(0, 12);
-        elements.recentCount.textContent = `${state.history.length} Eintr\u00e4ge`;
+        elements.recentCount.textContent = `${state.history.length} Entries (Eintr\u00e4ge)`;
 
         if (!items.length) {
-          elements.recentList.innerHTML = '<div class="empty-state">Noch keine Erkennungen.<br />Warte auf Daten vom Modell.</div>';
+          elements.recentList.innerHTML = '<div class="empty-state">No detections yet (Noch keine Erkennungen).<br />Waiting for model data (Warte auf Daten vom Modell).</div>';
           return;
         }
 
@@ -1971,7 +2388,7 @@
       }
 
       function renderHistory() {
-        elements.historyCount.textContent = `${state.history.length} / 50 Eintr\u00e4ge`;
+        elements.historyCount.textContent = `${state.history.length} / 50 Entries (Eintr\u00e4ge)`;
 
         if (!state.history.length) {
           elements.historyBody.innerHTML = "";
@@ -2093,8 +2510,8 @@
         setBusy(true);
         fetchJSON("/api/stream/start", { method: "POST" })
           .then(data => {
-            showToast(data.message || "Stream gestartet", "success");
-            handleStatus("running", "Stream gestartet");
+            showToast(data.message || "Stream started (gestartet)", "success");
+            handleStatus("running", "Stream started (gestartet)");
           })
           .catch(() => {})
           .finally(() => setBusy(false));
@@ -2105,8 +2522,8 @@
         setBusy(true);
         fetchJSON("/api/stream/stop", { method: "POST" })
           .then(data => {
-            showToast(data.message || "Stream gestoppt", "success");
-            handleStatus("stopped", "Stream gestoppt");
+            showToast(data.message || "Stream stopped (gestoppt)", "success");
+            handleStatus("stopped", "Stream stopped (gestoppt)");
           })
           .catch(() => {})
           .finally(() => setBusy(false));
@@ -2141,7 +2558,7 @@
         renderHistory();
         renderSummary();
         scheduleChartUpdate();
-        showToast("Historie gel\u00f6scht", "success");
+        showToast("History cleared (Historie gel\u00f6scht)", "success");
       });
 
       let sessionTimer = null;
@@ -2165,7 +2582,7 @@
         }
       });
 
-      // Settings logic
+      // Settings — sliders
       const sliders = [
         { slider: document.getElementById("modelConf"), label: document.getElementById("modelConfVal") },
         { slider: document.getElementById("modelReject"), label: document.getElementById("modelRejectVal") },
@@ -2173,10 +2590,37 @@
       ];
       sliders.forEach(({ slider, label }) => {
         if (slider && label) {
-          slider.addEventListener("input", (e) => {
-            label.textContent = Number(e.target.value).toFixed(2);
-          });
+          const update = () => { label.textContent = Number(slider.value).toFixed(2); };
+          slider.addEventListener("input", update);
+          update();
         }
+      });
+
+      // Settings — reset buttons restore defaults
+      const cameraResetDefaults = { index: 0, fps: 30, res: "640x360", autofocus: false, autoExposure: true };
+      const modelResetDefaults  = { conf: 0.5, reject: 0.55, iou: 0.45, tracking: true, latency: 50 };
+
+      document.getElementById("cameraSettingsForm")?.addEventListener("reset", () => {
+        setTimeout(() => {
+          document.getElementById("cameraIndex").value = cameraResetDefaults.index;
+          document.getElementById("cameraFps").value = cameraResetDefaults.fps;
+          document.querySelector(`input[name="cameraRes"][value="${cameraResetDefaults.res}"]`).checked = true;
+          document.getElementById("cameraAutofocus").checked = cameraResetDefaults.autofocus;
+          document.getElementById("cameraAutoExposure").checked = cameraResetDefaults.autoExposure;
+        }, 0);
+      });
+
+      document.getElementById("modelSettingsForm")?.addEventListener("reset", () => {
+        setTimeout(() => {
+          const mc = document.getElementById("modelConf");
+          const mr = document.getElementById("modelReject");
+          const mi = document.getElementById("modelIou");
+          mc.value = modelResetDefaults.conf; document.getElementById("modelConfVal").textContent = modelResetDefaults.conf.toFixed(2);
+          mr.value = modelResetDefaults.reject; document.getElementById("modelRejectVal").textContent = modelResetDefaults.reject.toFixed(2);
+          mi.value = modelResetDefaults.iou; document.getElementById("modelIouVal").textContent = modelResetDefaults.iou.toFixed(2);
+          document.getElementById("modelTracking").checked = modelResetDefaults.tracking;
+          document.getElementById("modelLatency").value = modelResetDefaults.latency;
+        }, 0);
       });
 
       function loadModelOptions() {
@@ -2187,7 +2631,7 @@
             if (data.models && Array.isArray(data.models) && data.models.length > 0) {
               select.innerHTML = data.models.map(model => `
                 <option value="${model.name}" ${model.recommended ? 'selected' : ''}>
-                  ${model.label} (${model.size_mb} MB) ${model.recommended ? '\u2605 Empfohlen' : ''}
+                  ${model.label} (${model.size_mb} MB) ${model.recommended ? '\u2605 Recommended (Empfohlen)' : ''}
                 </option>
               `).join("");
             }
@@ -2199,7 +2643,8 @@
       if (cameraForm) {
         cameraForm.addEventListener("submit", (e) => {
           e.preventDefault();
-          const resolution = document.getElementById("cameraResolution").value.split("x");
+          const resVal = document.querySelector('input[name="cameraRes"]:checked')?.value || "640x360";
+          const resolution = resVal.split("x");
           const config = {
             index: parseInt(document.getElementById("cameraIndex").value, 10),
             width: parseInt(resolution[0], 10),
@@ -2220,11 +2665,11 @@
               body: JSON.stringify(config)
             })
             .then(data => {
-              showToast(data.message || "Kamera konfiguriert", "success");
+              showToast(data.message || "Camera configured (Kamera konfiguriert)", "success");
             })
             .catch(() => {});
           } else {
-            showToast("Kamera-Konfiguration \u00fcbermittelt", "success");
+            showToast("Camera config submitted (Kamera-Konfiguration \u00fcbermittelt)", "success");
           }
         });
       }
@@ -2253,11 +2698,11 @@
               body: JSON.stringify(config)
             })
             .then(data => {
-              showToast(data.message || "Modell geladen", "success");
+              showToast(data.message || "Model loaded (Modell geladen)", "success");
             })
             .catch(() => {});
           } else {
-            showToast("Modell-Konfiguration \u00fcbermittelt", "success");
+            showToast("Model config submitted (Modell-Konfiguration \u00fcbermittelt)", "success");
           }
         });
       }

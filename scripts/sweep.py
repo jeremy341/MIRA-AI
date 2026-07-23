@@ -96,6 +96,7 @@ def _objective_factory(args: argparse.Namespace, run_dir: Path):
 
         try:
             model = YOLO(args.model)
+            trial_start = time.time()
 
             results = model.train(
                 data=args.data,
@@ -119,6 +120,7 @@ def _objective_factory(args: argparse.Namespace, run_dir: Path):
 
             map50 = float(getattr(results.box, "map50", 0.0))
             map50_95 = float(getattr(results.box, "map", 0.0))
+            duration = time.time() - trial_start
 
         except Exception as exc:
             logger.error("Trial %d failed: %s", trial.number, exc)
@@ -134,7 +136,7 @@ def _objective_factory(args: argparse.Namespace, run_dir: Path):
             "hyperparameters": hparams,
             "metrics": metrics,
             "best_model": str(trial_dir / "weights" / "best.pt"),
-            "duration_seconds": 0,
+            "duration_seconds": round(duration, 2),
         }
 
         with open(trial_dir / "sweep_result.json", "w", encoding="utf-8") as f:

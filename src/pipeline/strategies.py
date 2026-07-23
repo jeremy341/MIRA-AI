@@ -66,8 +66,8 @@ class TrainConfig:
             errors.append(f"seed must be >= 0, got {self.seed}")
 
         # Device validation
-        if self.device != "cpu" and not all(c.isdigit() or c == "," for c in self.device):
-            errors.append(f"device must be 'cpu' or comma-separated GPU IDs, got '{self.device}'")
+        if self.device != "cpu" and not all(c.isdigit() or c in (",", ":") for c in self.device):
+            errors.append(f"device must be 'cpu', comma-separated GPU IDs, or 'cuda:N', got '{self.device}'")
 
         return errors
 
@@ -141,6 +141,13 @@ class YOLOStrategy(TrainingStrategy):
             "deterministic": False,
         }
         if config.extra:
+            for key in list(config.extra.keys()):
+                val = config.extra[key]
+                if isinstance(val, dict):
+                    for subkey, subval in val.items():
+                        if subkey not in kwargs:
+                            kwargs[subkey] = subval
+
             training_keys = {
                 "data",
                 "epochs",
@@ -178,7 +185,6 @@ class YOLOStrategy(TrainingStrategy):
                 "single_cls",
                 "nbs",
                 "multi_scale",
-                "translate",
                 "hsv_h",
                 "hsv_s",
                 "hsv_v",

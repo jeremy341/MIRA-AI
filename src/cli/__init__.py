@@ -65,7 +65,7 @@ Examples:
             print("\nInterrupted by user.")
             sys.exit(130)
         except Exception as e:
-            logger.exception(f"Unexpected error in command '{args.command}': {e}")
+            logger.exception("Unexpected error in command '%s': %s", args.command, e)
             print(f"\nUnexpected error: {e}")
             print("Try running 'mira doctor' to diagnose common issues.")
             sys.exit(1)

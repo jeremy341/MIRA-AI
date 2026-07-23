@@ -14,4 +14,6 @@ if exist "%PROJECT_DIR%.venv\Scripts\python.exe" (
 rem Force UTF-8 output for Unicode characters (checkmarks, etc.)
 set PYTHONUTF8=1
 
+cd /d "%PROJECT_DIR%"
+
 "%PYTHON%" -m src %*

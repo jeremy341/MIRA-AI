@@ -78,6 +78,7 @@ class BenchmarkResult:
     map50: float = 0.0
     map50_95: float = 0.0
     errors: list[str] = field(default_factory=list)
+    evaluated_on_train: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -94,10 +95,11 @@ class BenchmarkResult:
             "map50": self.map50,
             "map50_95": self.map50_95,
             "errors": self.errors,
+            "evaluated_on_train": self.evaluated_on_train,
         }
 
 
-def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]:
+def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[dict]]], bool]:
     """Load images/val + labels/val from a YOLO-format dataset.
 
     Returns list of (image_path, gt_objects) where gt_objects is a list of
@@ -112,17 +114,19 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
         dataset_path = dataset_path.parent
 
     split = "val"
+    evaluated_on_train = False
     img_dir = dataset_path / "images" / "val"
     lbl_dir = dataset_path / "labels" / "val"
     if not (img_dir.exists() and lbl_dir.exists()):
-        import logging as _logging
+        from ..logger import get_logger as _get_logger
 
-        _logging.getLogger(__name__).warning(
+        _get_logger(__name__).warning(
             "Validation split not found in %s — falling back to train split. "
             "Metrics may be inflated because the model is evaluated on training data.",
             dataset_path,
         )
         split = "train"
+        evaluated_on_train = True
         img_dir = dataset_path / "images" / "train"
         lbl_dir = dataset_path / "labels" / "train"
         if not (img_dir.exists() and lbl_dir.exists()):
@@ -181,7 +185,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
         f"  Loaded {len(samples)} images from {dataset_path.name}/{split}"
         + (f" (skipped {skipped})" if skipped else "")
     )
-    return samples
+    return samples, evaluated_on_train
 
 
 def _compute_ap_for_class(
@@ -277,9 +281,11 @@ class ModelBenchmark:
         self.models = models or []
         self.dataset = Path(dataset) if isinstance(dataset, (Path, str)) else None
         self.conf = conf
-        self.iou = iou
+        self.iou = iou  # COCO-standard eval threshold (0.7); inference default is typically 0.45
         self.max_images = max_images
-        self.samples = load_yolo_dataset(self.dataset) if self.dataset else []
+        self.evaluated_on_train = False
+        if self.dataset:
+            self.samples, self.evaluated_on_train = load_yolo_dataset(self.dataset)
 
     @classmethod
     def from_registry(
@@ -420,6 +426,7 @@ class ModelBenchmark:
                     map50=map50,
                     map50_95=map50_95,
                     errors=errors,
+                    evaluated_on_train=self.evaluated_on_train,
                 )
             )
             print("done")

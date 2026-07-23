@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 
+from src.config import ROOT_DIR
 from src.pipeline.registry import register_command
 
 
@@ -20,10 +21,13 @@ def cmd_merge(args):
     registry = DatasetRegistry()
     n = registry.discover()
     print(f"Discovered {n} dataset sources.")
-    output = Path(args.output)
+    output_path = Path(args.output).resolve()
+    if not output_path.is_relative_to(ROOT_DIR.resolve()):
+        print(f"Error: Output path must be within the project directory.")
+        sys.exit(1)
     result = registry.merge(
         sources=args.sources,
-        output=output,
+        output=output_path,
         custom_path=Path(args.custom) if args.custom else None,
         dry_run=args.dry_run,
     )

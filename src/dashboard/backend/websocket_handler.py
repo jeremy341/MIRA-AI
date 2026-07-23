@@ -7,7 +7,7 @@ from datetime import datetime
 import cv2
 import numpy as np
 from typing import Dict, Any
-from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
+from starlette.websockets import WebSocketDisconnect
 
 from models import Detection, SystemMetrics
 
@@ -49,19 +49,18 @@ class WebSocketHandler:
                 if not self.connections:
                     continue
                 
-                # Create tasks for all connections
+                # Collect tasks for all connections
                 tasks = []
                 to_remove = set()
                 for websocket in self.connections:
                     try:
                         tasks.append(websocket.send_json(message))
                     except Exception:
-                        # Mark broken connections for removal
                         to_remove.add(websocket)
                 
-                # Remove broken connections after iteration
-                for websocket in to_remove:
-                    self.connections.discard(websocket)
+                # Remove broken connections
+                for ws in to_remove:
+                    self.connections.discard(ws)
                 
                 # Send concurrently
                 if tasks:
@@ -69,45 +68,7 @@ class WebSocketHandler:
             except asyncio.CancelledError:
                 break
             except Exception:
-                # Continue on other errors to prevent task crash
                 continue
-    
-    async def start(self):
-        """Start the background broadcast task"""
-        self._broadcast_task = asyncio.create_task(self._broadcast_consumer())
-    
-    async def stop(self):
-        """Stop the background broadcast task"""
-        if self._broadcast_task:
-            self._broadcast_task.cancel()
-            try:
-                await self._broadcast_task
-            except asyncio.CancelledError:
-                pass
-    
-    async def _broadcast_consumer(self):
-        """Consume messages from the broadcast queue and send to all connections"""
-        while True:
-            message = await self._broadcast_queue.get()
-            if not self.connections:
-                continue
-            
-            # Collect tasks for all connections
-            tasks = []
-            to_remove = set()
-            for websocket in self.connections:
-                try:
-                    tasks.append(websocket.send_json(message))
-                except Exception:
-                    to_remove.add(websocket)
-            
-            # Remove broken connections
-            for ws in to_remove:
-                self.connections.discard(ws)
-            
-            # Send concurrently
-            if tasks:
-                await asyncio.gather(*tasks, return_exceptions=True)
     
     async def handle_video_stream(self, websocket):
         """Handle video streaming WebSocket connection"""
@@ -131,7 +92,7 @@ class WebSocketHandler:
                     # Handle configuration updates
                     await self._handle_config(websocket, message[7:])
                     
-        except ConnectionClosed:
+        except (WebSocketDisconnect, Exception):
             pass
         finally:
             self.connections.remove(websocket)
