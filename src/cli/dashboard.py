@@ -35,6 +35,14 @@ def cmd_dashboard(args):
     if str(src_dir) not in sys.path:
         sys.path.insert(0, str(src_dir))
 
+    # Add backend dir to sys.path so bare imports (from models, from camera_service, etc.) resolve
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+
+    # Register src.config as "config" so "from config import ..." in camera_service.py works
+    import src.config
+    sys.modules["config"] = src.config
+
     # Load main.py from backend_dir
     spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
     if spec is None or spec.loader is None:
