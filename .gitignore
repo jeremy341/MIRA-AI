@@ -95,3 +95,5 @@ results/
 setup/
 dashboard_output/
 dashboard_output_backup/
+check_ultra.py
+run_check.bat
