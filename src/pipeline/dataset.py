@@ -315,7 +315,7 @@ class DatasetRegistry:
         mu = _import_merge_utils()
         path = Path(path)
         if not path.exists():
-            print(f"  ERROR: Custom source not found: {path}")
+            logger.error("Custom source not found: %s", path)
             return 0, 0
 
         if dry_run:

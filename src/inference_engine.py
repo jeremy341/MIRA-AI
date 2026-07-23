@@ -155,6 +155,16 @@ class InferenceEngine:
             if hasattr(self, "model") and self.model is not None:
                 del self.model
                 self.model = None
+            import gc
+
+            gc.collect()
+            try:
+                import torch
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except (ImportError, AttributeError):
+                pass
         except Exception as exc:
             logger.warning("Exception while releasing model: %s", exc)
         try:

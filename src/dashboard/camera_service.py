@@ -42,7 +42,7 @@ class CameraService:
 
         # Statistics
         self.detection_history = deque(maxlen=1000)
-        self.class_history = defaultdict(lambda: deque(maxlen=1000))
+
         self.metrics_history = deque(maxlen=100)
 
         # Performance tracking
@@ -322,7 +322,7 @@ class CameraService:
                     if entries:
                         temperature = entries[0].current
                         break
-        except (AttributeError, Exception):
+        except (AttributeError, OSError):
             pass
 
         # Calculate detections per second
@@ -349,7 +349,6 @@ class CameraService:
         """Update detection history"""
         for detection in detections:
             self.detection_history.append(detection)
-            self.class_history[detection.class_name].append(detection)
 
     def _update_status(self, status: SystemStatus, message: str):
         """Update system status"""
