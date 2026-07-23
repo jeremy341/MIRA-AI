@@ -130,7 +130,7 @@ pip install -r requirements.txt
 | `.\mira train --model yolo11n.pt --dataset <path> --epochs 50` | Train with inline flags |
 | `.\mira eval-yolo --model <file>` | Evaluate a YOLO detection model on test set |
 | `.\mira benchmark --models <file1> <file2> ...` | Compare models by accuracy and latency |
-| `.\mira export --model <file> --format tflite` | Export trained `.pt` to TFLite / ONNX |
+| `.\mira export --model <file> --formats tflite_int8` | Export trained `.pt` to TFLite / ONNX |
 | `.\mira merge --sources taco_trashnet roboflow --output <dir>` | Merge registered datasets into unified YOLO dataset |
 | `.\mira datasets` | List registered dataset sources from `datasets/registry/*.yaml` |
 | `.\mira validate` | Validate a YOLO-format dataset's annotation structure |
@@ -140,7 +140,7 @@ pip install -r requirements.txt
 | `.\mira doctor` | Run comprehensive environment and project health check |
 | `.\mira diagnostics` | Check hardware capabilities (GPU, NPU, TPU) |
 | `.\mira config` | Display current project configuration |
-| `.\mira generate` | Generate cloud training scripts (Kaggle, Colab, Docker) |
+| `.\mira generate kaggle --config <file>` | Generate cloud training scripts (Kaggle, Colab, Docker) |
 | `.\mira wizard` | Interactive training setup wizard |
 | `scripts/visualize_classifier_dataset.py` | Visualize dataset class distribution and sample grids |
 
@@ -287,9 +287,9 @@ The reject threshold is configurable via the dashboard slider or `--reject` CLI 
 MIRA includes a modular research pipeline for systematic experimentation. The pipeline is YAML-driven, plugin-based, and designed for extensibility.
 
 ```
- CLI (cli.py)
-   │
-   ├─ datasets ──→ DatasetRegistry ──→ datasets/registry/*.yaml
+ CLI (src/cli/)
+    │
+    ├─ datasets ──→ DatasetRegistry ──→ datasets/registry/*.yaml
    │                                        │
    ├─ merge ─────→ copy_passthrough ───────→ datasets/<merged>/
    │                copy_remapped_images         │
@@ -521,11 +521,10 @@ All commands are accessed via `.\mira <command>` (Windows) or `python -m src <co
 | **Training** | `train --config <file>` | Train from experiment YAML config |
 | | `train --model yolo11n.pt --dataset <path>` | Train with inline flags |
 | | `wizard` | Interactive training setup wizard |
-| **Export** | `export --model <file> --format tflite` | Export `.pt` to TFLite / ONNX |
+| **Export** | `export --model <file> --formats tflite_int8` | Export `.pt` to TFLite / ONNX |
 | **Data** | `datasets` | List registered dataset sources |
 | | `merge --sources ... --output <dir>` | Merge sources into unified YOLO dataset |
 | | `validate` | Validate YOLO dataset annotation structure |
-| | `data-viz` | Visualize dataset class distribution |
 | **Models** | `models` | List all discovered model files |
 | | `benchmark --models <file1> <file2>` | Compare models by accuracy and latency |
 | | `download` | Download pretrained models from Hugging Face |
@@ -538,9 +537,9 @@ All commands are accessed via `.\mira <command>` (Windows) or `python -m src <co
 ```bash
 # Full pipeline example
 .\mira datasets                                                    # List available sources
-.\mira merge --sources taco_trashnet,roboflow --output datasets/mira_tnr
+.\mira merge --sources taco_trashnet roboflow --output datasets/mira_tnr
 .\mira train --config experiments/exp014_yolo11n_multidataset.yaml
-.\mira export --model models/detection/mira_exp014.pt --format tflite --int8
+.\mira export --model models/detection/mira_exp014.pt --formats tflite_int8
 .\mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite --dataset datasets/mira_tnr
 .\mira models                                                       # Verify model discovery
 ```
@@ -625,28 +624,43 @@ MIRA-AI/
 ├── src/                            # Runtime packages
 │   ├── __init__.py                 # Version, imports
 │   ├── __main__.py                 # Entry point (python -m src)
-│   ├── cli.py                      # Unified CLI (17 subcommands)
 │   ├── config.py                   # Shared paths, constants, and utilities
 │   ├── inference_engine.py         # Camera setup, model loading, inference loop
 │   ├── visualize.py                # Bounding-box drawing with 3-tier confidence
-│   ├── field_benchmark.py          # Real-world model comparison
 │   ├── logger.py                   # Singleton logger
 │   ├── model_picker.py             # Interactive arrow-key model selector
-│   ├── validators.py               # Dataset + YAML validators
+│   ├── hardware.py                 # GPU/NPU/TPU detection and capabilities
+│   ├── deploy.py                   # Model deployment and quantization helpers
+│   ├── exceptions.py               # Custom exception classes
+│   ├── version.py                  # Project version constants
+│   ├── serialization.py            # Model serialization utilities
+│   ├── cli/                        # CLI subcommand modules
+│   │   ├── __init__.py             # CLI registration and argument parser
+│   │   ├── inference.py            # live, eval-yolo commands
+│   │   ├── train.py                # train, wizard commands
+│   │   ├── data.py                 # datasets, merge, validate commands
+│   │   ├── generate.py             # generate command (Kaggle, Colab, Docker)
+│   │   ├── dashboard.py            # dashboard command
+│   │   ├── system.py               # doctor, diagnostics, config, models, experiments, benchmark commands
+│   │   └── wizard.py               # Interactive training setup wizard
 │   ├── dashboard/                   # FastAPI+WebSocket web control center
-│   │   ├── main.py                  # FastAPI server (REST + WebSocket)
-│   │   ├── camera_service.py        # Camera + YOLO inference management
-│   │   ├── websocket_handler.py     # WebSocket video streaming
-│   │   ├── models.py                # Pydantic data models
-│   │   ├── requirements.txt         # Dashboard dependencies
-│   │   └── templates/
-│   │       └── dashboard.html       # Clean light-theme frontend
+│   │   ├── backend/
+│   │   │   ├── main.py             # FastAPI server (REST + WebSocket)
+│   │   │   ├── camera_service.py   # Camera + YOLO inference management
+│   │   │   ├── websocket_handler.py # WebSocket video streaming
+│   │   │   ├── models.py           # Pydantic data models
+│   │   │   ├── requirements.txt    # Dashboard dependencies
+│   │   │   └── run.py              # Server startup script
+│   │   └── frontend/
+│   │       └── dashboard.html      # Clean light-theme frontend
 │   └── pipeline/                   # Research pipeline framework
 │       ├── __init__.py             # Public API exports
 │       ├── registry.py             # Plugin registry: @register_command, @register_dataset_source
 │       ├── dataset.py              # DatasetRegistry: YAML-based dataset source management
 │       ├── models.py               # Model adapters: YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
 │       ├── train.py                # TrainingPipeline: configurable YOLO training
+│       ├── strategies.py           # Training strategy implementations
+│       ├── validators.py           # Dataset + YAML validators
 │       └── benchmark.py            # ModelBenchmark: accuracy + latency comparison
 │
 ├── scripts/                        # Training, cloud, and utility scripts
@@ -692,7 +706,6 @@ MIRA-AI/
 │
 ├── experiments/                    # Training experiment configs (YAML)
 │   ├── exp009_yolov8n_int8.yaml
-│   ├── exp013_yolo11n_taco_trashnet.yaml
 │   └── exp014_yolo11n_multidataset.yaml
 │
 ├── data/
@@ -701,10 +714,9 @@ MIRA-AI/
 │
 ├── datasets/                       # Detection datasets (gitignored)
 │   ├── registry/                   # Dataset YAML descriptors for pipeline
-│   │   ├── taco_trashnet.yaml
+│   │   ├── trashnet.yaml
 │   │   ├── roboflow.yaml
-│   │   ├── warp.yaml
-│   │   └── mira_v3.yaml
+│   │   └── warp.yaml
 │   ├── mira_v2/                    # TACO + TrashNet (3,924 images)
 │   ├── mira_tnr/                   # Model 1: TACO+TrashNet+Roboflow
 │   ├── mira_tnw/                   # Model 2: TACO+TrashNet+WaRP
@@ -782,7 +794,7 @@ All trained models are available in the `models/` directory. Run `.\mira downloa
 
 ### Kaggle / Colab Training
 
-For exact reproduction of training runs, generate cloud scripts with `.\mira generate` or use the templates in `scripts/generate_kaggle.py` / `scripts/generate_colab.py`. Each experiment's hyperparameters are logged in `results/experiments_log.md`.
+For exact reproduction of training runs, generate cloud scripts with `.\mira generate kaggle --config <file>` or use the templates in `scripts/generate_kaggle.py` / `scripts/generate_colab.py`. Each experiment's hyperparameters are logged in `results/experiments_log.md`.
 
 ### Hardware
 
@@ -834,7 +846,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 Use the plugin registry to add commands without editing existing files:
 
 ```python
-# src/pipeline/my_module.py
+# src/cli/my_module.py
 from pipeline.registry import register_command
 
 @register_command("my-command", "Description of what it does")
@@ -845,7 +857,7 @@ def setup(parser):
     parser.add_argument("--flag", help="Custom flag")
 ```
 
-Then import the module in `cli.py` to activate it.
+Then import the module in `src/cli/__init__.py` to activate it.
 
 ---
 
