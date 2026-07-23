@@ -1,9 +1,9 @@
-"""CLI command for the interactive training setup wizard."""
+﻿"""CLI command for the interactive training setup wizard."""
 
 import sys
 
-from ..config import PROJECT_CONFIG
-from ..pipeline.registry import register_command
+from src.config import PROJECT_CONFIG
+from src.pipeline.registry import register_command
 
 
 def _add_wizard_args(parser):
@@ -12,8 +12,8 @@ def _add_wizard_args(parser):
 
 @register_command("wizard", "Interactive training setup wizard", add_args=_add_wizard_args)
 def cmd_wizard(args):
-    from ..deploy import detect_hardware
-    from ..pipeline.dataset import DatasetRegistry
+    from src.deploy import detect_hardware
+    from src.pipeline.dataset import DatasetRegistry
 
     print()
     print("=" * 50)
@@ -144,3 +144,4 @@ def cmd_wizard(args):
     from .train import cmd_train
 
     cmd_train(train_args)
+

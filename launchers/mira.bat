@@ -2,7 +2,7 @@
 rem MIRA Unified Windows CLI Wrapper
 rem All paths are relative to the batch file's location
 
-set "PROJECT_DIR=%~dp0"
+set "PROJECT_DIR=%~dp0..\"
 
 rem Prefer the local venv if it exists, otherwise fall back to system python
 if exist "%PROJECT_DIR%.venv\Scripts\python.exe" (

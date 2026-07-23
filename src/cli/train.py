@@ -1,10 +1,10 @@
-"""CLI commands for training, exporting, and auto-detecting training parameters."""
+﻿"""CLI commands for training, exporting, and auto-detecting training parameters."""
 
 import sys
 from pathlib import Path
 
-from ..config import ROOT_DIR
-from ..pipeline.registry import register_command
+from src.config import ROOT_DIR
+from src.pipeline.registry import register_command
 
 
 def _add_train_args(parser):
@@ -45,8 +45,8 @@ def _add_train_args(parser):
 
 @register_command("train", "Train a YOLO detection or classification model", add_args=_add_train_args)
 def cmd_train(args):
-    from ..pipeline.strategies import TrainConfig
-    from ..pipeline.train import TrainingPipeline
+    from src.pipeline.strategies import TrainConfig
+    from src.pipeline.train import TrainingPipeline
 
     if args.config:
         config = TrainConfig.from_yaml(args.config)
@@ -69,7 +69,7 @@ def cmd_train(args):
         config.data_dir = args.data_dir
 
     if args.auto:
-        from ..deploy import detect_hardware
+        from src.deploy import detect_hardware
 
         hw = detect_hardware()
         print("\n  Auto-detecting hardware...")
@@ -78,15 +78,15 @@ def cmd_train(args):
             config.device = "0"
             if args.batch_size is None:
                 config.batch_size = 32
-            print("  GPU detected — device=cuda:0, batch_size=32")
+            print("  GPU detected â€” device=cuda:0, batch_size=32")
         else:
             config.device = "cpu"
             if args.batch_size is None:
                 config.batch_size = 8
-            print("  CPU only — device=cpu, batch_size=8")
+            print("  CPU only â€” device=cpu, batch_size=8")
 
         if args.model is None:
-            from ..pipeline.models import ModelRegistry
+            from src.pipeline.models import ModelRegistry
 
             registry = ModelRegistry()
             registry.discover()
@@ -97,7 +97,7 @@ def cmd_train(args):
                 print(f"  Base model: {config.model}")
 
         if args.dataset is None:
-            from ..pipeline.dataset import DatasetRegistry
+            from src.pipeline.dataset import DatasetRegistry
 
             ds_registry = DatasetRegistry()
             ds_registry.discover()
@@ -122,7 +122,7 @@ def cmd_train(args):
         sys.exit(2)
 
     if args.dry_run:
-        print("Configuration is valid. Dry run — no training started.")
+        print("Configuration is valid. Dry run â€” no training started.")
         print(f"  model: {config.model}")
         print(f"  dataset: {config.dataset}")
         print(f"  epochs: {config.epochs}")
@@ -161,7 +161,7 @@ def _add_export_args(parser):
 
 @register_command("export", "Export a trained .pt model to TFLite / ONNX", add_args=_add_export_args)
 def cmd_export(args):
-    from ..pipeline.train import TrainingPipeline
+    from src.pipeline.train import TrainingPipeline
 
     model_path = Path(args.model)
     if not model_path.is_absolute():
@@ -174,7 +174,7 @@ def cmd_export(args):
     if args.dry_run:
         print(f"Model found: {model_path}")
         print(f"Formats: {', '.join(args.formats)}")
-        print("Dry run — no export performed.")
+        print("Dry run â€” no export performed.")
         return
 
     pipeline = TrainingPipeline()
@@ -185,3 +185,4 @@ def cmd_export(args):
             print(f"  {p}")
     else:
         print("No files exported.")
+

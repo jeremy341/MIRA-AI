@@ -72,7 +72,7 @@ pip install -r requirements.txt
 
 ### Live Detection
 
-> **Platform note:** On Windows, use `.\mira` (PowerShell) or `mira.bat` (CMD). On Linux/macOS, use `python -m src`.
+> **Platform note:** On Windows, use `.\mira` (PowerShell) or `launchers\mira.bat` (CMD). On Linux/macOS, use `python -m src` or `./launchers/mira.sh`.
 
 ```bash
 # Interactive model picker (arrow keys to choose)
@@ -738,8 +738,9 @@ MIRA-AI/
 ├── bytetrack.yaml                  # ByteTrack tracker configuration
 ├── pyproject.toml                  # Project metadata + Ruff + pytest config
 ├── requirements.txt                # Python dependencies
-├── mira.bat                        # Windows CLI launcher
-├── mira.sh                         # Linux/macOS CLI launcher
+├── launchers/
+│   ├── mira.bat                    # Windows CLI launcher
+│   └── mira.sh                     # Linux/macOS CLI launcher
 ├── setup/                          # Setup helpers
 ├── AGENTS.md                       # Agent instructions
 ├── LICENSE                         # MIT License

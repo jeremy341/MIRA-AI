@@ -1,16 +1,13 @@
 """
 Data models for MIRA Control Center API
 """
-
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from enum import StrEnum
-
-from ..config import DEFAULT_CONF, DEFAULT_IOU, REJECT_THRESHOLD
+from enum import Enum
 
 
-class WasteClass(StrEnum):
+class WasteClass(str, Enum):
     GLASS = "glass"
     METAL = "metal"
     PAPER = "paper"
@@ -20,20 +17,18 @@ class WasteClass(StrEnum):
 
 class Detection(BaseModel):
     """Single detection result"""
-
     class_name: WasteClass
     confidence: float = Field(ge=0.0, le=1.0)
-    bbox: list[int]  # [x1, y1, x2, y2]
-    track_id: int | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    bbox: List[int]  # [x1, y1, x2, y2]
+    track_id: Optional[int] = None
+    timestamp: datetime = Field(default_factory=datetime.now)
 
 
 class CameraConfig(BaseModel):
     """Camera configuration"""
-
     index: int = 0
     width: int = 640
-    height: int = 360
+    height: int =   360
     fps: int = 30
     autofocus: bool = False
     auto_exposure: bool = True
@@ -41,43 +36,39 @@ class CameraConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     """Model inference configuration"""
-
     name: str
-    conf_threshold: float = DEFAULT_CONF
-    reject_threshold: float = REJECT_THRESHOLD
-    iou_threshold: float = DEFAULT_IOU
+    conf_threshold: float = 0.5
+    reject_threshold: float = 0.55
+    iou_threshold: float = 0.45
     enable_tracking: bool = True
     target_latency_ms: int = 50
 
 
 class SystemMetrics(BaseModel):
     """System performance metrics"""
-
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=datetime.now)
     fps: float
     inference_latency_ms: float
     avg_latency_ms: float
     cpu_percent: float
     memory_percent: float
-    temperature_celsius: float | None = None
+    temperature_celsius: Optional[float] = None
     detections_per_second: float
     skip_frames: bool
 
 
 class Statistics(BaseModel):
     """Detection statistics"""
-
     period_start: datetime
     period_end: datetime
     total_detections: int
-    class_counts: dict[WasteClass, int]
-    avg_confidence: dict[WasteClass, float]
-    sorting_accuracy: float | None = None  # If robotic arm feedback available
+    class_counts: Dict[WasteClass, int]
+    avg_confidence: Dict[WasteClass, float]
+    sorting_accuracy: Optional[float] = None  # If robotic arm feedback available
 
 
 class ModelInfo(BaseModel):
     """Detection model information"""
-
     name: str
     label: str
     path: str
@@ -88,7 +79,7 @@ class ModelInfo(BaseModel):
     recommended: bool = False
 
 
-class SystemStatus(StrEnum):
+class SystemStatus(str, Enum):
     IDLE = "idle"
     INITIALIZING = "initializing"
     RUNNING = "running"
@@ -98,8 +89,7 @@ class SystemStatus(StrEnum):
 
 class StatusUpdate(BaseModel):
     """System status update"""
-
     status: SystemStatus
     message: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: dict[str, Any] | None = None
+    timestamp: datetime = Field(default_factory=datetime.now)
+    details: Optional[Dict[str, Any]] = None

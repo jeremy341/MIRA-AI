@@ -1,13 +1,13 @@
-"""CLI commands for model evaluation, live webcam inference, and model downloads."""
+﻿"""CLI commands for model evaluation, live webcam inference, and model downloads."""
 
 import sys
 from pathlib import Path
 
-from ..config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
-from ..exceptions import ConfigError
-from ..model_picker import pick_model
-from ..pipeline.models import ModelRegistry
-from ..pipeline.registry import register_command
+from src.config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
+from src.exceptions import ConfigError
+from src.model_picker import pick_model
+from src.pipeline.models import ModelRegistry
+from src.pipeline.registry import register_command
 
 AVAILABLE_MODELS = {
     "mira_exp014.pt": {
@@ -107,7 +107,7 @@ def cmd_eval_yolo(args):
             sys.exit(0)
     model_path = DETECTION_DIR / model
     if not model_path.exists():
-        from ..logger import get_logger
+        from src.logger import get_logger
 
         logger = get_logger(__name__)
         logger.error(f"Model file not found at {model_path}")
@@ -154,7 +154,7 @@ def cmd_live(args):
     if "classifier" in model.lower():
         print(f"ERROR: '{model}' is a classifier model, not a detector.")
         sys.exit(1)
-    from ..inference_engine import InferenceEngine
+    from src.inference_engine import InferenceEngine
 
     try:
         w, h = map(int, args.resolution.split("x"))
@@ -215,7 +215,7 @@ def cmd_download(args):
         for i, name in enumerate(names, 1):
             exists = (DETECTION_DIR / name).exists()
             status = " (downloaded)" if exists else ""
-            print(f"  [{i}] {name}{status} — {AVAILABLE_MODELS[name]['description']}")
+            print(f"  [{i}] {name}{status} â€” {AVAILABLE_MODELS[name]['description']}")
         print()
         choice = input("  Enter model name or number: ").strip()
         if choice.isdigit() and 1 <= int(choice) <= len(names):
@@ -281,3 +281,5 @@ def _download_with_progress(url: str, dest: Path):
                     print(f"\r    Downloaded {downloaded} bytes", end="", flush=True)
         print()
         print(f"    SHA-256: {sha256.hexdigest()}")
+
+

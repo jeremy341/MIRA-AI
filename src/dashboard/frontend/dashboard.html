@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIRA — Recycling Sorting Robot</title>
+  <title>MIRA â Recycling Sorting Robot</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,44 +12,25 @@
 
   <style>
     :root {
-      /* ── Core surfaces ───────────────────────────────── */
-      --bg:          #f0f4f8;          /* outer page background — soft blue-grey */
-      --surface:     #ffffff;          /* card / panel white */
-      --surface-2:   #f1f5f9;          /* panel header tint */
+      --bg: #ebe8df;
+      --surface: #f8f6ef;
+      --surface-2: #efede5;
+      --ink: #18231e;
+      --muted: #69736d;
+      --line: #c7c8bf;
+      --line-dark: #9da39d;
+      --green: #285c45;
+      --green-dark: #193c2e;
+      --accent: #e76f3c;
+      --danger: #c53d36;
+      --warning: #d99125;
+      --success: #2f7a51;
 
-      /* ── Text ────────────────────────────────────────── */
-      --ink:         #0f172a;          /* primary text */
-      --muted:       #64748b;          /* secondary/dimmed text */
-
-      /* ── Borders ──────────────────────────────────────── */
-      --line:        #cbd5e1;
-      --line-dark:   #94a3b8;
-
-      /* ── Brand Blue (primary) ─────────────────────────── */
-      --blue:        #2563eb;
-      --blue-dark:   #1d4ed8;
-      --blue-light:  #eff6ff;
-
-      /* ── Accent: Cyan (secondary cool accent) ─────────── */
-      --cyan:        #0891b2;
-      --cyan-light:  #ecfeff;
-
-      /* ── Accent: Amber (warm accent, analytics cards) ─── */
-      --accent:      #f59e0b;
-      --accent-dim:  #fffbeb;
-
-      /* ── Semantic ─────────────────────────────────────── */
-      --danger:      #ef4444;
-      --warning:     #f59e0b;
-      --success:     #10b981;
-      --success-dark:#059669;
-
-      /* ── Class colors ─────────────────────────────────── */
-      --glass:       #0e7490;   /* deep cyan — glass */
-      --metal:       #6366f1;   /* indigo — metal */
-      --paper:       #f59e0b;   /* amber — paper */
-      --plastic:     #f43f5e;   /* rose — plastic */
-      --trash:       #64748b;   /* slate — trash */
+      --glass: #2d8c8c;
+      --metal: #6e7185;
+      --paper: #d19a2c;
+      --plastic: #d85c48;
+      --trash: #4c4a43;
     }
 
     * {
@@ -84,17 +65,15 @@
       grid-template-rows: 56px minmax(0, 1fr);
     }
 
-    /* ── Top bar ────────────────────────────────────────── */
     .topbar {
       display: grid;
       grid-template-columns: auto auto minmax(0, 1fr) auto;
       align-items: center;
       gap: 22px;
       padding: 0 18px;
-      background: var(--blue);
-      color: #ffffff;
-      border-bottom: 3px solid var(--blue-dark);
-      box-shadow: 0 2px 8px rgba(37,99,235,0.18);
+      background: var(--ink);
+      color: #f7f3e8;
+      border-bottom: 4px solid var(--accent);
       min-width: 0;
     }
 
@@ -109,7 +88,7 @@
       width: 27px;
       height: 27px;
       position: relative;
-      border: 2px solid rgba(255,255,255,0.7);
+      border: 2px solid #f7f3e8;
       transform: rotate(45deg);
     }
 
@@ -143,19 +122,17 @@
       font-size: 18px;
       font-weight: 700;
       letter-spacing: 0.12em;
-      color: #ffffff;
     }
 
     .brand-subtitle {
       display: block;
       margin-top: 4px;
-      color: rgba(255,255,255,0.65);
+      color: #b7c0ba;
       font: 500 9px/1 "IBM Plex Mono", monospace;
       letter-spacing: 0.14em;
       text-transform: uppercase;
     }
 
-    /* ── Navigation ─────────────────────────────────────── */
     .navigation {
       height: 100%;
       display: flex;
@@ -166,12 +143,11 @@
       position: relative;
       border: 0;
       background: transparent;
-      color: rgba(255,255,255,0.6);
+      color: #aeb8b1;
       padding: 0 15px;
       cursor: pointer;
       font-size: 13px;
       font-weight: 600;
-      transition: color 150ms ease;
     }
 
     .nav-button::after {
@@ -182,11 +158,10 @@
       bottom: 0;
       height: 3px;
       background: transparent;
-      transition: background 150ms ease;
     }
 
     .nav-button.active {
-      color: #ffffff;
+      color: #fff;
     }
 
     .nav-button.active::after {
@@ -194,21 +169,20 @@
     }
 
     .nav-button:hover {
-      color: #ffffff;
+      color: #fff;
     }
 
     .topbar-spacer {
       min-width: 0;
     }
 
-    /* ── System strip ───────────────────────────────────── */
     .system-strip {
       display: flex;
       align-items: center;
       gap: 16px;
       min-width: 0;
       font: 500 11px/1 "IBM Plex Mono", monospace;
-      color: rgba(255,255,255,0.75);
+      color: #c9d0cb;
       white-space: nowrap;
     }
 
@@ -219,7 +193,7 @@
     }
 
     .system-label {
-      color: rgba(255,255,255,0.5);
+      color: #7f8d84;
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
@@ -230,19 +204,19 @@
       height: 8px;
       border-radius: 50%;
       flex: none;
-      background: rgba(255,255,255,0.3);
+      background: #7b827d;
     }
 
     .connection-dot.connected {
-      background: #34d399;   /* emerald-400 — readable on blue */
+      background: #58b87c;
     }
 
     .connection-dot.disconnected {
-      background: #fca5a5;   /* red-300 — readable on blue */
+      background: var(--danger);
     }
 
     .stream-dot.streaming {
-      background: #fca5a5;
+      background: #eb4d44;
       animation: livePulse 1.4s ease-in-out infinite;
     }
 
@@ -256,7 +230,6 @@
       }
     }
 
-    /* ── Workspace / pages ──────────────────────────────── */
     .workspace {
       min-height: 0;
       position: relative;
@@ -274,7 +247,6 @@
       display: block;
     }
 
-    /* ── Grids ──────────────────────────────────────────── */
     .dashboard-grid {
       height: 100%;
       display: grid;
@@ -292,15 +264,13 @@
       gap: 12px;
     }
 
-    /* ── Panels ─────────────────────────────────────────── */
     .panel {
       min-width: 0;
       min-height: 0;
       overflow: hidden;
       background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04);
+      border: 1px solid var(--line-dark);
+      border-radius: 5px;
     }
 
     .camera-panel {
@@ -318,7 +288,6 @@
       grid-template-rows: 43px minmax(0, 1fr);
     }
 
-    /* ── Panel header ───────────────────────────────────── */
     .panel-header {
       min-width: 0;
       display: flex;
@@ -342,7 +311,6 @@
       font-size: 13px;
       font-weight: 700;
       letter-spacing: 0.035em;
-      color: var(--ink);
     }
 
     .panel-kicker {
@@ -353,7 +321,6 @@
       white-space: nowrap;
     }
 
-    /* ── Camera actions ─────────────────────────────────── */
     .camera-actions {
       display: flex;
       align-items: center;
@@ -365,10 +332,9 @@
       align-items: center;
       gap: 6px;
       padding: 5px 8px;
-      border-radius: 4px;
-      border: 1px solid #fca5a5;
-      color: #dc2626;
-      background: #fff1f2;
+      border: 1px solid #d4554d;
+      color: #a82b27;
+      background: #f7dfd9;
       font: 600 10px/1 "IBM Plex Mono", monospace;
       letter-spacing: 0.1em;
     }
@@ -377,84 +343,54 @@
       display: flex;
     }
 
-    /* ── Buttons ────────────────────────────────────────── */
     .button {
       min-height: 29px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
+      border: 1px solid var(--line-dark);
+      border-radius: 3px;
       background: var(--surface);
       padding: 0 11px;
       cursor: pointer;
       font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.02em;
-      color: var(--ink);
-      transition: all 180ms cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
     }
 
     .button:hover:not(:disabled) {
-      background: var(--surface-2);
-      border-color: var(--line-dark);
-      transform: translateY(-1px);
-      box-shadow: 0 3px 8px rgba(15,23,42,0.1);
-    }
-
-    .button:active:not(:disabled) {
-      transform: translateY(0);
-      box-shadow: 0 1px 2px rgba(15,23,42,0.06);
+      background: #e6e4dc;
     }
 
     .button:disabled {
-      opacity: 0.4;
+      opacity: 0.45;
       cursor: not-allowed;
     }
 
-    /* Start stream button — primary blue */
     .button.primary {
-      border-color: var(--blue-dark);
-      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      border-color: var(--green-dark);
+      background: var(--green);
       color: #fff;
-      box-shadow: 0 2px 6px rgba(37,99,235,0.25);
     }
 
     .button.primary:hover:not(:disabled) {
-      background: linear-gradient(135deg, var(--blue-dark), #1e3a8a);
-      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+      background: var(--green-dark);
     }
 
-    /* Stop button — outlined danger */
     .button.stop {
-      border-color: #fca5a5;
-      color: #dc2626;
-      background: #fff1f2;
+      border-color: #af4b44;
+      color: #a5322c;
+      background: #fff3ef;
     }
 
-    .button.stop:hover:not(:disabled) {
-      background: var(--danger);
-      border-color: var(--danger);
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(239,68,68,0.25);
-    }
-
-    /* Clear history button — subtle outline */
     .button.danger {
-      border-color: #fca5a5;
-      color: #dc2626;
+      border-color: #bd5a50;
+      color: #a5322c;
       background: transparent;
     }
 
-    .button.danger:hover:not(:disabled) {
-      background: #fff1f2;
-      border-color: var(--danger);
-    }
-
-    /* ── Camera stage ───────────────────────────────────── */
     .camera-stage {
       position: relative;
       min-height: 0;
       overflow: hidden;
-      background: #0f172a;  /* very dark slate — feed background */
+      background: #111713;
     }
 
     .camera-image {
@@ -486,11 +422,11 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #64748b;
+      color: #aab3ac;
       background:
-        linear-gradient(#1e293b 1px, transparent 1px),
-        linear-gradient(90deg, #1e293b 1px, transparent 1px),
-        #0f172a;
+        linear-gradient(#1b241e 1px, transparent 1px),
+        linear-gradient(90deg, #1b241e 1px, transparent 1px),
+        #111713;
       background-size: 38px 38px;
     }
 
@@ -504,7 +440,7 @@
       height: 42px;
       position: relative;
       margin: 0 auto 16px;
-      border: 2px solid #334155;
+      border: 2px solid #6c786f;
     }
 
     .camera-symbol::before {
@@ -512,7 +448,7 @@
       position: absolute;
       width: 19px;
       height: 19px;
-      border: 2px solid #334155;
+      border: 2px solid #6c786f;
       border-radius: 50%;
       left: 18px;
       top: 9px;
@@ -523,7 +459,7 @@
       position: absolute;
       width: 17px;
       height: 9px;
-      border: 2px solid #334155;
+      border: 2px solid #6c786f;
       border-bottom: 0;
       top: -11px;
       left: 8px;
@@ -531,18 +467,17 @@
 
     .placeholder-title {
       margin: 0 0 7px;
-      color: #e2e8f0;
+      color: #e1e5e1;
       font-size: 15px;
       font-weight: 600;
     }
 
     .placeholder-text {
       margin: 0;
-      color: #475569;
+      color: #7f8b82;
       font: 500 11px/1.5 "IBM Plex Mono", monospace;
     }
 
-    /* ── Metric rail (overlay on feed) ─────────────────── */
     .metric-rail {
       position: absolute;
       top: 12px;
@@ -550,18 +485,15 @@
       z-index: 4;
       display: grid;
       grid-template-columns: repeat(4, auto);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 6px;
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(10px);
+      border: 1px solid #58645c;
+      background: rgba(17, 23, 19, 0.91);
       color: #fff;
-      overflow: hidden;
     }
 
     .camera-metric {
       min-width: 83px;
       padding: 8px 10px;
-      border-right: 1px solid rgba(255,255,255,0.08);
+      border-right: 1px solid #455047;
     }
 
     .camera-metric:last-child {
@@ -570,7 +502,7 @@
 
     .camera-metric-label {
       display: block;
-      color: rgba(255,255,255,0.45);
+      color: #8d9b91;
       font: 500 8px/1 "IBM Plex Mono", monospace;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -580,10 +512,8 @@
       display: block;
       margin-top: 5px;
       font: 600 13px/1 "IBM Plex Mono", monospace;
-      color: #ffffff;
     }
 
-    /* Camera state badge */
     .camera-state {
       position: absolute;
       right: 12px;
@@ -591,15 +521,12 @@
       z-index: 4;
       max-width: calc(100% - 24px);
       padding: 7px 9px;
-      border-radius: 4px;
-      border-left: 3px solid var(--blue);
-      background: rgba(15, 23, 42, 0.88);
-      backdrop-filter: blur(10px);
-      color: #cbd5e1;
+      border-left: 3px solid var(--accent);
+      background: rgba(17, 23, 19, 0.91);
+      color: #cbd2cd;
       font: 500 10px/1.3 "IBM Plex Mono", monospace;
     }
 
-    /* ── Distribution chart ──────────────────────────────── */
     .distribution-content {
       min-height: 0;
       display: grid;
@@ -635,7 +562,6 @@
       display: flex;
     }
 
-    /* ── Legend ─────────────────────────────────────────── */
     .class-legend {
       display: grid;
       gap: 7px;
@@ -654,7 +580,6 @@
     .legend-swatch {
       width: 9px;
       height: 9px;
-      border-radius: 2px;
     }
 
     .legend-name {
@@ -668,12 +593,11 @@
       font: 600 11px/1 "IBM Plex Mono", monospace;
     }
 
-    /* ── Recent detections list ─────────────────────────── */
     .recent-list {
       min-height: 0;
       overflow-y: auto;
       scrollbar-width: thin;
-      scrollbar-color: var(--line) transparent;
+      scrollbar-color: var(--line-dark) transparent;
     }
 
     .recent-row {
@@ -683,13 +607,8 @@
       align-items: center;
       min-height: 38px;
       padding: 7px 12px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid #deddd6;
       font-size: 11px;
-      transition: background 120ms ease;
-    }
-
-    .recent-row:hover {
-      background: var(--blue-light);
     }
 
     .recent-row:last-child {
@@ -699,7 +618,6 @@
     .class-marker {
       width: 8px;
       height: 8px;
-      border-radius: 2px;
     }
 
     .class-name {
@@ -735,40 +653,31 @@
       text-align: center;
     }
 
-    /* ── Summary cards (analytics) ──────────────────────── */
     .summary-card {
       grid-column: span 3;
       min-width: 0;
       display: grid;
       grid-template-columns: 5px minmax(0, 1fr);
       background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+      border: 1px solid var(--line-dark);
+      border-radius: 4px;
       overflow: hidden;
-      transition: box-shadow 180ms ease, transform 180ms ease;
     }
 
-    .summary-card:hover {
-      box-shadow: 0 4px 16px rgba(15,23,42,0.1);
-      transform: translateY(-1px);
-    }
-
-    /* Card accent bars — using your chosen accent palette */
     .summary-accent {
-      background: var(--blue);         /* card 1: blue */
+      background: var(--green);
     }
 
     .summary-card:nth-child(2) .summary-accent {
-      background: var(--cyan);         /* card 2: cyan */
+      background: var(--metal);
     }
 
     .summary-card:nth-child(3) .summary-accent {
-      background: var(--success);      /* card 3: emerald */
+      background: var(--paper);
     }
 
     .summary-card:nth-child(4) .summary-accent {
-      background: var(--accent);       /* card 4: amber */
+      background: var(--accent);
     }
 
     .summary-content {
@@ -795,7 +704,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      color: var(--ink);
     }
 
     .summary-unit {
@@ -803,7 +711,6 @@
       font: 500 10px/1 "IBM Plex Mono", monospace;
     }
 
-    /* ── Chart panels ───────────────────────────────────── */
     .trend-panel {
       grid-column: span 8;
     }
@@ -822,12 +729,11 @@
       padding: 10px 13px 9px;
     }
 
-    /* ── History table ──────────────────────────────────── */
     .history-wrap {
       min-height: 0;
       overflow: auto;
       scrollbar-width: thin;
-      scrollbar-color: var(--line) transparent;
+      scrollbar-color: var(--line-dark) transparent;
     }
 
     .history-table {
@@ -843,9 +749,9 @@
       z-index: 1;
       height: 31px;
       padding: 0 12px;
-      background: var(--blue);
-      color: rgba(255,255,255,0.9);
-      border-bottom: 1px solid var(--blue-dark);
+      background: #e5e4dc;
+      color: #59635d;
+      border-bottom: 1px solid var(--line-dark);
       font: 600 9px/1 "IBM Plex Mono", monospace;
       text-align: left;
       letter-spacing: 0.07em;
@@ -855,14 +761,14 @@
     .history-table td {
       height: 32px;
       padding: 0 12px;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid #deddd6;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
     .history-table tbody tr:hover {
-      background: var(--blue-light);
+      background: #f1efe7;
     }
 
     .table-class {
@@ -886,7 +792,6 @@
       display: flex;
     }
 
-    /* ── Toasts ─────────────────────────────────────────── */
     .toast-region {
       position: fixed;
       right: 15px;
@@ -903,11 +808,9 @@
       grid-template-columns: 5px minmax(0, 1fr) auto;
       align-items: center;
       min-height: 48px;
-      background: #ffffff;
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(15,23,42,0.12);
+      background: #19231e;
+      color: #f7f5ed;
+      border: 1px solid #465149;
       animation: toastIn 0.18s ease-out;
       pointer-events: auto;
     }
@@ -915,7 +818,6 @@
     .toast-bar {
       align-self: stretch;
       background: var(--success);
-      border-radius: 8px 0 0 8px;
     }
 
     .toast.error .toast-bar {
@@ -935,17 +837,11 @@
     .toast-close {
       align-self: stretch;
       border: 0;
-      border-left: 1px solid var(--line);
+      border-left: 1px solid #465149;
       background: transparent;
-      color: var(--muted);
+      color: #aeb8b1;
       padding: 0 12px;
       cursor: pointer;
-      border-radius: 0 8px 8px 0;
-      transition: background 150ms ease;
-    }
-
-    .toast-close:hover {
-      background: var(--surface-2);
     }
 
     @keyframes toastIn {
@@ -977,7 +873,7 @@
       }
 
       .camera-metric:nth-child(-n + 2) {
-        border-bottom: 1px solid rgba(255,255,255,0.08);
+        border-bottom: 1px solid #455047;
       }
     }
   </style>
@@ -1023,7 +919,7 @@
           <article class="panel camera-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h1 class="panel-title">Kamera & Erkennung</h1>
+                <h1 class="panel-title">Kamera &amp; Erkennung</h1>
                 <span class="panel-kicker" id="cameraStatusLabel">System bereit</span>
               </div>
 
@@ -1042,7 +938,7 @@
                 <div class="placeholder-content">
                   <div class="camera-symbol" aria-hidden="true"></div>
                   <p class="placeholder-title">Kein aktiver Kamerastream</p>
-                  <p class="placeholder-text">"Stream starten" drücken, um die Erkennung zu beginnen.</p>
+                  <p class="placeholder-text">âStream startenâ drÃ¼cken, um die Erkennung zu beginnen.</p>
                 </div>
               </div>
 
@@ -1052,11 +948,11 @@
               <div class="metric-rail" aria-label="Live-Metriken">
                 <div class="camera-metric">
                   <span class="camera-metric-label">FPS</span>
-                  <span id="fpsValue" class="camera-metric-value">—</span>
+                  <span id="fpsValue" class="camera-metric-value">â</span>
                 </div>
                 <div class="camera-metric">
                   <span class="camera-metric-label">Latenz</span>
-                  <span id="latencyValue" class="camera-metric-value">— ms</span>
+                  <span id="latencyValue" class="camera-metric-value">â ms</span>
                 </div>
                 <div class="camera-metric">
                   <span class="camera-metric-label">Objekte</span>
@@ -1064,11 +960,11 @@
                 </div>
                 <div class="camera-metric">
                   <span class="camera-metric-label">Konfidenz</span>
-                  <span id="liveConfidenceValue" class="camera-metric-value">— %</span>
+                  <span id="liveConfidenceValue" class="camera-metric-value">â %</span>
                 </div>
               </div>
 
-              <div id="cameraState" class="camera-state">Warte auf Stream …</div>
+              <div id="cameraState" class="camera-state">Warte auf Stream â¦</div>
             </div>
           </article>
 
@@ -1096,7 +992,7 @@
                 <h2 class="panel-title">Letzte Erkennungen</h2>
                 <span class="panel-kicker">Neueste zuerst</span>
               </div>
-              <span id="recentCount" class="panel-kicker">0 Einträge</span>
+              <span id="recentCount" class="panel-kicker">0 EintrÃ¤ge</span>
             </header>
 
             <div id="recentList" class="recent-list">
@@ -1127,16 +1023,16 @@
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Häufigste Klasse</span>
-              <span id="summaryTopClass" class="summary-value">—</span>
+              <span class="summary-label">HÃ¤ufigste Klasse</span>
+              <span id="summaryTopClass" class="summary-value">â</span>
             </div>
           </article>
 
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Ø Konfidenz</span>
-              <span id="summaryConfidence" class="summary-value">— <span class="summary-unit">%</span></span>
+              <span class="summary-label">Ã Konfidenz</span>
+              <span id="summaryConfidence" class="summary-value">â <span class="summary-unit">%</span></span>
             </div>
           </article>
 
@@ -1144,7 +1040,7 @@
             <header class="panel-header">
               <div class="panel-title-wrap">
                 <h2 class="panel-title">Erkennungstrend</h2>
-                <span class="panel-kicker">Kumulativ über Zeit</span>
+                <span class="panel-kicker">Kumulativ Ã¼ber Zeit</span>
               </div>
               <span class="panel-kicker">5 Klassen</span>
             </header>
@@ -1157,7 +1053,7 @@
           <article class="panel breakdown-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Klassenübersicht</h2>
+                <h2 class="panel-title">KlassenÃ¼bersicht</h2>
                 <span class="panel-kicker">Nach Anzahl</span>
               </div>
             </header>
@@ -1171,7 +1067,7 @@
             <header class="panel-header">
               <div class="panel-title-wrap">
                 <h2 class="panel-title">Erkennungshistorie</h2>
-                <span id="historyCount" class="panel-kicker">0 / 50 Einträge</span>
+                <span id="historyCount" class="panel-kicker">0 / 50 EintrÃ¤ge</span>
               </div>
               <button id="clearHistoryButton" class="button danger" type="button">Historie leeren</button>
             </header>
@@ -1216,14 +1112,14 @@
         metal: "Metall",
         paper: "Papier",
         plastic: "Kunststoff",
-        trash: "Restmüll"
+        trash: "RestmÃ¼ll"
       };
       const CLASS_COLORS = {
-        glass:   "#0e7490",   /* deep cyan */
-        metal:   "#6366f1",   /* indigo */
-        paper:   "#f59e0b",   /* amber */
-        plastic: "#f43f5e",   /* rose */
-        trash:   "#64748b"    /* slate */
+        glass: "#2d8c8c",
+        metal: "#6e7185",
+        paper: "#d19a2c",
+        plastic: "#d85c48",
+        trash: "#4c4a43"
       };
 
       const state = {
@@ -1253,8 +1149,6 @@
       let controlSocket = null;
       let videoReconnectTimer = null;
       let controlReconnectTimer = null;
-      let videoReconnectDelay = 1000;
-      let controlReconnectDelay = 1000;
       let pingTimer = null;
       let boxClearTimer = null;
 
@@ -1299,9 +1193,9 @@
 
       Chart.defaults.font.family = '"IBM Plex Mono", monospace';
       Chart.defaults.font.size = 9;
-      Chart.defaults.color = "#64748b";
+      Chart.defaults.color = "#667069";
       Chart.defaults.animation.duration = 0;
-      Chart.defaults.borderColor = "#cbd5e1";
+      Chart.defaults.borderColor = "#d7d7d0";
 
       const distributionChart = new Chart(
         document.getElementById("distributionChart"),
@@ -1312,7 +1206,7 @@
             datasets: [{
               data: CLASSES.map(() => 0),
               backgroundColor: CLASSES.map(name => CLASS_COLORS[name]),
-              borderColor: "#ffffff",
+              borderColor: "#f8f6ef",
               borderWidth: 3,
               hoverOffset: 2
             }]
@@ -1430,8 +1324,6 @@
         }
       );
 
-      function esc(s) { const el = document.createElement("span"); el.textContent = s; return el.innerHTML; }
-
       function websocketURL(path) {
         const protocol = location.protocol === "https:" ? "wss:" : "ws:";
         return `${protocol}//${location.host}${path}`;
@@ -1452,7 +1344,7 @@
         return {
           className: normalizeClass(item.class_name ?? item.class),
           confidence: normalizeConfidence(item.confidence),
-          trackId: item.track_id ?? "—",
+          trackId: item.track_id ?? "â",
           timestamp: item.timestamp || new Date().toISOString(),
           bbox: Array.isArray(item.bbox) ? item.bbox : null
         };
@@ -1460,7 +1352,7 @@
 
       function formatTime(timestamp, withDate = false) {
         const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) return "—";
+        if (Number.isNaN(date.getTime())) return "â";
 
         const options = withDate
           ? {
@@ -1510,7 +1402,7 @@
         toast.innerHTML = `
           <span class="toast-bar"></span>
           <span class="toast-message"></span>
-          <button class="toast-close" type="button" aria-label="Benachrichtigung schließen">×</button>
+          <button class="toast-close" type="button" aria-label="Benachrichtigung schlieÃen">Ã</button>
         `;
         toast.querySelector(".toast-message").textContent = message;
         toast.querySelector(".toast-close").addEventListener("click", () => toast.remove());
@@ -1589,7 +1481,7 @@
         elements.headerStreamDot.classList.toggle("streaming", streaming);
         elements.headerStreamText.textContent = streaming ? "LIVE" : "BEREIT";
         elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming aktiv" : "System bereit");
-        elements.cameraState.textContent = message || (streaming ? "Warte auf Kameraframe …" : "Warte auf Stream …");
+        elements.cameraState.textContent = message || (streaming ? "Warte auf Kameraframe â¦" : "Warte auf Stream â¦");
 
         if (!streaming) {
           state.frameLoaded = false;
@@ -1597,7 +1489,7 @@
           elements.cameraImage.classList.remove("visible");
           elements.cameraPlaceholder.style.display = "flex";
           elements.detectionCountValue.textContent = "0";
-          elements.liveConfidenceValue.textContent = "— %";
+          elements.liveConfidenceValue.textContent = "â %";
           clearBoundingBoxes();
         }
       }
@@ -1606,8 +1498,8 @@
         state.busy = busy;
         elements.startButton.disabled = busy || state.streaming;
         elements.stopButton.disabled = busy || !state.streaming;
-        elements.startButton.textContent = busy && !state.streaming ? "Starte …" : "Stream starten";
-        elements.stopButton.textContent = busy && state.streaming ? "Stoppe …" : "Stoppen";
+        elements.startButton.textContent = busy && !state.streaming ? "Starte â¦" : "Stream starten";
+        elements.stopButton.textContent = busy && state.streaming ? "Stoppe â¦" : "Stoppen";
       }
 
       function sendControl(payload) {
@@ -1629,15 +1521,13 @@
         } catch (error) {
           state.videoConnected = false;
           updateConnectionUI();
-          videoReconnectTimer = setTimeout(connectVideoSocket, videoReconnectDelay);
-          videoReconnectDelay = Math.min(videoReconnectDelay * 1.5, 30000);
+          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
           return;
         }
 
         videoSocket.addEventListener("open", () => {
           state.videoConnected = true;
           updateConnectionUI();
-          videoReconnectDelay = 1000;
 
           clearInterval(pingTimer);
           pingTimer = setInterval(() => {
@@ -1671,8 +1561,7 @@
           state.videoConnected = false;
           updateConnectionUI();
           clearInterval(pingTimer);
-          videoReconnectTimer = setTimeout(connectVideoSocket, videoReconnectDelay);
-          videoReconnectDelay = Math.min(videoReconnectDelay * 1.5, 30000);
+          videoReconnectTimer = setTimeout(connectVideoSocket, 3000);
         });
       }
 
@@ -1684,15 +1573,13 @@
         } catch (error) {
           state.controlConnected = false;
           updateConnectionUI();
-          controlReconnectTimer = setTimeout(connectControlSocket, controlReconnectDelay);
-          controlReconnectDelay = Math.min(controlReconnectDelay * 1.5, 30000);
+          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
           return;
         }
 
         controlSocket.addEventListener("open", () => {
           state.controlConnected = true;
           updateConnectionUI();
-          controlReconnectDelay = 1000;
           sendControl({ command: "get_status" });
           sendControl({
             command: "get_statistics",
@@ -1718,8 +1605,7 @@
         controlSocket.addEventListener("close", () => {
           state.controlConnected = false;
           updateConnectionUI();
-          controlReconnectTimer = setTimeout(connectControlSocket, controlReconnectDelay);
-          controlReconnectDelay = Math.min(controlReconnectDelay * 1.5, 30000);
+          controlReconnectTimer = setTimeout(connectControlSocket, 3000);
         });
       }
 
@@ -1742,10 +1628,10 @@
             state.latency = Number(payload.inference_latency_ms);
             elements.fpsValue.textContent = Number.isFinite(state.fps)
               ? state.fps.toFixed(1)
-              : "—";
+              : "â";
             elements.latencyValue.textContent = Number.isFinite(state.latency)
               ? `${state.latency.toFixed(1)} ms`
-              : "— ms";
+              : "â ms";
             break;
 
           case "status":
@@ -1800,7 +1686,7 @@
           const average = detections.reduce((sum, item) => sum + item.confidence, 0) / detections.length;
           elements.liveConfidenceValue.textContent = `${Math.round(average * 100)} %`;
         } else {
-          elements.liveConfidenceValue.textContent = "— %";
+          elements.liveConfidenceValue.textContent = "â %";
         }
 
         if (!detections.length) {
@@ -1913,7 +1799,7 @@
 
       function renderRecent() {
         const items = state.history.slice(0, 12);
-        elements.recentCount.textContent = `${state.history.length} Einträge`;
+        elements.recentCount.textContent = `${state.history.length} Eintr\u00e4ge`;
 
         if (!items.length) {
           elements.recentList.innerHTML = '<div class="empty-state">Noch keine Erkennungen.<br />Warte auf Daten vom Modell.</div>';
@@ -1931,7 +1817,7 @@
       }
 
       function renderHistory() {
-        elements.historyCount.textContent = `${state.history.length} / 50 Einträge`;
+        elements.historyCount.textContent = `${state.history.length} / 50 Eintr\u00e4ge`;
 
         if (!state.history.length) {
           elements.historyBody.innerHTML = "";
@@ -1950,7 +1836,7 @@
               </span>
             </td>
             <td class="mono">${Math.round(detection.confidence * 100)} %</td>
-            <td class="mono">${esc(detection.trackId)}</td>
+            <td class="mono">${detection.trackId}</td>
           </tr>
         `).join("");
       }
@@ -2101,7 +1987,7 @@
         renderHistory();
         renderSummary();
         scheduleChartUpdate();
-        showToast("Historie gelöscht", "success");
+        showToast("Historie gel\u00f6scht", "success");
       });
 
       let sessionTimer = null;

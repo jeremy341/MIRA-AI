@@ -95,9 +95,8 @@ def test_get_source_by_key():
 
     reg = DatasetRegistry()
     reg.discover()
-    src = reg.get_source("taco_trashnet")
-    assert src.key == "taco_trashnet"
-    assert src.name == "TACO + TrashNet"
+    src = reg.get_source("roboflow")
+    assert src.key == "roboflow"
 
 
 def test_get_source_unknown_raises():

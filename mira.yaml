@@ -11,7 +11,6 @@ paths:
   datasets: datasets/
   models: models/
   results: results/
-  reference: reference/
 
 training:
   default_model: yolo11n.pt

@@ -1,9 +1,9 @@
-"""CLI entry point for MIRA — registers and dispatches all subcommands."""
+﻿"""CLI entry point for MIRA â€” registers and dispatches all subcommands."""
 
 import sys
 
-from ..version import __version__
-from ..pipeline.registry import get_commands
+from src.version import __version__
+from src.pipeline.registry import get_commands
 
 from . import train  # noqa: F401
 from . import inference  # noqa: F401
@@ -19,13 +19,13 @@ __all__ = ["main"]
 def main():
     import argparse
 
-    from ..exceptions import MiraError
-    from ..logger import get_logger
+    from src.exceptions import MiraError
+    from src.logger import get_logger
 
     logger = get_logger(__name__)
 
     parser = argparse.ArgumentParser(
-        description="MIRA CLI — Machine Intelligence for Recycling Automation",
+        description="MIRA CLI â€” Machine Intelligence for Recycling Automation",
         epilog="""\
 Examples:
   mira live --model mira_exp014_int8.tflite
@@ -75,3 +75,4 @@ Examples:
 
 if __name__ == "__main__":
     main()
+
