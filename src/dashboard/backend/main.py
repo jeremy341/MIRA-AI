@@ -2,6 +2,7 @@
 FastAPI server for MIRA Control Center
 """
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -15,11 +16,27 @@ from models import (
 from camera_service import CameraService
 from websocket_handler import WebSocketHandler
 
+# Initialize services
+camera_service = CameraService()
+websocket_handler = WebSocketHandler(camera_service)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown lifecycle"""
+    print("MIRA Control Center starting up...")
+    camera_service._loop = asyncio.get_running_loop()
+    await websocket_handler.start()
+    yield
+    print("Shutting down MIRA Control Center...")
+    await websocket_handler.stop()
+    await camera_service.stop()
+
 # Initialize FastAPI app
 app = FastAPI(
     title="MIRA Control Center API",
     description="Control interface for MIRA recycling sorting system",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS middleware
@@ -78,7 +95,7 @@ async def initialize_camera(config: CameraConfig):
         return {
             "success": True,
             "message": "Camera initialized successfully",
-            "config": config.dict()
+            "config": config.model_dump()
         }
     else:
         raise HTTPException(
@@ -98,7 +115,7 @@ async def load_model(model_config: ModelConfig):
         return {
             "success": True,
             "message": f"Model {model_config.name} loaded successfully",
-            "config": model_config.dict()
+            "config": model_config.model_dump()
         }
     else:
         raise HTTPException(
@@ -140,7 +157,7 @@ async def get_statistics(period: int = 60):
     stats = camera_service.get_statistics(period)
 
     return {
-        "statistics": stats.dict(),
+                    "statistics": stats.model_dump(),
         "period_seconds": period
     }
 
@@ -150,7 +167,7 @@ async def get_metrics_history(limit: int = 100):
     history = list(camera_service.metrics_history)[-limit:]
 
     return {
-        "metrics": [m.dict() for m in history],
+        "metrics": [m.model_dump() for m in history],
         "count": len(history),
         "timestamp": datetime.now().isoformat()
     }
@@ -161,7 +178,7 @@ async def get_recent_detections(limit: int = 50):
     detections = list(camera_service.detection_history)[-limit:]
 
     return {
-        "detections": [d.dict() for d in detections],
+        "detections": [d.model_dump() for d in detections],
         "count": len(detections),
         "timestamp": datetime.now().isoformat()
     }
@@ -241,7 +258,7 @@ async def control_websocket(websocket: WebSocket):
 
                 await websocket.send_json({
                     "type": "statistics",
-                    "statistics": stats.dict(),
+        "statistics": stats.model_dump(),
                     "period": period
                 })
 
@@ -258,21 +275,6 @@ async def control_websocket(websocket: WebSocket):
             "type": "error",
             "message": f"Error: {str(e)}"
         })
-
-# Startup and shutdown events
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    print("MIRA Control Center starting up...")
-    camera_service._loop = asyncio.get_running_loop()
-    await websocket_handler.start()
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Cleanup on shutdown"""
-    print("Shutting down MIRA Control Center...")
-    await websocket_handler.stop()
-    await camera_service.stop()
 
 # Run the server
 if __name__ == "__main__":
