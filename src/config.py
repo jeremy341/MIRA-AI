@@ -166,7 +166,10 @@ def get_tflite_imgsz(model_path: pathlib.Path) -> int:
         raise ImportError("No TFLite interpreter found (install tflite_runtime or tensorflow).")
     try:
         input_details = interp.get_input_details()[0]
-        shape = list(map(int, input_details.get("shape") or input_details.get("shape_signature", [])))
+        shape_raw = input_details.get("shape")
+        if shape_raw is None:
+            shape_raw = input_details.get("shape_signature", [])
+        shape = list(map(int, shape_raw))
         if len(shape) == 4:
             if shape[1] in (1, 3):
                 h, w = shape[2], shape[3]
