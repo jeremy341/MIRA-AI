@@ -178,76 +178,78 @@ async def control_websocket(websocket: WebSocket):
             command = data.get("command")
             params = data.get("params", {})
 
+            response = None
+
             if command == "set_camera_config":
                 config = CameraConfig(**params)
                 success = await camera_service.initialize_camera(config)
 
-                await websocket.send_json(
-                    {
-                        "type": "response",
-                        "command": command,
-                        "success": success,
-                        "message": "Camera config updated" if success else "Failed to update camera config",
-                    }
-                )
+                response = {
+                    "type": "response",
+                    "command": command,
+                    "success": success,
+                    "message": "Camera config updated" if success else "Failed to update camera config",
+                }
 
             elif command == "load_model":
                 model_config = ModelConfig(**params)
                 success = await camera_service.load_model(model_config.name, model_config)
 
-                await websocket.send_json(
-                    {
-                        "type": "response",
-                        "command": command,
-                        "success": success,
-                        "message": f"Model {model_config.name} loaded"
-                        if success
-                        else f"Failed to load model {model_config.name}",
-                    }
-                )
+                response = {
+                    "type": "response",
+                    "command": command,
+                    "success": success,
+                    "message": f"Model {model_config.name} loaded"
+                    if success
+                    else f"Failed to load model {model_config.name}",
+                }
 
             elif command == "start_stream":
                 success = await camera_service.start_streaming()
 
-                await websocket.send_json(
-                    {
-                        "type": "response",
-                        "command": command,
-                        "success": success,
-                        "message": "Stream started" if success else "Failed to start stream",
-                    }
-                )
+                response = {
+                    "type": "response",
+                    "command": command,
+                    "success": success,
+                    "message": "Stream started" if success else "Failed to start stream",
+                }
 
             elif command == "stop_stream":
                 await camera_service.stop()
 
-                await websocket.send_json(
-                    {"type": "response", "command": command, "success": True, "message": "Stream stopped"}
-                )
+                response = {"type": "response", "command": command, "success": True, "message": "Stream stopped"}
 
             elif command == "get_status":
-                await websocket.send_json(
-                    {
-                        "type": "status",
-                        "status": camera_service.status.value,
-                        "message": camera_service.status_message,
-                        "timestamp": datetime.now(timezone.utc).isoformat(),
-                    }
-                )
+                response = {
+                    "type": "status",
+                    "status": camera_service.status.value,
+                    "message": camera_service.status_message,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
 
             elif command == "get_statistics":
                 period = params.get("period", 60)
                 stats = camera_service.get_statistics(period)
 
-                await websocket.send_json({"type": "statistics", "statistics": stats.model_dump(), "period": period})
+                response = {"type": "statistics", "statistics": stats.model_dump(), "period": period}
 
             else:
-                await websocket.send_json({"type": "error", "message": f"Unknown command: {command}"})
+                response = {"type": "error", "message": f"Unknown command: {command}"}
+
+            if response is not None:
+                try:
+                    await websocket.send_json(response)
+                except Exception:
+                    log.warning("Failed to send WebSocket response for command: %s", command)
 
     except WebSocketDisconnect:
-        print("Control WebSocket disconnected")
+        log.info("Control WebSocket disconnected")
     except Exception as e:
-        await websocket.send_json({"type": "error", "message": f"Error: {str(e)}"})
+        log.error("Control WebSocket error: %s", e)
+        try:
+            await websocket.send_json({"type": "error", "message": f"Error: {str(e)}"})
+        except Exception:
+            pass
 
 
 # Run the server

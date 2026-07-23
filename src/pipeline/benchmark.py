@@ -1,13 +1,14 @@
 """Structured benchmarking module for MIRA detection models.
 
 Runs models against a YOLO-format validation set and produces
-per-class + micro-averaged metrics with exportable results.
+per-class + macro-averaged metrics with exportable results.
 """
 
 from __future__ import annotations
 
 import json
 import time
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -183,48 +184,81 @@ def load_yolo_dataset(dataset_path: Path | str) -> list[tuple[Path, list[dict]]]
     return samples
 
 
-def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: float = 0.5) -> float:
-    """Compute mAP at given IoU threshold using 101-point interpolation."""
-    all_detections: list[dict] = []
-    num_gt = 0
-    for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts, strict=True)):
-        num_gt += len(img_gts)
-        for d in img_preds:
-            all_detections.append({**d, "img_idx": img_idx})
-    all_detections.sort(key=lambda x: x["confidence"], reverse=True)
+def _compute_ap_for_class(
+    all_detections_for_class: list[dict],
+    all_gts_for_class: list[dict],
+    iou_thresh: float,
+) -> float:
+    """Compute AP for a single class using 101-point interpolation."""
+    num_gt = len(all_gts_for_class)
+    if num_gt == 0:
+        return 0.0
 
-    tp = np.zeros(len(all_detections))
-    fp = np.zeros(len(all_detections))
-    gt_used = [set() for _ in gts]
+    all_detections_for_class.sort(key=lambda x: x["confidence"], reverse=True)
 
-    for i, det in enumerate(all_detections):
-        img_idx = det["img_idx"]
+    tp = np.zeros(len(all_detections_for_class))
+    fp = np.zeros(len(all_detections_for_class))
+    gt_used = set()
+
+    for i, det in enumerate(all_detections_for_class):
         best_iou = iou_thresh
         best_gt = -1
-        for j, gt in enumerate(gts[img_idx]):
-            if j in gt_used[img_idx]:
+        for j, gt in enumerate(all_gts_for_class):
+            if j in gt_used:
                 continue
             iou = compute_iou(det["bbox_pixel"], gt["bbox"])
             if iou >= best_iou:
                 best_iou = iou
                 best_gt = j
-        if best_gt >= 0 and det["class_id"] == gts[img_idx][best_gt]["class_id"]:
+        if best_gt >= 0:
             tp[i] = 1
-            gt_used[img_idx].add(best_gt)
+            gt_used.add(best_gt)
         else:
             fp[i] = 1
 
     acc_tp = np.cumsum(tp)
     acc_fp = np.cumsum(fp)
-    rec = acc_tp / max(num_gt, 1)
+    rec = acc_tp / num_gt
     prec = acc_tp / np.maximum(acc_tp + acc_fp, 1e-6)
 
     ap = 0.0
-    for t in np.arange(0, 1.01, 0.01):
+    for t in np.linspace(0, 1, 101):
         mask = rec >= t
         if np.any(mask):
             ap += np.max(prec[mask]) / 101
     return ap
+
+
+def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: float = 0.5) -> float:
+    """Compute mAP at given IoU threshold using 101-point interpolation.
+
+    Averages per-class AP (COCO-style macro-averaged mAP).
+    """
+    class_ids: set[int] = set()
+    for img_gts in gts:
+        for gt in img_gts:
+            class_ids.add(gt["class_id"])
+    for img_preds in preds:
+        for d in img_preds:
+            class_ids.add(d["class_id"])
+
+    if not class_ids:
+        return 0.0
+
+    per_class_aps = []
+    for cid in class_ids:
+        class_preds = []
+        class_gts = []
+        for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts, strict=True)):
+            for d in img_preds:
+                if d["class_id"] == cid:
+                    class_preds.append({**d, "img_idx": img_idx})
+            for gt in img_gts:
+                if gt["class_id"] == cid:
+                    class_gts.append(gt)
+        per_class_aps.append(_compute_ap_for_class(class_preds, class_gts, iou_thresh))
+
+    return float(np.mean(per_class_aps))
 
 
 class ModelBenchmark:
@@ -263,8 +297,7 @@ class ModelBenchmark:
     def run(self) -> list[BenchmarkResult]:
         """Evaluate every model and return structured results."""
 
-        if self.max_images and self.samples:
-            self.samples = self.samples[: self.max_images]
+        samples = self.samples[: self.max_images] if self.max_images else self.samples
 
         results: list[BenchmarkResult] = []
 
@@ -274,16 +307,18 @@ class ModelBenchmark:
             per_class: dict[str, PerClassMetrics] = {name: PerClassMetrics() for name in CLASS_NAMES}
             total_detections = 0
             total_latency_ms = 0.0
+            successful_predictions = 0
             errors: list[str] = []
 
             all_preds: list[list[dict]] = []
             all_gts: list[list[dict]] = []
 
-            for img_path, gt_objects in self.samples:
+            for img_path, gt_objects in samples:
                 try:
                     t0 = time.perf_counter()
                     result = model.predict(str(img_path), conf=self.conf, iou=self.iou)
                     total_latency_ms += (time.perf_counter() - t0) * 1000
+                    successful_predictions += 1
 
                     img_preds: list[dict] = []
                     for det in result.detections:
@@ -296,45 +331,49 @@ class ModelBenchmark:
                             }
                         )
 
-                    # IoU-based per-class matching (GT bbox already in xyxy pixel)
-                    gt_boxes = [obj["bbox"] for obj in gt_objects]
-                    pred_boxes = [d["bbox_pixel"] for d in img_preds]
-                    gt_matched = [False] * len(gt_objects)
-                    pred_matched = [False] * len(img_preds)
+                    # Detection-first IoU-based matching (consistent with compute_map)
+                    sorted_pred_indices = sorted(
+                        range(len(img_preds)), key=lambda i: img_preds[i]["confidence"], reverse=True
+                    )
+                    gt_used = [False] * len(gt_objects)
 
-                    for gi, gt_box in enumerate(gt_boxes):
+                    tp_count = defaultdict(int)
+                    fp_count = defaultdict(int)
+
+                    for pi in sorted_pred_indices:
+                        pred = img_preds[pi]
+                        pred_cid = pred["class_id"]
+                        pred_cls = CLASS_NAMES[pred_cid] if pred_cid < len(CLASS_NAMES) else f"class_{pred_cid}"
                         best_iou = self.iou
-                        best_pi = -1
-                        for pi, pred_box in enumerate(pred_boxes):
-                            if pred_matched[pi]:
+                        best_gi = -1
+                        for gi, gt_obj in enumerate(gt_objects):
+                            if gt_used[gi]:
                                 continue
-                            iou_val = compute_iou(gt_box, pred_box)
-                            gt_class = gt_objects[gi]["class_id"]
-                            pred_class = img_preds[pi]["class_id"]
-                            if iou_val >= best_iou and gt_class == pred_class:
+                            if gt_obj["class_id"] != pred_cid:
+                                continue
+                            iou_val = compute_iou(pred["bbox_pixel"], gt_obj["bbox"])
+                            if iou_val >= best_iou:
                                 best_iou = iou_val
-                                best_pi = pi
-                        if best_pi >= 0:
-                            gt_matched[gi] = True
-                            pred_matched[best_pi] = True
+                                best_gi = gi
+                        if best_gi >= 0:
+                            gt_used[best_gi] = True
+                            tp_count[pred_cls] += 1
+                        else:
+                            fp_count[pred_cls] += 1
 
-                    for gi, matched in enumerate(gt_matched):
-                        cid = gt_objects[gi]["class_id"]
-                        cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
+                    fn_count = defaultdict(int)
+                    for gi, used in enumerate(gt_used):
+                        if not used:
+                            cid = gt_objects[gi]["class_id"]
+                            cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
+                            fn_count[cls_name] += 1
+
+                    for cls_name in set(list(tp_count.keys()) + list(fp_count.keys()) + list(fn_count.keys())):
                         if cls_name not in per_class:
                             per_class[cls_name] = PerClassMetrics()
-                        if matched:
-                            per_class[cls_name].tp += 1
-                        else:
-                            per_class[cls_name].fn += 1
-
-                    for pi, matched in enumerate(pred_matched):
-                        if not matched:
-                            cid = img_preds[pi]["class_id"]
-                            cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
-                            if cls_name not in per_class:
-                                per_class[cls_name] = PerClassMetrics()
-                            per_class[cls_name].fp += 1
+                        per_class[cls_name].tp += tp_count.get(cls_name, 0)
+                        per_class[cls_name].fp += fp_count.get(cls_name, 0)
+                        per_class[cls_name].fn += fn_count.get(cls_name, 0)
 
                     all_preds.append(img_preds)
                     all_gts.append(gt_objects)
@@ -344,8 +383,8 @@ class ModelBenchmark:
                     all_preds.append([])
                     all_gts.append(gt_objects)
 
-            n = len(self.samples)
-            avg_latency = total_latency_ms / n if n > 0 else 0.0
+            n = len(samples)
+            avg_latency = total_latency_ms / successful_predictions if successful_predictions > 0 else 0.0
 
             total_tp = sum(m.tp for m in per_class.values())
             total_fp = sum(m.fp for m in per_class.values())

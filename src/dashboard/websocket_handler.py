@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 import cv2
 import numpy as np
 from typing import Any
-from websockets.exceptions import ConnectionClosed
+from fastapi import WebSocketDisconnect
 
 from .models import Detection, SystemMetrics
 
@@ -48,7 +48,7 @@ class WebSocketHandler:
                     # Handle configuration updates
                     await self._handle_config(websocket, message[7:])
 
-        except ConnectionClosed:
+        except WebSocketDisconnect:
             pass
         finally:
             self.connections.remove(websocket)

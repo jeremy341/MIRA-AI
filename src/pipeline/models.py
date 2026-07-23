@@ -16,7 +16,15 @@ from typing import Any
 import cv2
 import numpy as np
 
-from ..config import CLASS_NAMES, DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU, DETECTION_DIR, TFLITE_INT8_CONF
+from ..config import (
+    CLASS_NAMES,
+    DEFAULT_CONF,
+    DEFAULT_IMGSZ,
+    DEFAULT_IOU,
+    DETECTION_DIR,
+    TFLITE_INT8_CONF,
+    get_tflite_imgsz,
+)
 from ..logger import get_logger
 
 log = get_logger(__name__)
@@ -271,8 +279,7 @@ class YOLOTFLiteAdapter(DetectionModel):
         self._names = self._model.names if hasattr(self._model, "names") else {}
         # Detect correct input size from model
         if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "interpreter"):
-            details = self._backend.backend.interpreter.get_input_details()
-            self._imgsz = details[0]["shape"][-1]  # H or W dimension
+            self._imgsz = get_tflite_imgsz(self.path)
         else:
             self._imgsz = (
                 self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ

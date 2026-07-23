@@ -33,7 +33,10 @@ def remap_label_file(lbl_file, mapping):
         parts = line.split()
         if not parts:
             continue
-        old_id = int(parts[0])
+        try:
+            old_id = int(parts[0])
+        except ValueError:
+            continue
         if old_id in mapping:
             new_id = mapping[old_id]
             new_lines.append(f"{new_id} {' '.join(parts[1:])}\n")
@@ -54,7 +57,7 @@ def copy_passthrough(src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_dir):
         if img.suffix.lower() in image_exts:
             shutil.copy2(img, dst_img_dir / img.name)
             added += 1
-    for lbl in src_lbl_dir.glob("*"):
+    for lbl in src_lbl_dir.glob("*.txt"):
         shutil.copy2(lbl, dst_lbl_dir / lbl.name)
     return added, 0
 

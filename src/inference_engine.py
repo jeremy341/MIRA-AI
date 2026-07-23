@@ -18,6 +18,7 @@ from .config import (
     DEFAULT_IMGSZ,
     DEFAULT_IOU,
     DETECTION_DIR,
+    REJECT_THRESHOLD,
     get_tflite_imgsz,
 )
 from .hardware import USBCamera
@@ -44,7 +45,7 @@ class InferenceEngine:
         cam_height: int = 360,
         target_latency_ms: int = 50,
         conf_threshold: float = None,
-        reject_threshold: float = 0.55,
+        reject_threshold: float = REJECT_THRESHOLD,
         imgsz: int | None = None,
         enable_tracking: bool = True,
         iou_threshold: float = None,
@@ -214,6 +215,7 @@ class InferenceEngine:
                 frame,
                 imgsz=self.img_size,
                 conf=self.conf_threshold,
+                iou=self.iou_threshold,
                 verbose=False,
                 half=False,
             )
