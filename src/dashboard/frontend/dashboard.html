@@ -1736,7 +1736,12 @@
         trendValues: Object.fromEntries(CLASSES.map(name => [name, []])),
         chartUpdatePending: false,
         lastChartUpdate: 0,
-        frameLoaded: false
+        frameLoaded: false,
+        perfLabels: [],
+        fpsHistory: [],
+        latencyHistory: [],
+        cpuHistory: [],
+        memHistory: []
       };
 
       let videoSocket = null;
@@ -1778,10 +1783,8 @@
         summaryConfidence: document.getElementById("summaryConfidence"),
         trendEmpty: document.getElementById("trendEmpty"),
         breakdownEmpty: document.getElementById("breakdownEmpty"),
-        historyBody: document.getElementById("historyBody"),
-        historyEmpty: document.getElementById("historyEmpty"),
-        historyCount: document.getElementById("historyCount"),
-        clearHistoryButton: document.getElementById("clearHistoryButton"),
+        perfEmpty: document.getElementById("perfEmpty"),
+        sysEmpty: document.getElementById("sysEmpty"),
         toastRegion: document.getElementById("toastRegion")
       };
 
@@ -1911,6 +1914,198 @@
               tooltip: {
                 callbacks: {
                   label: context => ` ${context.raw} Objects (Objekte)`
+                }
+              }
+            }
+          }
+        }
+      );
+
+      const perfChart = new Chart(
+        document.getElementById("perfChart"),
+        {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "FPS",
+                data: [],
+                borderColor: "#58b87c",
+                backgroundColor: "#58b87c",
+                yAxisID: "y",
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                borderWidth: 2,
+                tension: 0.18
+              },
+              {
+                label: "Latency (ms)",
+                data: [],
+                borderColor: "#e76f3c",
+                backgroundColor: "#e76f3c",
+                yAxisID: "y1",
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                borderWidth: 2,
+                tension: 0.18
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  maxTicksLimit: 6,
+                  maxRotation: 0
+                }
+              },
+              y: {
+                type: "linear",
+                display: true,
+                position: "left",
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: "FPS",
+                  font: { size: 8, family: "'IBM Plex Mono', monospace" }
+                },
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 5
+                }
+              },
+              y1: {
+                type: "linear",
+                display: true,
+                position: "right",
+                beginAtZero: true,
+                grid: { drawOnChartArea: false },
+                title: {
+                  display: true,
+                  text: "ms",
+                  font: { size: 8, family: "'IBM Plex Mono', monospace" }
+                },
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 5
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                align: "start",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 3,
+                  padding: 10,
+                  usePointStyle: false,
+                  font: { size: 8 }
+                }
+              }
+            }
+          }
+        }
+      );
+
+      const sysChart = new Chart(
+        document.getElementById("sysChart"),
+        {
+          type: "line",
+          data: {
+            labels: [],
+            datasets: [
+              {
+                label: "CPU %",
+                data: [],
+                borderColor: "#6e7185",
+                backgroundColor: "#6e7185",
+                yAxisID: "y",
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                borderWidth: 2,
+                tension: 0.18
+              },
+              {
+                label: "Memory %",
+                data: [],
+                borderColor: "#d19a2c",
+                backgroundColor: "#d19a2c",
+                yAxisID: "y1",
+                pointRadius: 0,
+                pointHoverRadius: 3,
+                borderWidth: 2,
+                tension: 0.18
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "index",
+              intersect: false
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: {
+                  maxTicksLimit: 6,
+                  maxRotation: 0
+                }
+              },
+              y: {
+                type: "linear",
+                display: true,
+                position: "left",
+                min: 0,
+                max: 100,
+                title: {
+                  display: true,
+                  text: "CPU %",
+                  font: { size: 8, family: "'IBM Plex Mono', monospace" }
+                },
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 5
+                }
+              },
+              y1: {
+                type: "linear",
+                display: true,
+                position: "right",
+                min: 0,
+                max: 100,
+                grid: { drawOnChartArea: false },
+                title: {
+                  display: true,
+                  text: "Memory %",
+                  font: { size: 8, family: "'IBM Plex Mono', monospace" }
+                },
+                ticks: {
+                  precision: 0,
+                  maxTicksLimit: 5
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                position: "top",
+                align: "start",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 3,
+                  padding: 10,
+                  usePointStyle: false,
+                  font: { size: 8 }
                 }
               }
             }
@@ -2226,6 +2421,25 @@
             elements.latencyValue.textContent = Number.isFinite(state.latency)
               ? `${state.latency.toFixed(1)} ms`
               : "â ms";
+
+            // Record performance & system history
+            const now = formatTime(new Date().toISOString());
+            state.perfLabels.push(now);
+            state.fpsHistory.push(Number.isFinite(state.fps) ? state.fps : 0);
+            state.latencyHistory.push(Number.isFinite(state.latency) ? state.latency : 0);
+            state.cpuHistory.push(Number.isFinite(payload.cpu_percent) ? payload.cpu_percent : 0);
+            state.memHistory.push(Number.isFinite(payload.memory_percent) ? payload.memory_percent : 0);
+
+            // Keep last 60 data points
+            if (state.perfLabels.length > 60) {
+              state.perfLabels.shift();
+              state.fpsHistory.shift();
+              state.latencyHistory.shift();
+              state.cpuHistory.shift();
+              state.memHistory.shift();
+            }
+
+            updatePerfCharts();
             break;
 
           case "status":
@@ -2299,7 +2513,6 @@
 
         recordTrendPoint();
         renderRecent();
-        renderHistory();
         renderSummary();
         scheduleChartUpdate();
         drawBoundingBoxes(detections);
@@ -2410,29 +2623,22 @@
         `).join("");
       }
 
-      function renderHistory() {
-        elements.historyCount.textContent = `${state.history.length} / 50 Entries (Eintr\u00e4ge)`;
+      function updatePerfCharts() {
+        const labels = [...state.perfLabels];
+        const hasData = labels.length > 0;
 
-        if (!state.history.length) {
-          elements.historyBody.innerHTML = "";
-          elements.historyEmpty.classList.add("visible");
-          return;
-        }
+        elements.perfEmpty.classList.toggle("visible", !hasData);
+        elements.sysEmpty.classList.toggle("visible", !hasData);
 
-        elements.historyEmpty.classList.remove("visible");
-        elements.historyBody.innerHTML = state.history.map(detection => `
-          <tr>
-            <td class="mono">${formatTime(detection.timestamp, true)}</td>
-            <td>
-              <span class="table-class">
-                <span class="legend-swatch" style="background:${CLASS_COLORS[detection.className]}"></span>
-                ${CLASS_LABELS[detection.className]}
-              </span>
-            </td>
-            <td class="mono">${Math.round(detection.confidence * 100)} %</td>
-            <td class="mono">${detection.trackId}</td>
-          </tr>
-        `).join("");
+        perfChart.data.labels = labels;
+        perfChart.data.datasets[0].data = [...state.fpsHistory];
+        perfChart.data.datasets[1].data = [...state.latencyHistory];
+        perfChart.update("none");
+
+        sysChart.data.labels = labels;
+        sysChart.data.datasets[0].data = [...state.cpuHistory];
+        sysChart.data.datasets[1].data = [...state.memHistory];
+        sysChart.update("none");
       }
 
       function renderSummary() {

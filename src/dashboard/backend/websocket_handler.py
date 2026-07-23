@@ -272,26 +272,3 @@ class WebSocketHandler:
                 "type": "error",
                 "message": f"Configuration error: {str(e)}"
             })
-    
-    async def _broadcast(self, message: Dict[str, Any]):
-        """Broadcast message to all connected clients"""
-        if not self.connections:
-            return
-        
-        # Create tasks for all connections
-        tasks = []
-        to_remove = set()
-        for websocket in self.connections:
-            try:
-                tasks.append(websocket.send_json(message))
-            except Exception:
-                # Mark broken connections for removal
-                to_remove.add(websocket)
-        
-        # Remove broken connections after iteration
-        for websocket in to_remove:
-            self.connections.discard(websocket)
-        
-        # Send concurrently
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
