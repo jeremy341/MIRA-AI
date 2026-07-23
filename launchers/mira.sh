@@ -2,7 +2,7 @@
 # MIRA Unified Linux/macOS CLI Wrapper
 # All paths are relative to the script's location
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Prefer the local venv if it exists, otherwise fall back to system python
 if [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then

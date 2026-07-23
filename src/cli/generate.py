@@ -1,10 +1,10 @@
-"""CLI command for generating cloud training notebooks and Docker infrastructure."""
+﻿"""CLI command for generating cloud training notebooks and Docker infrastructure."""
 
 import sys
 from pathlib import Path
 
-from ..config import ROOT_DIR
-from ..pipeline.registry import register_command
+from src.config import ROOT_DIR
+from src.pipeline.registry import register_command
 
 
 def _add_generate_args(parser):
@@ -90,3 +90,4 @@ def cmd_generate(args):
     else:
         print(f"Unknown target: {target}")
         sys.exit(1)
+

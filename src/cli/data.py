@@ -1,9 +1,9 @@
-"""CLI commands for merging, listing, and validating YOLO-format datasets."""
+﻿"""CLI commands for merging, listing, and validating YOLO-format datasets."""
 
 import sys
 from pathlib import Path
 
-from ..pipeline.registry import register_command
+from src.pipeline.registry import register_command
 
 
 def _add_merge_args(parser):
@@ -15,7 +15,7 @@ def _add_merge_args(parser):
 
 @register_command("merge", "Merge registered dataset sources into a unified YOLO dataset", add_args=_add_merge_args)
 def cmd_merge(args):
-    from ..pipeline.dataset import DatasetRegistry
+    from src.pipeline.dataset import DatasetRegistry
 
     registry = DatasetRegistry()
     n = registry.discover()
@@ -33,7 +33,7 @@ def cmd_merge(args):
 
 @register_command("datasets", "List registered dataset sources from datasets/registry/*.yaml")
 def cmd_datasets(args):
-    from ..pipeline.dataset import DatasetRegistry
+    from src.pipeline.dataset import DatasetRegistry
 
     registry = DatasetRegistry()
     registry.discover()
@@ -54,7 +54,7 @@ def _add_validate_args(parser):
 
 @register_command("validate", "Validate a YOLO-format dataset", add_args=_add_validate_args)
 def cmd_validate(args):
-    from ..pipeline.validators import validate_yolo_dataset
+    from src.pipeline.validators import validate_yolo_dataset
 
     result = validate_yolo_dataset(args.dataset)
     print(f"\n  Dataset validation: {args.dataset}")
@@ -89,3 +89,4 @@ def cmd_validate(args):
 
     if not result.is_valid:
         sys.exit(1)
+

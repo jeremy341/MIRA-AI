@@ -1,8 +1,8 @@
-"""CLI command to launch the real-time detection dashboard server."""
+﻿"""CLI command to launch the real-time detection dashboard server."""
 
 import sys
 
-from ..pipeline.registry import register_command
+from src.pipeline.registry import register_command
 
 
 def _add_dashboard_args(parser):
@@ -22,24 +22,20 @@ def cmd_dashboard(args):
     import importlib.util
     from pathlib import Path
 
-    # Determine absolute path to the restored backend directory
+    # Determine absolute path to the dashboard backend
     project_root = Path(__file__).resolve().parent.parent.parent
-    backend_dir = project_root / "dashboard_output" / "extracted" / "backend"
+    backend_dir = project_root / "src" / "dashboard" / "backend"
 
     if not backend_dir.exists():
         print(f"Error: Dashboard backend not found at {backend_dir}")
         sys.exit(1)
 
-    # Insert backend_dir at the front of sys.path so internal imports resolve correctly
-    if str(backend_dir) not in sys.path:
-        sys.path.insert(0, str(backend_dir))
+    # Ensure the src package is importable
+    src_dir = project_root / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
 
-    # Pre-register `src.config` under `config` in sys.modules to satisfy "from config import ..."
-    # and avoid "attempted relative import with no known parent package" errors.
-    import src.config
-    sys.modules["config"] = src.config
-
-    # Load main.py from backend_dir dynamically
+    # Load main.py from backend_dir
     spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
     if spec is None or spec.loader is None:
         print("Error: Could not load dashboard backend spec")
@@ -51,3 +47,4 @@ def cmd_dashboard(args):
 
     print(f"Starting MIRA Dashboard on http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
+

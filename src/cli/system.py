@@ -1,19 +1,19 @@
-"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
+﻿"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
 
 import sys
 
-from ..config import DEFAULT_CONF, ROOT_DIR
-from ..version import __version__
-from ..pipeline.registry import register_command
+from src.config import DEFAULT_CONF, ROOT_DIR
+from src.version import __version__
+from src.pipeline.registry import register_command
 
 
 @register_command("doctor", "Run comprehensive environment and project health check")
 def cmd_doctor(args):
     """Run a comprehensive health check of the MIRA environment."""
-    from ..config import validate_config
-    from ..deploy import check_environment, detect_hardware, suggest_model
-    from ..pipeline.dataset import DatasetRegistry
-    from ..pipeline.models import ModelRegistry
+    from src.config import validate_config
+    from src.deploy import check_environment, detect_hardware, suggest_model
+    from src.pipeline.dataset import DatasetRegistry
+    from src.pipeline.models import ModelRegistry
 
     print(f"\n  MIRA Doctor v{__version__}")
     print(f"  {'=' * 60}")
@@ -72,7 +72,7 @@ def cmd_doctor(args):
 
     print(f"\n  {'=' * 60}")
     if config_errors or env_warnings:
-        print("  Status: ISSUES FOUND — see details above")
+        print("  Status: ISSUES FOUND â€” see details above")
     else:
         print("  Status: HEALTHY")
     print()
@@ -80,7 +80,7 @@ def cmd_doctor(args):
 
 @register_command("diagnostics", "Check hardware capabilities and environment")
 def cmd_diagnostics(args):
-    from ..deploy import check_environment, detect_hardware, suggest_model
+    from src.deploy import check_environment, detect_hardware, suggest_model
 
     info = detect_hardware()
     print("\n  Hardware Diagnostics")
@@ -118,7 +118,7 @@ def cmd_config(args):
     """Display the current mira.yaml configuration."""
     import json
 
-    from ..config import DETECTION_DIR, MODELS_DIR, PROJECT_CONFIG, ROOT_DIR, get_project_config, validate_config
+    from src.config import DETECTION_DIR, MODELS_DIR, PROJECT_CONFIG, ROOT_DIR, get_project_config, validate_config
 
     if args.validate:
         errors = validate_config()
@@ -174,7 +174,7 @@ def cmd_config(args):
 
 @register_command("models", "List all discovered model files in the models/ directory")
 def cmd_models(args):
-    from ..pipeline.models import ModelRegistry
+    from src.pipeline.models import ModelRegistry
 
     registry = ModelRegistry()
     registry.discover()
@@ -223,7 +223,7 @@ def _add_benchmark_args(parser):
 
 @register_command("benchmark", "Benchmark multiple models for accuracy and latency", add_args=_add_benchmark_args)
 def cmd_benchmark(args):
-    from ..pipeline.benchmark import ModelBenchmark
+    from src.pipeline.benchmark import ModelBenchmark
 
     from .inference import resolve_detection_data_yaml
 
@@ -239,3 +239,4 @@ def cmd_benchmark(args):
     print(ModelBenchmark.comparison_table(results))
     if args.output:
         ModelBenchmark.export(results, args.output)
+
