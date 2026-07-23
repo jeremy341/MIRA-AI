@@ -74,7 +74,7 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
     effective_level = (level or _DEFAULT_LEVEL).upper()
     logger.setLevel(getattr(logging, effective_level, logging.INFO))
 
-    if not logger.handlers:
+    if not logger.hasHandlers():
         logger.addHandler(_make_handler())
         if _LOG_FILE:
             _add_file_handler(logger, _LOG_FILE)

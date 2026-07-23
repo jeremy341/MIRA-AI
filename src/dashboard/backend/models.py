@@ -2,12 +2,12 @@
 Data models for MIRA Control Center API
 """
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any
 from pydantic import BaseModel, Field
-from enum import Enum
+from enum import StrEnum
 
 
-class WasteClass(str, Enum):
+class WasteClass(StrEnum):
     GLASS = "glass"
     METAL = "metal"
     PAPER = "paper"
@@ -19,8 +19,8 @@ class Detection(BaseModel):
     """Single detection result"""
     class_name: WasteClass
     confidence: float = Field(ge=0.0, le=1.0)
-    bbox: List[int]  # [x1, y1, x2, y2]
-    track_id: Optional[int] = None
+    bbox: list[int]  # [x1, y1, x2, y2]
+    track_id: int | None = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
 
@@ -52,7 +52,7 @@ class SystemMetrics(BaseModel):
     avg_latency_ms: float
     cpu_percent: float
     memory_percent: float
-    temperature_celsius: Optional[float] = None
+    temperature_celsius: float | None = None
     detections_per_second: float
     skip_frames: bool
 
@@ -62,9 +62,9 @@ class Statistics(BaseModel):
     period_start: datetime
     period_end: datetime
     total_detections: int
-    class_counts: Dict[WasteClass, int]
-    avg_confidence: Dict[WasteClass, float]
-    sorting_accuracy: Optional[float] = None  # If robotic arm feedback available
+    class_counts: dict[WasteClass, int]
+    avg_confidence: dict[WasteClass, float]
+    sorting_accuracy: float | None = None  # If robotic arm feedback available
 
 
 class ModelInfo(BaseModel):
@@ -79,7 +79,7 @@ class ModelInfo(BaseModel):
     recommended: bool = False
 
 
-class SystemStatus(str, Enum):
+class SystemStatus(StrEnum):
     IDLE = "idle"
     INITIALIZING = "initializing"
     RUNNING = "running"
@@ -92,4 +92,4 @@ class StatusUpdate(BaseModel):
     status: SystemStatus
     message: str
     timestamp: datetime = Field(default_factory=datetime.now)
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None

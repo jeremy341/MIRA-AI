@@ -2,7 +2,6 @@
 FastAPI server for MIRA Control Center
 """
 import asyncio
-import json
 from datetime import datetime
 from pathlib import Path
 
@@ -11,8 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 
 from models import (
-    CameraConfig, ModelConfig, SystemStatus,
-    Statistics, Detection, WasteClass
+    CameraConfig, ModelConfig
 )
 from camera_service import CameraService
 from websocket_handler import WebSocketHandler
@@ -75,7 +73,7 @@ async def get_models():
 async def initialize_camera(config: CameraConfig):
     """Initialize camera with configuration"""
     success = await camera_service.initialize_camera(config)
-    
+
     if success:
         return {
             "success": True,
@@ -95,7 +93,7 @@ async def load_model(model_config: ModelConfig):
         model_config.name,
         model_config
     )
-    
+
     if success:
         return {
             "success": True,
@@ -112,7 +110,7 @@ async def load_model(model_config: ModelConfig):
 async def start_stream():
     """Start video streaming and inference"""
     success = await camera_service.start_streaming()
-    
+
     if success:
         return {
             "success": True,
@@ -129,7 +127,7 @@ async def start_stream():
 async def stop_stream():
     """Stop video streaming"""
     await camera_service.stop()
-    
+
     return {
         "success": True,
         "message": "Streaming stopped",
@@ -140,7 +138,7 @@ async def stop_stream():
 async def get_statistics(period: int = 60):
     """Get detection statistics for the given period"""
     stats = camera_service.get_statistics(period)
-    
+
     return {
         "statistics": stats.dict(),
         "period_seconds": period
@@ -150,7 +148,7 @@ async def get_statistics(period: int = 60):
 async def get_metrics_history(limit: int = 100):
     """Get historical system metrics"""
     history = list(camera_service.metrics_history)[-limit:]
-    
+
     return {
         "metrics": [m.dict() for m in history],
         "count": len(history),
@@ -161,7 +159,7 @@ async def get_metrics_history(limit: int = 100):
 async def get_recent_detections(limit: int = 50):
     """Get recent detections"""
     detections = list(camera_service.detection_history)[-limit:]
-    
+
     return {
         "detections": [d.dict() for d in detections],
         "count": len(detections),
@@ -179,56 +177,56 @@ async def video_stream(websocket: WebSocket):
 async def control_websocket(websocket: WebSocket):
     """WebSocket endpoint for control commands"""
     await websocket.accept()
-    
+
     try:
         while True:
             data = await websocket.receive_json()
-            
+
             command = data.get("command")
             params = data.get("params", {})
-            
+
             if command == "set_camera_config":
                 config = CameraConfig(**params)
                 success = await camera_service.initialize_camera(config)
-                
+
                 await websocket.send_json({
                     "type": "response",
                     "command": command,
                     "success": success,
                     "message": "Camera config updated" if success else "Failed to update camera config"
                 })
-                
+
             elif command == "load_model":
                 config = ModelConfig(**params)
                 success = await camera_service.load_model(config.name, config)
-                
+
                 await websocket.send_json({
                     "type": "response",
                     "command": command,
                     "success": success,
                     "message": f"Model {config.name} loaded" if success else f"Failed to load model {config.name}"
                 })
-                
+
             elif command == "start_stream":
                 success = await camera_service.start_streaming()
-                
+
                 await websocket.send_json({
                     "type": "response",
                     "command": command,
                     "success": success,
                     "message": "Stream started" if success else "Failed to start stream"
                 })
-                
+
             elif command == "stop_stream":
                 await camera_service.stop()
-                
+
                 await websocket.send_json({
                     "type": "response",
                     "command": command,
                     "success": True,
                     "message": "Stream stopped"
                 })
-                
+
             elif command == "get_status":
                 await websocket.send_json({
                     "type": "status",
@@ -236,23 +234,23 @@ async def control_websocket(websocket: WebSocket):
                     "message": camera_service.status_message,
                     "timestamp": datetime.now().isoformat()
                 })
-                
+
             elif command == "get_statistics":
                 period = params.get("period", 60)
                 stats = camera_service.get_statistics(period)
-                
+
                 await websocket.send_json({
                     "type": "statistics",
                     "statistics": stats.dict(),
                     "period": period
                 })
-                
+
             else:
                 await websocket.send_json({
                     "type": "error",
                     "message": f"Unknown command: {command}"
                 })
-                
+
     except WebSocketDisconnect:
         print("Control WebSocket disconnected")
     except Exception as e:
@@ -279,7 +277,7 @@ async def shutdown_event():
 # Run the server
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host="127.0.0.1",

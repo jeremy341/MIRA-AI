@@ -76,7 +76,7 @@ class DatasetSource:
         """Load a dataset source from a YAML descriptor."""
         import yaml
 
-        with open(yaml_path) as f:
+        with open(yaml_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
 
         required = ["key", "name", "source_format", "input_path"]

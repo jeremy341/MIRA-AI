@@ -230,7 +230,7 @@ class YOLOAdapter(DetectionModel):
 
         import torch
 
-        from ultralytics.utils import nms
+        from ultralytics.utils.ops import non_max_suppression as _nms
 
         im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, self._imgsz)
         dev = _get_device(self._backend)
@@ -241,7 +241,7 @@ class YOLOAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = nms.non_max_suppression(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
+        preds = _nms(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
 
         detections: list[Detection] = []
         if len(preds) > 0:
@@ -273,6 +273,8 @@ class YOLOTFLiteAdapter(DetectionModel):
         from ultralytics.nn.autobackend import AutoBackend
         from ultralytics.utils.torch_utils import select_device
 
+        if not self.path.exists():
+            raise ModelError(f"Model file not found: {self.path}")
         self._model = YOLO(str(self.path), task="detect")
         self._backend = AutoBackend(
             model=str(self.path),
@@ -311,7 +313,7 @@ class YOLOTFLiteAdapter(DetectionModel):
 
         import torch
 
-        from ultralytics.utils import nms
+        from ultralytics.utils.ops import non_max_suppression as _nms
 
         im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, self._imgsz)
         dev = getattr(self._backend, "device", torch.device("cpu"))
@@ -322,7 +324,7 @@ class YOLOTFLiteAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = nms.non_max_suppression(
+        preds = _nms(
             raw_preds, conf_thres=tflite_conf, iou_thres=iou, max_det=300, multi_label=True
         )[0]
 
@@ -407,7 +409,7 @@ class ThirdPartyAdapter(DetectionModel):
 
         import torch
 
-        from ultralytics.utils import nms
+        from ultralytics.utils.ops import non_max_suppression as _nms
 
         try:
             imgsz = self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
@@ -422,7 +424,7 @@ class ThirdPartyAdapter(DetectionModel):
                 raw_preds = self._model.model(im_tensor)
             latency_ms = (time.perf_counter() - start) * 1000
 
-            preds = nms.non_max_suppression(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
+            preds = _nms(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
 
             detections: list[Detection] = []
             if len(preds) > 0:
@@ -576,6 +578,15 @@ class ModelRegistry:
             return False
 
         model_path = (self.detection_dir / model_file).resolve()
+        try:
+            model_path.relative_to(self.detection_dir.resolve())
+        except ValueError:
+            log.warning(
+                "Model file %s for %s escapes detection directory, skipping",
+                model_file,
+                name,
+            )
+            return False
         if not model_path.exists():
             raw = Path(model_file).expanduser()
             if not raw.is_absolute():
