@@ -192,7 +192,7 @@ def _compute_ap_for_class(
     """Compute AP for a single class using 101-point interpolation."""
     num_gt = len(all_gts_for_class)
     if num_gt == 0:
-        return 0.0
+        return float("nan")
 
     all_detections_for_class.sort(key=lambda x: x["confidence"], reverse=True)
 
@@ -256,9 +256,11 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
             for gt in img_gts:
                 if gt["class_id"] == cid:
                     class_gts.append(gt)
-        per_class_aps.append(_compute_ap_for_class(class_preds, class_gts, iou_thresh))
+        ap = _compute_ap_for_class(class_preds, class_gts, iou_thresh)
+        if not np.isnan(ap):
+            per_class_aps.append(ap)
 
-    return float(np.mean(per_class_aps))
+    return float(np.mean(per_class_aps)) if per_class_aps else 0.0
 
 
 class ModelBenchmark:
@@ -344,7 +346,7 @@ class ModelBenchmark:
                         pred = img_preds[pi]
                         pred_cid = pred["class_id"]
                         pred_cls = CLASS_NAMES[pred_cid] if pred_cid < len(CLASS_NAMES) else f"class_{pred_cid}"
-                        best_iou = self.iou
+                        best_iou = 0.5
                         best_gi = -1
                         for gi, gt_obj in enumerate(gt_objects):
                             if gt_used[gi]:

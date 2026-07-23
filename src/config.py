@@ -159,8 +159,9 @@ def get_tflite_imgsz(model_path: pathlib.Path) -> int:
         try:
             mod = __import__(import_path, fromlist=[cls_name])
             interp = getattr(mod, cls_name)(model_path=str(model_path))
+            interp.allocate_tensors()
             break
-        except Exception:
+        except (ImportError, AttributeError, RuntimeError, OSError):
             continue
     if interp is None:
         raise ImportError("No TFLite interpreter found (install tflite_runtime or tensorflow).")

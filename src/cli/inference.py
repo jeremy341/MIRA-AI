@@ -158,8 +158,8 @@ def cmd_live(args):
 
     try:
         w, h = map(int, args.resolution.split("x"))
-    except ValueError:
-        print(f"Error: Invalid resolution format '{args.resolution}'. Expected format: WIDTHxHEIGHT (e.g. 640x360).")
+    except (ValueError, AttributeError):
+        print(f"Error: Invalid resolution format '{args.resolution}'. Use WIDTHxHEIGHT (e.g., 640x480)")
         sys.exit(1)
     engine = InferenceEngine(
         model_name=model,

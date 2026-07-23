@@ -48,24 +48,38 @@ def test_get_detection_models_only_pt_and_tflite():
 
 
 def test_get_tflite_imgsz_reads_tensor_shape():
+    import sys
     from src.config import get_tflite_imgsz
 
     mock_interpreter = MagicMock()
     mock_interpreter.get_input_details.return_value = [{"shape": [1, 320, 320, 3]}]
 
-    with patch("ai_edge_litert.interpreter.Interpreter", return_value=mock_interpreter):
+    mock_mod = MagicMock()
+    mock_mod.Interpreter.return_value = mock_interpreter
+
+    sys.modules["ai_edge_litert.interpreter"] = mock_mod
+    try:
         result = get_tflite_imgsz(pathlib.Path("/fake/model.tflite"))
+    finally:
+        del sys.modules["ai_edge_litert.interpreter"]
 
     assert result == 320
 
 
 def test_get_tflite_imgsz_max_of_dims():
+    import sys
     from src.config import get_tflite_imgsz
 
     mock_interpreter = MagicMock()
     mock_interpreter.get_input_details.return_value = [{"shape": [1, 3, 224, 224]}]
 
-    with patch("ai_edge_litert.interpreter.Interpreter", return_value=mock_interpreter):
+    mock_mod = MagicMock()
+    mock_mod.Interpreter.return_value = mock_interpreter
+
+    sys.modules["ai_edge_litert.interpreter"] = mock_mod
+    try:
         result = get_tflite_imgsz(pathlib.Path("/fake/model.tflite"))
+    finally:
+        del sys.modules["ai_edge_litert.interpreter"]
 
     assert result == 224

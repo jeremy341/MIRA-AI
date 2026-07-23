@@ -138,7 +138,7 @@ class YOLOStrategy(TrainingStrategy):
             "name": config.name,
             "exist_ok": config.exist_ok,
             "seed": config.seed,
-            "deterministic": True,
+            "deterministic": False,
         }
         if config.extra:
             training_keys = {

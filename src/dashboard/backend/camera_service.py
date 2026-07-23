@@ -13,16 +13,19 @@ import psutil
 
 from ultralytics import YOLO
 from config import DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
-from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus
+from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
 
 
 class CameraService:
     """Main service handling camera, inference, and statistics"""
     
-    def __init__(self):
+    def __init__(self, loop=None):
         self._lock = threading.Lock()
         self.status = SystemStatus.IDLE
         self.status_message = "System ready"
+        
+        # Store event loop for thread-safe coroutine scheduling
+        self._loop = loop
         
         # Camera state
         self.camera = None
@@ -102,17 +105,21 @@ class CameraService:
                     self.is_tflite_int8 = "int8" in model_name.lower()
                     self.img_size = get_tflite_imgsz(model_path)
                 else:
-                    task_type = None
+                    task_type = "detect"
                     self.is_tflite_int8 = False
                     self.img_size = 640
                 
                 self.model = YOLO(str(model_path), task=task_type)
                 
                 # Adjust confidence for INT8 models
-                if self.is_tflite_int8:
-                    config.conf_threshold = min(config.conf_threshold, 0.25)
-                
-                self.model_config = config
+                self.model_config = ModelConfig(
+                    name=config.name,
+                    conf_threshold=min(config.conf_threshold, 0.25) if self.is_tflite_int8 else config.conf_threshold,
+                    reject_threshold=config.reject_threshold,
+                    iou_threshold=config.iou_threshold,
+                    enable_tracking=config.enable_tracking,
+                    target_latency_ms=config.target_latency_ms,
+                )
                 self._update_status(SystemStatus.IDLE, f"Model {model_name} loaded")
                 return True
                 
@@ -159,8 +166,14 @@ class CameraService:
                 # Read frame
                 ret, frame = self.camera.read()
                 if not ret:
+                    self._disconnect_count = getattr(self, '_disconnect_count', 0) + 1
+                    if self._disconnect_count > 100:  # ~1 second at 10ms sleep
+                        self._update_status(SystemStatus.ERROR, "Camera disconnected")
+                        self.is_streaming = False
+                        break
                     time.sleep(0.01)
                     continue
+                self._disconnect_count = 0
                 
                 frame_start = time.perf_counter()
                 
@@ -206,26 +219,27 @@ class CameraService:
                 current_time = time.time()
                 if current_time - last_metrics_time >= metrics_interval:
                     metrics = self._calculate_system_metrics()
-                    if self.on_metrics:
+                    if self.on_metrics and self._loop:
                         asyncio.run_coroutine_threadsafe(
                             self.on_metrics(metrics),
-                            asyncio.get_event_loop()
+                            self._loop
                         )
                     last_metrics_time = current_time
                 
                 # Notify about detections
-                if detections and self.on_detection:
+                if detections and self.on_detection and self._loop:
                     asyncio.run_coroutine_threadsafe(
                         self.on_detection(detections),
-                        asyncio.get_event_loop()
+                        self._loop
                     )
                 
                 # Store in history
                 self._update_history(detections)
                 
                 # Control frame skipping based on latency
-                avg_latency = sum(self.latency_history) / len(self.latency_history)
-                self.skip_frame = avg_latency > self.model_config.target_latency_ms
+                if self.model_config and self.latency_history:
+                    avg_latency = sum(self.latency_history) / len(self.latency_history)
+                    self.skip_frame = avg_latency > self.model_config.target_latency_ms
                 
             except Exception as e:
                 print(f"Streaming error: {e}")
@@ -348,10 +362,10 @@ class CameraService:
         self.status = status
         self.status_message = message
         
-        if self.on_status_change:
+        if self.on_status_change and self._loop:
             asyncio.run_coroutine_threadsafe(
                 self.on_status_change(status, message),
-                asyncio.get_event_loop()
+                self._loop
             )
     
     async def stop(self):
