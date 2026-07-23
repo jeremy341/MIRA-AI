@@ -21,6 +21,7 @@ class WebSocketHandler:
         self.latest_detections = []
         self._broadcast_queue = asyncio.Queue()
         self._broadcast_task = None
+        self._loop = None  # Will be set by main.py
 
         # Register callbacks
         camera_service.on_detection = self._on_detections
@@ -94,7 +95,7 @@ class WebSocketHandler:
         except (WebSocketDisconnect, Exception):
             pass
         finally:
-            self.connections.remove(websocket)
+            self.connections.discard(websocket)
 
     async def _on_detections(self, detections: list[Detection]):
         """Callback when new detections are available"""
@@ -118,7 +119,16 @@ class WebSocketHandler:
             "count": len(detections)
         }
 
-        await self._broadcast_queue.put(message)
+        if self._loop:
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_queue.put(message),
+                self._loop
+            )
+        else:
+            try:
+                self._broadcast_queue.put_nowait(message)
+            except Exception:
+                pass
 
     async def _on_metrics(self, metrics: SystemMetrics):
         """Callback when system metrics are updated"""
@@ -135,7 +145,16 @@ class WebSocketHandler:
             "timestamp": metrics.timestamp.isoformat()
         }
 
-        await self._broadcast_queue.put(message)
+        if self._loop:
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_queue.put(message),
+                self._loop
+            )
+        else:
+            try:
+                self._broadcast_queue.put_nowait(message)
+            except Exception:
+                pass
 
     async def _on_status_change(self, status, message):
         """Callback when system status changes"""
@@ -160,7 +179,7 @@ class WebSocketHandler:
 
                 # Choose color based on class
                 colors = {
-                    "glass": (0, 255,  0),    # Green
+                    "glass": (0, 255, 0),    # Green
                     "metal": (255, 165, 0),  # Orange
                     "paper": (0, 0, 255),    # Red
                     "plastic": (255, 255, 0), # Yellow
@@ -220,11 +239,17 @@ class WebSocketHandler:
             "timestamp": datetime.now().isoformat()
         }
 
-        # Push to broadcast queue (non-blocking)
-        try:
-            self._broadcast_queue.put_nowait(message)
-        except asyncio.QueueFull:
-            pass  # Drop frame if queue is full
+        # Push to broadcast queue (non-blocking, thread-safe)
+        if self._loop:
+            asyncio.run_coroutine_threadsafe(
+                self._broadcast_queue.put(message),
+                self._loop
+            )
+        else:
+            try:
+                self._broadcast_queue.put_nowait(message)
+            except Exception:
+                pass  # Drop frame if queue is full or error
 
     async def _send_frame(self, websocket, frame: np.ndarray):
         """Send a single frame to a websocket"""

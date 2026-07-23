@@ -119,7 +119,7 @@ class CameraService:
                     conf_threshold=min(config.conf_threshold, 0.25) if self.is_tflite_int8 else config.conf_threshold,
                     reject_threshold=config.reject_threshold,
                     iou_threshold=config.iou_threshold,
-                    enable_tracking=config.enable_tracking,
+                    enable_tracking=config.enable_tracking if model_path.suffix != ".tflite" else False,
                     target_latency_ms=config.target_latency_ms,
                 )
                 self._update_status(SystemStatus.IDLE, f"Model {model_name} loaded")
