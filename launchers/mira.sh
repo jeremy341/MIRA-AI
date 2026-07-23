@@ -14,4 +14,6 @@ fi
 # Force UTF-8 output for Unicode characters
 export PYTHONUTF8=1
 
+cd "$SCRIPT_DIR"
+
 exec "$PYTHON" -m src "$@"

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import psutil
 
 from ultralytics import YOLO
-from config import DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
+from config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
 from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
 
 
@@ -55,10 +55,10 @@ class CameraService:
         
     async def initialize_camera(self, config):
         """Initialize camera with configuration"""
+        if self.status == SystemStatus.RUNNING:
+            await self.stop()
+        
         with self._lock:
-            if self.status == SystemStatus.RUNNING:
-                await self.stop()
-            
             self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
             
             try:
@@ -96,6 +96,9 @@ class CameraService:
             
             try:
                 model_path = DETECTION_DIR / model_name
+                model_path = model_path.resolve()
+                if not str(model_path).startswith(str(DETECTION_DIR.resolve())):
+                    raise ValueError(f"Invalid model path: {model_name}")
                 if not model_path.exists():
                     raise FileNotFoundError(f"Model not found: {model_name}")
                 
@@ -183,8 +186,9 @@ class CameraService:
                         frame,
                         imgsz=self.img_size,
                         conf=self.model_config.conf_threshold,
+                        iou=self.model_config.iou_threshold,
                         verbose=False,
-                        half=False,
+                        quantize=False,
                     )
                 elif self.model_config.enable_tracking:
                     results = self.model.track(
@@ -195,7 +199,7 @@ class CameraService:
                         persist=True,
                         verbose=False,
                         tracker=str(BYTE_TRACK_CONFIG_PATH),
-                        half=False,
+                        quantize=False,
                     )
                 else:
                     results = self.model.predict(
@@ -204,7 +208,7 @@ class CameraService:
                         conf=self.model_config.conf_threshold,
                         iou=self.model_config.iou_threshold,
                         verbose=False,
-                        half=False,
+                        quantize=False,
                     )
                 
                 inference_time = (time.perf_counter() - frame_start) * 1000
@@ -286,8 +290,7 @@ class CameraService:
     
     def _class_id_to_name(self, class_id: int) -> str:
         """Map class ID to name"""
-        class_names = ["glass", "metal", "paper", "plastic", "trash"]
-        return class_names[class_id] if class_id < len(class_names) else "unknown"
+        return CLASS_NAMES[class_id] if class_id < len(CLASS_NAMES) else "unknown"
     
     def _update_performance_metrics(self, inference_time: float, detections: List[Detection]):
         """Update performance tracking metrics"""
@@ -327,7 +330,7 @@ class CameraService:
             with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
                 temp_millic = int(f.read().strip())
                 temperature = temp_millic / 1000.0
-        except:
+        except Exception:
             pass
         
         # Calculate detections per second
@@ -421,7 +424,7 @@ class CameraService:
                         input_size = get_tflite_imgsz(model_file)
                     else:
                         input_size = 640
-                except:
+                except Exception:
                     input_size = 640
                 
                 models.append({

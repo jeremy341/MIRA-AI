@@ -143,6 +143,8 @@ def validate_config() -> list[str]:
 
 def get_detection_models() -> list[str]:
     """Return sorted list of detection model filenames."""
+    if not DETECTION_DIR.exists():
+        return []
     return sorted(
         p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower()
     )
@@ -171,6 +173,8 @@ def get_tflite_imgsz(model_path: pathlib.Path) -> int:
         if shape_raw is None:
             shape_raw = input_details.get("shape_signature", [])
         shape = list(map(int, shape_raw))
+        if not shape:
+            raise ValueError("Empty tensor shape in TFLite model")
         if len(shape) == 4:
             if shape[1] in (1, 3):
                 h, w = shape[2], shape[3]

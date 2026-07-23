@@ -1,5 +1,6 @@
 ﻿"""CLI commands for model evaluation, live webcam inference, and model downloads."""
 
+import os
 import sys
 from pathlib import Path
 
@@ -105,6 +106,9 @@ def cmd_eval_yolo(args):
         model = _pick_model_interactive("Available detection models")
         if model is None:
             sys.exit(0)
+    if os.sep in model or "/" in model or "\\" in model or ".." in model:
+        print(f"Error: Invalid model name '{model}'. Use a simple filename, not a path.")
+        sys.exit(1)
     model_path = DETECTION_DIR / model
     if not model_path.exists():
         from src.logger import get_logger
@@ -194,14 +198,6 @@ def cmd_download(args):
         print()
         return
 
-    try:
-        import importlib
-
-        importlib.import_module("urllib.request")
-    except ImportError:
-        print("Error: urllib is not available. Cannot download files.")
-        sys.exit(1)
-
     if args.all:
         models_to_download = list(AVAILABLE_MODELS.items())
     elif args.model_name:
@@ -225,6 +221,7 @@ def cmd_download(args):
             sys.exit(1)
         models_to_download = [(choice, AVAILABLE_MODELS[choice])]
 
+    failed = []
     for name, info in models_to_download:
         dest_dir = DETECTION_DIR
         dest_path = dest_dir / name
@@ -245,7 +242,12 @@ def cmd_download(args):
             print(f"    Download failed: {e}")
             if dest_path.exists():
                 dest_path.unlink()
-            sys.exit(1)
+            failed.append(name)
+            continue
+
+    if failed:
+        print(f"\nFailed to download: {', '.join(failed)}")
+        sys.exit(1)
 
     print("\nDone.")
 

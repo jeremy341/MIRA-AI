@@ -51,6 +51,7 @@ def cmd_generate(args):
         import json
 
         out = Path(args.output) if args.output else Path(f"{exp_config.get('name', 'mira_exp')}_kaggle.ipynb")
+        out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
         print(f"Kaggle notebook generated: {out}")
 
@@ -61,6 +62,7 @@ def cmd_generate(args):
         import json
 
         out = Path(args.output) if args.output else Path(f"{exp_config.get('name', 'mira_exp')}_colab.ipynb")
+        out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
         print(f"Colab notebook generated: {out}")
 

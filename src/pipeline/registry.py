@@ -15,6 +15,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from ..logger import get_logger
+
+_logging = get_logger(__name__)
+
 # ── Command Registry ────────────────────────────────────────────────
 
 
@@ -39,6 +43,8 @@ def register_command(name: str, help_text: str, add_args: Callable | None = None
     """
 
     def decorator(func):
+        if name in _COMMANDS:
+            _logging.warning("Command '%s' being overwritten", name)
         _COMMANDS[name] = CommandEntry(name=name, help_text=help_text, fn=func, add_args=add_args)
         return func
 

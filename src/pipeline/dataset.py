@@ -89,7 +89,7 @@ class DatasetSource:
 
         root = yaml_path.parent.parent.parent  # datasets/registry/ -> project root
         input_path = (root / data["input_path"]).resolve()
-        if not str(input_path).startswith(str(root.resolve())):
+        if not input_path.is_relative_to(root.resolve()):
             raise ValueError(f"input_path '{data['input_path']}' escapes project root in {yaml_path.name}")
 
         # Parse class_mapping (YAML dicts have string keys)

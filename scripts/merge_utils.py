@@ -29,6 +29,7 @@ def remap_label_file(lbl_file, mapping):
     with open(lbl_file) as f:
         lines = f.readlines()
     new_lines = []
+    skipped_count = 0
     for line in lines:
         parts = line.split()
         if not parts:
@@ -40,6 +41,10 @@ def remap_label_file(lbl_file, mapping):
         if old_id in mapping:
             new_id = mapping[old_id]
             new_lines.append(f"{new_id} {' '.join(parts[1:])}\n")
+        else:
+            skipped_count += 1
+    if skipped_count > 0:
+        print(f"Warning: {skipped_count} annotations skipped — no valid classes after remap", file=sys.stderr)
     return new_lines
 
 
@@ -122,7 +127,10 @@ def print_stats(output_dir, label):
         for lbl in (output_dir / "labels" / split).glob("*.txt"):
             for line in lbl.read_text().splitlines():
                 if line.strip():
-                    cid = int(line.split()[0])
+                    try:
+                        cid = int(line.split()[0])
+                    except (ValueError, IndexError):
+                        continue
                     class_counts[cid] = class_counts.get(cid, 0) + 1
 
     total_annots = sum(class_counts.values())

@@ -1,10 +1,18 @@
 ﻿"""CLI commands for training, exporting, and auto-detecting training parameters."""
 
+import argparse
+import re
 import sys
 from pathlib import Path
 
 from src.config import ROOT_DIR
 from src.pipeline.registry import register_command
+
+
+def _validate_name(name):
+    if not re.match(r'^[a-zA-Z0-9_\-]+$', name):
+        raise argparse.ArgumentTypeError(f"Invalid name '{name}'. Use only letters, numbers, hyphens, underscores.")
+    return name
 
 
 def _add_train_args(parser):
@@ -20,7 +28,7 @@ def _add_train_args(parser):
     )
     parser.add_argument("--epochs", type=int, default=None, help="Number of training epochs (default: 120).")
     parser.add_argument("--batch-size", type=int, default=None, help="Batch size (default: 32).")
-    parser.add_argument("--name", type=str, default=None, help="Experiment/run name (default: exp).")
+    parser.add_argument("--name", type=_validate_name, default=None, help="Experiment/run name (default: exp).")
     parser.add_argument("--device", type=str, default=None, help="CUDA device or 'cpu' (default: 0).")
     parser.add_argument(
         "--data-dir", type=str, default=None, help="Data directory for classifier training (default: data/classes)."
@@ -49,7 +57,11 @@ def cmd_train(args):
     from src.pipeline.train import TrainingPipeline
 
     if args.config:
-        config = TrainConfig.from_yaml(args.config)
+        try:
+            config = TrainConfig.from_yaml(args.config)
+        except FileNotFoundError:
+            print(f"Error: Config file not found: {args.config}")
+            sys.exit(1)
     else:
         config = TrainConfig()
 
@@ -105,7 +117,7 @@ def cmd_train(args):
             available = [s for s in sources if s["exists"]]
             if available:
                 default = available[0]
-                dataset_yaml = default["path"] + "/dataset.yaml"
+                dataset_yaml = Path(default["path"]) / "dataset.yaml"
                 import pathlib
 
                 if pathlib.Path(dataset_yaml).exists():
