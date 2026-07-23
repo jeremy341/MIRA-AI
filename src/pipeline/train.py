@@ -57,7 +57,7 @@ class TrainingPipeline:
                     if fmt_lower == "tflite_fp32"
                     else model.export(format="onnx")
                     if fmt_lower == "onnx"
-                    else model.export(format="engine", half=True, imgsz=640, workspace=4)
+                    else model.export(format="engine", quantize=True, imgsz=640, workspace=4)
                     if fmt_lower == "tensorrt"
                     else None
                 )

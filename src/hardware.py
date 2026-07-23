@@ -122,15 +122,15 @@ class USBCamera(AbstractCamera):
         while self._buffer.running:
             try:
                 ret, frame = self.cap.read()
-            except Exception as exc:
-                logger.warning(f"Camera {self._index} read error: {exc}")
-                time.sleep(0.05)
+            except Exception as e:
+                logger.warning(f"Frame read error: {type(e).__name__}: {e}")
+                time.sleep(0.01)
                 continue
             if not ret:
-                time.sleep(0.001)
+                time.sleep(0.01)
                 continue
             self._buffer.update(ret, frame)
-            time.sleep(0.001)
+            time.sleep(0.01)
 
     def read(self) -> tuple[bool, object | None]:
         return self._buffer.get()
@@ -199,7 +199,11 @@ class IPCamera(AbstractCamera):
                 for attempt in range(self.RECONNECT_ATTEMPTS):
                     time.sleep(self.RECONNECT_DELAY_SECONDS)
                     old_cap = self.cap
-                    old_cap.release()
+                    if old_cap is not None:
+                        try:
+                            old_cap.release()
+                        except Exception:
+                            pass
                     self.cap = cv2.VideoCapture(self._rtsp_url)
                     if self.cap.isOpened():
                         logger.info(f"IP camera reconnected after {attempt + 1} attempt(s)")
@@ -209,7 +213,7 @@ class IPCamera(AbstractCamera):
                     self._buffer.stop()
                 continue
             self._buffer.update(ret, frame)
-            time.sleep(0.001)
+            time.sleep(0.01)
 
     def read(self) -> tuple[bool, object | None]:
         return self._buffer.get()

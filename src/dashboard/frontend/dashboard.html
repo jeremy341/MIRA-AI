@@ -84,34 +84,7 @@
       white-space: nowrap;
     }
 
-    .brand-mark {
-      width: 27px;
-      height: 27px;
-      position: relative;
-      border: 2px solid #f7f3e8;
-      transform: rotate(45deg);
-    }
 
-    .brand-mark::before,
-    .brand-mark::after {
-      content: "";
-      position: absolute;
-      background: var(--accent);
-    }
-
-    .brand-mark::before {
-      width: 8px;
-      height: 8px;
-      left: 3px;
-      top: 3px;
-    }
-
-    .brand-mark::after {
-      width: 8px;
-      height: 8px;
-      right: 3px;
-      bottom: 3px;
-    }
 
     .brand-copy {
       line-height: 1;
@@ -855,7 +828,99 @@
       }
     }
 
+    .settings-grid {
+      height: 100%;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .settings-content {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-control {
+      height: 32px;
+      padding: 0 10px;
+      background: var(--surface);
+      border: 1px solid var(--line-dark);
+      border-radius: 3px;
+      color: var(--ink);
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .checkbox-group label {
+      margin-top: 0;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--green);
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .range-wrap input[type="range"] {
+      flex: 1;
+      accent-color: var(--green);
+    }
+
+    .range-value {
+      font: 600 12px/1 "IBM Plex Mono", monospace;
+      min-width: 32px;
+      text-align: right;
+    }
+
     @media (max-width: 900px) {
+      .settings-grid {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+      }
+
       .system-item.model-info {
         display: none;
       }
@@ -883,7 +948,6 @@
   <div class="app">
     <header class="topbar">
       <div class="brand" aria-label="MIRA Recycling Sorting Robot">
-        <span class="brand-mark" aria-hidden="true"></span>
         <span class="brand-copy">
           <span class="brand-name">MIRA</span>
           <span class="brand-subtitle">Recycling Sorting Robot</span>
@@ -893,6 +957,7 @@
       <nav class="navigation" aria-label="Hauptnavigation">
         <button class="nav-button active" type="button" data-page="dashboard">Dashboard</button>
         <button class="nav-button" type="button" data-page="analytics">Analytics</button>
+        <button class="nav-button" type="button" data-page="settings">Settings</button>
       </nav>
 
       <div class="topbar-spacer"></div>
@@ -1094,6 +1159,95 @@
                 Keine Historie vorhanden. Neue Erkennungen erscheinen automatisch hier.
               </div>
             </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="settingsPage" class="page" aria-label="Settings">
+        <div class="settings-grid">
+          <article class="panel settings-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Kamera-Einstellungen</h2>
+                <span class="panel-kicker">Hardware &amp; Stream</span>
+              </div>
+            </header>
+            <form id="cameraSettingsForm" class="settings-content">
+              <div class="form-group">
+                <label for="cameraIndex">Kamera-Index</label>
+                <input type="number" id="cameraIndex" class="form-control" min="0" max="10" value="0" required />
+              </div>
+              <div class="form-group">
+                <label for="cameraResolution">Auflösung</label>
+                <select id="cameraResolution" class="form-control">
+                  <option value="640x360" selected>640 x 360 (Standard)</option>
+                  <option value="640x480">640 x 480</option>
+                  <option value="1280x720">1280 x 720 (HD)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="cameraFps">Framerate (FPS)</label>
+                <input type="number" id="cameraFps" class="form-control" min="1" max="60" value="30" required />
+              </div>
+              <div class="form-group checkbox-group">
+                <input type="checkbox" id="cameraAutofocus" />
+                <label for="cameraAutofocus">Autofokus aktivieren</label>
+              </div>
+              <div class="form-group checkbox-group">
+                <input type="checkbox" id="cameraAutoExposure" checked />
+                <label for="cameraAutoExposure">Belichtungsautomatik</label>
+              </div>
+              <div style="flex: 1;"></div>
+              <button class="button primary" type="submit" style="height: 34px; font-size: 12px; margin-top: auto;">Einstellungen anwenden</button>
+            </form>
+          </article>
+
+          <article class="panel settings-panel">
+            <header class="panel-header">
+              <div class="panel-title-wrap">
+                <h2 class="panel-title">Modell-Einstellungen</h2>
+                <span class="panel-kicker">KI-Inferenz</span>
+              </div>
+            </header>
+            <form id="modelSettingsForm" class="settings-content">
+              <div class="form-group">
+                <label for="modelSelect">Erkennungsmodell</label>
+                <select id="modelSelect" class="form-control">
+                  <!-- Dynamically populated -->
+                  <option value="yolov11n.pt">YOLO11n.pt (Standard)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="modelConf">Konfidenzschwellenwert (Confidence)</label>
+                <div class="range-wrap">
+                  <input type="range" id="modelConf" min="0.0" max="1.0" step="0.05" value="0.5" />
+                  <span id="modelConfVal" class="range-value">0.50</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="modelReject">Reject-Schwellenwert (Müll-Filter)</label>
+                <div class="range-wrap">
+                  <input type="range" id="modelReject" min="0.0" max="1.0" step="0.05" value="0.55" />
+                  <span id="modelRejectVal" class="range-value">0.55</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="modelIou">IOU-Schwellenwert</label>
+                <div class="range-wrap">
+                  <input type="range" id="modelIou" min="0.0" max="1.0" step="0.05" value="0.45" />
+                  <span id="modelIouVal" class="range-value">0.45</span>
+                </div>
+              </div>
+              <div class="form-group checkbox-group">
+                <input type="checkbox" id="modelTracking" checked />
+                <label for="modelTracking">Objekt-Tracking aktivieren</label>
+              </div>
+              <div class="form-group">
+                <label for="modelLatency">Ziel-Latenz (ms)</label>
+                <input type="number" id="modelLatency" class="form-control" min="5" max="500" value="50" required />
+              </div>
+              <button class="button primary" type="submit" style="height: 34px; font-size: 12px; margin-top: auto;">Modell laden &amp; konfigurieren</button>
+            </form>
           </article>
         </div>
       </section>
@@ -2010,6 +2164,105 @@
           drawBoundingBoxes(state.latestDetections);
         }
       });
+
+      // Settings logic
+      const sliders = [
+        { slider: document.getElementById("modelConf"), label: document.getElementById("modelConfVal") },
+        { slider: document.getElementById("modelReject"), label: document.getElementById("modelRejectVal") },
+        { slider: document.getElementById("modelIou"), label: document.getElementById("modelIouVal") }
+      ];
+      sliders.forEach(({ slider, label }) => {
+        if (slider && label) {
+          slider.addEventListener("input", (e) => {
+            label.textContent = Number(e.target.value).toFixed(2);
+          });
+        }
+      });
+
+      function loadModelOptions() {
+        const select = document.getElementById("modelSelect");
+        if (!select) return;
+        fetchJSON("/api/models", {}, true)
+          .then(data => {
+            if (data.models && Array.isArray(data.models) && data.models.length > 0) {
+              select.innerHTML = data.models.map(model => `
+                <option value="${model.name}" ${model.recommended ? 'selected' : ''}>
+                  ${model.label} (${model.size_mb} MB) ${model.recommended ? '\u2605 Empfohlen' : ''}
+                </option>
+              `).join("");
+            }
+          })
+          .catch(() => {});
+      }
+
+      const cameraForm = document.getElementById("cameraSettingsForm");
+      if (cameraForm) {
+        cameraForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const resolution = document.getElementById("cameraResolution").value.split("x");
+          const config = {
+            index: parseInt(document.getElementById("cameraIndex").value, 10),
+            width: parseInt(resolution[0], 10),
+            height: parseInt(resolution[1], 10),
+            fps: parseInt(document.getElementById("cameraFps").value, 10),
+            autofocus: document.getElementById("cameraAutofocus").checked,
+            auto_exposure: document.getElementById("cameraAutoExposure").checked
+          };
+
+          const sent = sendControl({
+            command: "set_camera_config",
+            params: config
+          });
+
+          if (!sent) {
+            fetchJSON("/api/camera/initialize", {
+              method: "POST",
+              body: JSON.stringify(config)
+            })
+            .then(data => {
+              showToast(data.message || "Kamera konfiguriert", "success");
+            })
+            .catch(() => {});
+          } else {
+            showToast("Kamera-Konfiguration \u00fcbermittelt", "success");
+          }
+        });
+      }
+
+      const modelForm = document.getElementById("modelSettingsForm");
+      if (modelForm) {
+        modelForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const config = {
+            name: document.getElementById("modelSelect").value,
+            conf_threshold: parseFloat(document.getElementById("modelConf").value),
+            reject_threshold: parseFloat(document.getElementById("modelReject").value),
+            iou_threshold: parseFloat(document.getElementById("modelIou").value),
+            enable_tracking: document.getElementById("modelTracking").checked,
+            target_latency_ms: parseInt(document.getElementById("modelLatency").value, 10)
+          };
+
+          const sent = sendControl({
+            command: "load_model",
+            params: config
+          });
+
+          if (!sent) {
+            fetchJSON("/api/model/load", {
+              method: "POST",
+              body: JSON.stringify(config)
+            })
+            .then(data => {
+              showToast(data.message || "Modell geladen", "success");
+            })
+            .catch(() => {});
+          } else {
+            showToast("Modell-Konfiguration \u00fcbermittelt", "success");
+          }
+        });
+      }
+
+      loadModelOptions();
 
       renderRecent();
       renderHistory();

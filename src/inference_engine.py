@@ -21,6 +21,7 @@ from .config import (
     REJECT_THRESHOLD,
     get_tflite_imgsz,
 )
+from .exceptions import CameraError, ConfigError
 from .hardware import USBCamera
 from .logger import logger
 from .visualize import draw_boxes
@@ -68,8 +69,10 @@ class InferenceEngine:
         self._stopped = False
         self._released = False
 
-        # Resolve and load model
-        self.model_path = DETECTION_DIR / model_name
+        # Resolve and load model (guard against path traversal)
+        self.model_path = (DETECTION_DIR / model_name).resolve()
+        if not str(self.model_path).startswith(str(DETECTION_DIR.resolve())):
+            raise ConfigError(f"Model path escapes detection directory: {model_name}")
         self._load_model(imgsz)
 
         # Initialize camera
@@ -108,7 +111,10 @@ class InferenceEngine:
             )
 
         task_type = "detect" if self.model_path.suffix == ".tflite" else None
-        self.model = YOLO(str(self.model_path), task=task_type)
+        try:
+            self.model = YOLO(str(self.model_path), task=task_type)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model {self.model_name}: {e}") from e
 
         self.is_tflite_int8 = self.model_path.suffix == ".tflite" and "int8" in self.model_name.lower()
 
@@ -188,11 +194,20 @@ class InferenceEngine:
         )
 
         consecutive_errors = 0
+        consecutive_read_failures = 0
         try:
             while not self._stopped:
                 ret, frame = self.stream.read()
                 if not ret or frame is None:
+                    consecutive_read_failures += 1
+                    if consecutive_read_failures >= 30:
+                        raise CameraError(
+                            f"Camera {self.camera_index} disconnected or frozen "
+                            f"({consecutive_read_failures} consecutive read failures)"
+                        )
+                    time.sleep(0.01)
                     continue
+                consecutive_read_failures = 0
 
                 if self.skip_frame:
                     self.skip_frame = False
@@ -227,7 +242,7 @@ class InferenceEngine:
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 verbose=False,
-                half=False,
+                quantize=False,
             )
         elif self.enable_tracking:
             return self.model.track(
@@ -238,7 +253,7 @@ class InferenceEngine:
                 persist=True,
                 verbose=False,
                 tracker=str(BYTE_TRACK_CONFIG_PATH),
-                half=False,
+                quantize=False,
             )
         else:
             return self.model.predict(
@@ -247,7 +262,7 @@ class InferenceEngine:
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 verbose=False,
-                half=False,
+                quantize=False,
             )
 
     def _update_metrics(self, results):

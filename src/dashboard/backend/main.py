@@ -266,11 +266,13 @@ async def control_websocket(websocket: WebSocket):
 async def startup_event():
     """Initialize services on startup"""
     print("MIRA Control Center starting up...")
+    await websocket_handler.start()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
     print("Shutting down MIRA Control Center...")
+    await websocket_handler.stop()
     await camera_service.stop()
 
 # Run the server

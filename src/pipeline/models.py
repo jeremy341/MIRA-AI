@@ -191,18 +191,21 @@ class YOLOAdapter(DetectionModel):
                 fp16=False,
             )
         self._names = self._model.names if hasattr(self._model, "names") else {}
-        if callable(self._model.model):
-            self._imgsz = (
-                self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
-            )
-        else:
+        try:
+            if callable(self._model.model):
+                self._imgsz = (
+                    self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
+                )
+            else:
+                self._imgsz = DEFAULT_IMGSZ
+                if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "get_input_details"):
+                    inp = self._backend.backend.get_input_details()
+                    self._imgsz = inp[0]["shape"][-1] if inp else DEFAULT_IMGSZ
+                elif hasattr(self._backend, "backend") and hasattr(self._backend.backend, "session"):
+                    inp = self._backend.backend.session.get_inputs()
+                    self._imgsz = inp[0].shape[-1] if inp else DEFAULT_IMGSZ
+        except (IndexError, KeyError, AttributeError, TypeError):
             self._imgsz = DEFAULT_IMGSZ
-            if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "get_input_details"):
-                inp = self._backend.backend.get_input_details()
-                self._imgsz = inp[0]["shape"][-1] if inp else DEFAULT_IMGSZ
-            elif hasattr(self._backend, "backend") and hasattr(self._backend.backend, "session"):
-                inp = self._backend.backend.session.get_inputs()
-                self._imgsz = inp[0].shape[-1] if inp else DEFAULT_IMGSZ
         self._loaded = True
 
     def predict(
@@ -567,9 +570,23 @@ class ModelRegistry:
         if not model_file:
             return False
 
-        model_path = self.detection_dir / model_file
+        model_path = (self.detection_dir / model_file).resolve()
         if not model_path.exists():
-            model_path = Path(model_file)
+            raw = Path(model_file).expanduser()
+            if not raw.is_absolute():
+                raw = (self.detection_dir / raw).resolve()
+            else:
+                raw = raw.resolve()
+            try:
+                raw.relative_to(self.detection_dir.resolve())
+            except ValueError:
+                log.warning(
+                    "Model file %s for %s escapes detection directory, skipping",
+                    model_file,
+                    name,
+                )
+                return False
+            model_path = raw
         if not model_path.exists():
             log.warning("Model file %s for %s not found, skipping", model_file, name)
             return False
