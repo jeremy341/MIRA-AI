@@ -97,3 +97,6 @@ dashboard_output/
 dashboard_output_backup/
 check_ultra.py
 run_check.bat
+install
+install_ultra.py
+test_venv.py

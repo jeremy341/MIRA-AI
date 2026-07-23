@@ -206,8 +206,12 @@ def cmd_experiments(args):
     print("-" * 80)
     for p in yaml_files:
         with open(p, encoding="utf-8") as f:
-            data = _yaml.safe_load(f) or {}
-        desc = data.get("name", data.get("model", ""))
+            try:
+                data = _yaml.safe_load(f)
+            except _yaml.YAMLError as e:
+                print(f"  Warning: Could not parse {p.name}: {e}")
+                continue
+        desc = (data or {}).get("name", (data or {}).get("model", ""))
         print(f"{p.name:<50} {desc}")
 
 

@@ -692,8 +692,45 @@
       grid-column: span 4;
     }
 
-    .history-panel {
+    .performance-panel {
       grid-column: 1 / -1;
+    }
+
+    .performance-body {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .performance-body .chart-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .performance-body .chart-wrap:first-child {
+      border-right: 1px solid var(--line);
+    }
+
+    .performance-chart-empty {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      color: var(--muted);
+      font: 500 11px/1.4 "IBM Plex Mono", monospace;
+      text-align: center;
+      pointer-events: none;
+      padding: 15px;
+    }
+
+    .performance-chart-empty.visible {
+      display: flex;
     }
 
     .chart-body {
@@ -1439,35 +1476,21 @@
             </div>
           </article>
 
-          <article class="panel history-panel">
+          <article class="panel performance-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Detection History (Erkennungshistorie)</h2>
-                <span id="historyCount" class="panel-kicker">0 / 50 Entries (Einträge)</span>
+                <h2 class="panel-title">Performance & System (Leistung & System)</h2>
+                <span class="panel-kicker">Live metrics over time (Live-Metriken über Zeit)</span>
               </div>
-              <button id="clearHistoryButton" class="button danger" type="button">Clear History (Historie leeren)</button>
             </header>
-
-            <div id="historyWrap" class="history-wrap">
-              <table class="history-table">
-                <colgroup>
-                  <col style="width: 29%" />
-                  <col style="width: 29%" />
-                  <col style="width: 23%" />
-                  <col style="width: 19%" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Time (Zeit)</th>
-                    <th>Class (Klasse)</th>
-                    <th>Confidence (Konfidenz)</th>
-                    <th>Track ID</th>
-                  </tr>
-                </thead>
-                <tbody id="historyBody"></tbody>
-              </table>
-              <div id="historyEmpty" class="empty-state history-empty visible">
-                No history available (Keine Historie vorhanden). New detections appear here automatically.
+            <div class="performance-body">
+              <div class="chart-wrap">
+                <canvas id="perfChart"></canvas>
+                <div id="perfEmpty" class="performance-chart-empty visible">Waiting for stream data (Warte auf Streamdaten)</div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="sysChart"></canvas>
+                <div id="sysEmpty" class="performance-chart-empty visible">Waiting for stream data (Warte auf Streamdaten)</div>
               </div>
             </div>
           </article>

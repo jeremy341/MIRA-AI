@@ -141,9 +141,9 @@ def _detect_git_sha() -> str | None:
 
     # Fallback: read .git/HEAD directly
     try:
-        head = Path(".git/HEAD").read_text(encoding="utf-8").strip()
+        head = (Path(__file__).resolve().parents[2] / ".git" / "HEAD").read_text(encoding="utf-8").strip()
         if head.startswith("ref: "):
-            ref_path = Path(".git") / head[5:]
+            ref_path = Path(__file__).resolve().parents[2] / ".git" / head[5:]
             if ref_path.exists():
                 return ref_path.read_text(encoding="utf-8").strip()
         elif len(head) == 40:
