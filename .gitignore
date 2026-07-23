@@ -45,6 +45,7 @@ latex/
 
 # --- CLAUDE AI context (private) ---
 CLAUDE/
+memory.md
 
 # --- Dataset images in data/classes (training pictures) ---
 data/classes/**/*.jpg
