@@ -34,10 +34,10 @@ def cmd_dashboard(args):
     if str(backend_dir) not in sys.path:
         sys.path.insert(0, str(backend_dir))
 
-    # Also ensure src_dir is in sys.path for `from config import ...`
-    src_dir = project_root / "src"
-    if str(src_dir) not in sys.path:
-        sys.path.insert(1, str(src_dir))
+    # Pre-register `src.config` under `config` in sys.modules to satisfy "from config import ..."
+    # and avoid "attempted relative import with no known parent package" errors.
+    import src.config
+    sys.modules["config"] = src.config
 
     # Load main.py from backend_dir dynamically
     spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
