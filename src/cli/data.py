@@ -23,7 +23,7 @@ def cmd_merge(args):
     print(f"Discovered {n} dataset sources.")
     output_path = Path(args.output).resolve()
     if not output_path.is_relative_to(ROOT_DIR.resolve()):
-        print(f"Error: Output path must be within the project directory.")
+        print("Error: Output path must be within the project directory.")
         sys.exit(1)
     result = registry.merge(
         sources=args.sources,

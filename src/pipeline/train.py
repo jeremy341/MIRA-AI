@@ -9,7 +9,7 @@ Usage:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
 
 
@@ -73,7 +73,7 @@ class TrainingPipeline:
     def train_yolo(self, config: TrainConfig) -> TrainResult:
         config.project = "runs/train"
         if config.name is None or config.name == "exp":
-            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+            config.name = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
 
         result = self.train("detection", config)
 
@@ -89,7 +89,7 @@ class TrainingPipeline:
 
         config.project = "runs/train"
         if config.name is None or config.name == "exp":
-            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+            config.name = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
 
         try:
             result = self.train("classifier", config)

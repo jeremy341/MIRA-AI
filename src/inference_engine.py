@@ -74,7 +74,7 @@ class InferenceEngine:
         try:
             self.model_path.relative_to(DETECTION_DIR.resolve())
         except ValueError:
-            raise ConfigError(f"Model path escapes detection directory: {model_name}")
+            raise ConfigError(f"Model path escapes detection directory: {model_name}") from None
         self._load_model(imgsz)
 
         # Initialize camera
@@ -139,6 +139,11 @@ class InferenceEngine:
             # use 0.25 so low-confidence detections are still visible.
             self.conf_threshold = 0.25
             logger.info(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
+
+        # TFLite models don't support ByteTrack; disable tracking
+        if self.model_path.suffix == ".tflite" and self.enable_tracking:
+            self.enable_tracking = False
+            logger.info("Tracking disabled — not supported for TFLite models.")
 
     def __enter__(self) -> Self:
         """Context manager entry."""

@@ -80,7 +80,7 @@ class TrainConfig:
             with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
         except FileNotFoundError:
-            raise ConfigError(f"Config file not found: {path}")
+            raise ConfigError(f"Config file not found: {path}") from None
         if not isinstance(data, dict):
             raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 

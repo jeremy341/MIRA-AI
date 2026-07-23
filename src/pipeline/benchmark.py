@@ -386,7 +386,7 @@ class ModelBenchmark:
                     all_preds.append(img_preds)
                     all_gts.append(gt_objects)
 
-                except (RuntimeError, ValueError, OSError) as exc:
+                except (RuntimeError, ValueError, OSError, FileNotFoundError, ImportError, AttributeError, KeyError) as exc:
                     errors.append(f"{img_path.name}: {exc}")
                     all_preds.append([])
                     all_gts.append(gt_objects)

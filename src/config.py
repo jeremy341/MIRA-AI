@@ -105,49 +105,14 @@ DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
 BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
 
 # Class configuration (single source of truth)
-_RAW_CLASSES = PROJECT_CONFIG.get("classes", {})
-CLASS_NAMES: list[str] = _RAW_CLASSES.get("names", ["glass", "metal", "paper", "plastic", "trash"])
-NUM_CLASSES: int = _RAW_CLASSES.get("count", len(CLASS_NAMES))
-
-# Training defaults
-_TRAINING = PROJECT_CONFIG.get("training", {})
-
-# Inference defaults
-_INFERENCE = PROJECT_CONFIG.get("inference", {})
-REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
-
-# Centralized numeric defaults
-DEFAULT_CONF: float = _INFERENCE.get("default_conf", 0.5)
-DEFAULT_IOU: float = _INFERENCE.get("default_iou", 0.45)
-DEFAULT_IMGSZ: int = _TRAINING.get("default_imgsz", 640)
-DEFAULT_MODEL: str = _TRAINING.get("default_model", "yolo11n.pt")
-TFLITE_INT8_CONF: float = 0.25
-
-# Legacy model labels — kept for backward compatibility.
-# New models are discovered dynamically by ModelRegistry.
-# To add a label for a model, create a YAML sidecar file in models/detection/.
-DETECTION_MODEL_LABELS: dict[str, str] = {}
-
-_PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
+_CLASSES = PROJECT_CONFIG.get("classes", {})
+CLASS_NAMES: list[str] = _CLASSES.get("names", ["glass", "metal", "paper", "plastic", "trash"])
+NUM_CLASSES: int = _CLASSES.get("count", len(CLASS_NAMES))
 
 
 def get_project_config() -> dict:
     """Return the full project configuration loaded from mira.yaml."""
-    return _PROJECT_CONFIG_FROZEN
-
-
-def validate_config() -> list[str]:
-    """Re-validate the current project configuration and return any errors."""
-    return _validate_project_config(PROJECT_CONFIG)
-
-
-def get_detection_models() -> list[str]:
-    """Return sorted list of detection model filenames."""
-    if not DETECTION_DIR.exists():
-        return []
-    return sorted(
-        p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower()
-    )
+    return dict(_PROJECT_CONFIG_FROZEN)
 
 
 def get_tflite_imgsz(model_path: pathlib.Path) -> int:
@@ -205,6 +170,42 @@ def setup_camera_properties(cap, width: int, height: int, fps: int = 30):
     cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
     cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
     cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)
+
+
+# Training defaults
+_TRAINING = PROJECT_CONFIG.get("training", {})
+
+# Inference defaults
+_INFERENCE = PROJECT_CONFIG.get("inference", {})
+REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
+
+# Centralized numeric defaults
+DEFAULT_CONF: float = _INFERENCE.get("default_conf", 0.5)
+DEFAULT_IOU: float = _INFERENCE.get("default_iou", 0.45)
+DEFAULT_IMGSZ: int = _TRAINING.get("default_imgsz", 640)
+DEFAULT_MODEL: str = _TRAINING.get("default_model", "yolo11n.pt")
+TFLITE_INT8_CONF: float = 0.25
+
+# Legacy model labels — kept for backward compatibility.
+# New models are discovered dynamically by ModelRegistry.
+# To add a label for a model, create a YAML sidecar file in models/detection/.
+DETECTION_MODEL_LABELS: dict[str, str] = {}
+
+_PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
+
+
+def validate_config() -> list[str]:
+    """Re-validate the current project configuration and return any errors."""
+    return _validate_project_config(PROJECT_CONFIG)
+
+
+def get_detection_models() -> list[str]:
+    """Return sorted list of detection model filenames."""
+    if not DETECTION_DIR.exists():
+        return []
+    return sorted(
+        p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower()
+    )
 
 
 def resolve_safe_path(user_path: str | pathlib.Path, base_dir: pathlib.Path | None = None) -> pathlib.Path:

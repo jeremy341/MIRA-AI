@@ -92,7 +92,7 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
     if hasattr(result, "__dataclass_fields__"):
         data = asdict(result)
     elif isinstance(result, dict):
-        data = result
+        data = dict(result)
     else:
         data = {"value": result}
 

@@ -178,7 +178,8 @@ class IPCamera(AbstractCamera):
 
         self.cap = cv2.VideoCapture(rtsp_url)
         if not self.cap.isOpened():
-            raise CameraError(f"Failed to open IP camera at {rtsp_url}.")
+            safe_url = rtsp_url.split("@")[-1] if "@" in rtsp_url else rtsp_url
+            raise CameraError(f"Failed to open IP camera at rtsp://<redacted>@{safe_url}.")
 
         self._buffer = _FrameBuffer()
         self._thread = threading.Thread(target=self._reader, daemon=True, name=f"IPCamera-{rtsp_url}")
