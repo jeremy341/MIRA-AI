@@ -6,7 +6,6 @@ can be benchmarked alongside YOLO models.
 
 from __future__ import annotations
 
-import logging
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -133,8 +132,8 @@ class DetectionModel(ABC):
     def predict(
         self,
         image: str | Path,
-        conf: float = None,
-        iou: float = None,
+        conf: float | None = None,
+        iou: float | None = None,
     ) -> InferenceResult: ...
 
     def _parse_yolo_results(
@@ -209,8 +208,8 @@ class YOLOAdapter(DetectionModel):
     def predict(
         self,
         image: str | Path,
-        conf: float = None,
-        iou: float = None,
+        conf: float | None = None,
+        iou: float | None = None,
     ) -> InferenceResult:
         if conf is None:
             conf = DEFAULT_CONF
@@ -289,8 +288,8 @@ class YOLOTFLiteAdapter(DetectionModel):
     def predict(
         self,
         image: str | Path,
-        conf: float = None,
-        iou: float = None,
+        conf: float | None = None,
+        iou: float | None = None,
     ) -> InferenceResult:
         if conf is None:
             conf = DEFAULT_CONF
@@ -359,8 +358,6 @@ class ThirdPartyAdapter(DetectionModel):
         self._model = None
 
     def load(self) -> None:
-
-        log = logging.getLogger(__name__)
         suffix = self.path.suffix.lower()
         if suffix in (".tflite", ".onnx", ".pt"):
             try:
@@ -385,8 +382,8 @@ class ThirdPartyAdapter(DetectionModel):
     def predict(
         self,
         image: str | Path,
-        conf: float = None,
-        iou: float = None,
+        conf: float | None = None,
+        iou: float | None = None,
     ) -> InferenceResult:
         if conf is None:
             conf = DEFAULT_CONF
@@ -574,7 +571,7 @@ class ModelRegistry:
         if not model_path.exists():
             model_path = Path(model_file)
         if not model_path.exists():
-            print(f"Warning: Model file {model_file} for {name} not found, skipping")
+            log.warning("Model file %s for %s not found, skipping", model_file, name)
             return False
 
         self._models[name] = {

@@ -19,7 +19,35 @@ def cmd_dashboard(args):
         print("Error: uvicorn is required for the dashboard. Install it with: pip install uvicorn")
         sys.exit(1)
 
-    from ..dashboard.main import app
+    import importlib.util
+    from pathlib import Path
+
+    # Determine absolute path to the restored backend directory
+    project_root = Path(__file__).resolve().parent.parent.parent
+    backend_dir = project_root / "dashboard_output" / "extracted" / "backend"
+
+    if not backend_dir.exists():
+        print(f"Error: Dashboard backend not found at {backend_dir}")
+        sys.exit(1)
+
+    # Insert backend_dir at the front of sys.path so internal imports resolve correctly
+    if str(backend_dir) not in sys.path:
+        sys.path.insert(0, str(backend_dir))
+
+    # Also ensure src_dir is in sys.path for `from config import ...`
+    src_dir = project_root / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(1, str(src_dir))
+
+    # Load main.py from backend_dir dynamically
+    spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
+    if spec is None or spec.loader is None:
+        print("Error: Could not load dashboard backend spec")
+        sys.exit(1)
+    dashboard_main = importlib.util.module_from_spec(spec)
+    sys.modules["dashboard_backend_main"] = dashboard_main
+    spec.loader.exec_module(dashboard_main)
+    app = dashboard_main.app
 
     print(f"Starting MIRA Dashboard on http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
