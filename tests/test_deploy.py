@@ -65,7 +65,10 @@ def test_detect_cuda_fallback_torch():
 def test_detect_cuda_no_cuda():
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = FileNotFoundError()
-        has_cuda, version = _detect_cuda()
+        mock_torch = MagicMock()
+        mock_torch.cuda.is_available.return_value = False
+        with patch.dict("sys.modules", {"torch": mock_torch}):
+            has_cuda, version = _detect_cuda()
         assert not has_cuda
         assert version == ""
 

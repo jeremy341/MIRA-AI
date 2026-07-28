@@ -79,12 +79,6 @@ secrets.*
 credentials.*
 config.local.*
 
-# --- Model files (regenerable artifacts, pushed to HuggingFace) ---
-models/**/*.pt
-models/**/*.onnx
-models/**/*.tflite
-models/**/*.keras
-
 # --- Experiment results (regenerable plots, CSVs, args) ---
 results/
 !results/experiments_log.md

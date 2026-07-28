@@ -26,7 +26,7 @@ def remap_label_file(lbl_file, mapping):
     Returns:
         list: remapped lines (empty if no valid annotations remain)
     """
-    with open(lbl_file) as f:
+    with open(lbl_file, encoding="utf-8") as f:
         lines = f.readlines()
     new_lines = []
     skipped_count = 0

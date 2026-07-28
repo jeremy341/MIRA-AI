@@ -81,6 +81,8 @@ class TrainConfig:
                 data = yaml.safe_load(f)
         except FileNotFoundError:
             raise ConfigError(f"Config file not found: {path}") from None
+        except yaml.YAMLError as e:
+            raise ConfigError(f"Failed to parse YAML config '{path}': {e}") from None
         if not isinstance(data, dict):
             raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 

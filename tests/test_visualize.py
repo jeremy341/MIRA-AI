@@ -149,7 +149,7 @@ def test_draw_boxes_empty_results(sample_frame):
     from src.visualize import draw_boxes
 
     results = MagicMock()
-    results.__len__ = lambda self: 0
+    results.__len__.return_value = 0
 
     result = draw_boxes(sample_frame.copy(), results, conf_threshold=0.3, reject_threshold=0.55)
     np.testing.assert_array_equal(result, sample_frame)

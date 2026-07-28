@@ -218,8 +218,8 @@ print(f"  {'TOTAL':8s}: {total_lbls:5d}")
 # WRITE dataset.yaml
 # ============================================================
 yaml_path = OUTPUT_DIR / "dataset.yaml"
-yaml_content = f"""train: {OUTPUT_DIR / "images" / "train"}
-val: {OUTPUT_DIR / "images" / "val"}
+yaml_content = f"""train: {(OUTPUT_DIR / "images" / "train").as_posix()}
+val: {(OUTPUT_DIR / "images" / "val").as_posix()}
 nc: {NUM_CLASSES}
 names: {CLASS_NAMES_LIST}
 """

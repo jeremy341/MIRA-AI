@@ -25,11 +25,15 @@ def draw_boxes(
 
     boxes = results[0].boxes
     for box in boxes:
+        if box.conf is None or len(box.conf) == 0:
+            continue
         conf = float(box.conf[0])
         if conf < conf_threshold:
             continue
 
         x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+        if box.cls is None or len(box.cls) == 0:
+            continue
         cls_id = int(box.cls[0])
         names = class_names if class_names else results[0].names
         cls_name = names[cls_id] if cls_id < len(names) else f"class_{cls_id}"

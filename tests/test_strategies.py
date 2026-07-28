@@ -134,9 +134,12 @@ def test_list_strategies():
 
 
 def test_register_strategy_custom():
+    from src.pipeline.strategies import _STRATEGIES
+
     class DummyStrategy(YOLOStrategy):
         pass
 
     register_strategy("dummy", DummyStrategy)
     strategy = get_strategy("dummy")
     assert isinstance(strategy, DummyStrategy)
+    _STRATEGIES.pop("dummy", None)

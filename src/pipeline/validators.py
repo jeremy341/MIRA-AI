@@ -59,7 +59,13 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
             result.is_valid = False
             continue
 
-        images = {p.stem: p for p in img_dir.glob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png")}
+        images = {}
+        for p in img_dir.glob("*"):
+            if p.suffix.lower() in (".jpg", ".jpeg", ".png"):
+                stem = p.stem
+                if stem in images:
+                    result.warnings.append(f"Duplicate image stem '{stem}' in {img_dir}: {images[stem]} and {p}")
+                images[stem] = p
         labels = {p.stem: p for p in lbl_dir.glob("*.txt")}
 
         for stem in labels:
@@ -73,7 +79,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
             result.total_labels += 1
 
             # Validate label content
-            with open(lbl_path) as f:
+            with open(lbl_path, encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     parts = line.strip().split()
                     if len(parts) < 5:

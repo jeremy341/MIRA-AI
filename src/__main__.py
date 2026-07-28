@@ -4,7 +4,8 @@ try:
     main()
 except KeyboardInterrupt:
     pass
-except Exception as e:
+except Exception:
     import sys
-    print(f"Fatal error: {e}", file=sys.stderr)
+    import traceback
+    traceback.print_exc(file=sys.stderr)
     sys.exit(1)

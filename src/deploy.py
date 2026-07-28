@@ -134,7 +134,7 @@ def _safe_memory_mb() -> int:
             mem = ctypes.c_ulonglong()
             kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(mem))
             return int(mem.value // 1024)
-        with open("/proc/meminfo") as f:
+        with open("/proc/meminfo", encoding="utf-8") as f:
             for line in f:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) // 1024
@@ -146,7 +146,7 @@ def _safe_memory_mb() -> int:
 def _detect_raspberry_pi() -> bool:
     try:
         if sys.platform == "linux":
-            with open("/proc/cpuinfo") as f:
+            with open("/proc/cpuinfo", encoding="utf-8") as f:
                 content = f.read()
                 return "Raspberry Pi" in content or "BCM" in content
     except OSError:

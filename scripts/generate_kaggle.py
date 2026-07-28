@@ -156,13 +156,13 @@ def generate_kaggle_notebook(exp: dict, project: dict) -> dict:
                 "# Write dataset.yaml\n"
                 "work_dir = Path('/kaggle/working')\n"
                 "yaml_path = work_dir / 'dataset.yaml'\n"
-                'yaml_content = f"""\n'
-                "train: {{data_root}}/images/train\n"
-                "val: {{data_root}}/images/val\n"
-                f"nc: {num_classes}\n"
-                f"names: {class_names}\n"
-                '"""\n'
-                "yaml_path.write_text(yaml_content.strip())\n"
+                "yaml_content = f'''\\n"
+                "train: {data_root}/images/train\\n"
+                "val: {data_root}/images/val\\n"
+                f"nc: {num_classes}\\n"
+                f"names: {class_names}\\n"
+                "'''\\n"
+                "yaml_path.write_text(yaml_content.strip())\\n"
                 "print(f'Written: {yaml_path}')"
             ),
             _md_cell("## Training"),
@@ -174,7 +174,7 @@ def generate_kaggle_notebook(exp: dict, project: dict) -> dict:
                 f"    batch={params['batch_size']},\n"
                 f"    imgsz={params['imgsz']},\n"
                 f"    patience={params['patience']},\n"
-                "    device=0,\n"
+                "    device='0',\n"
                 f"    project=str(work_dir / 'runs'),\n"
                 f"    name='{exp_name}',\n"
                 "    exist_ok=True,\n"

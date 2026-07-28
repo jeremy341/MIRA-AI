@@ -13,7 +13,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -117,7 +117,7 @@ def serialize_config(config: Any, path: str | Path) -> Path:
     data = _dataclass_to_dict(config)
     if isinstance(data, dict):
         data["__schema_version__"] = CURRENT_SCHEMA_VERSION
-        data["__serialized_at__"] = datetime.now(UTC).isoformat()
+        data["__serialized_at__"] = datetime.now(timezone.utc).isoformat()
 
     _backup_if_exists(path)
     _atomic_write(path, yaml.dump(data, default_flow_style=False, sort_keys=False))
@@ -187,7 +187,7 @@ class ExperimentRecord:
             "processor": platform.processor(),
         }
     )
-    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     schema_version: str = CURRENT_SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:

@@ -11,7 +11,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -162,7 +162,7 @@ def profile_model(
         "peak_gpu_memory_mb": round(gpu_mem_peak, 2) if gpu_mem_peak is not None else None,
         "peak_cpu_memory_mb": round(peak_cpu, 2) if peak_cpu is not None else None,
         "cuda_available": _CUDA_AVAILABLE,
-        "timestamp": datetime.now(UTC).isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return results
 
