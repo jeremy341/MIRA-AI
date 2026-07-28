@@ -1,8 +1,9 @@
-"""
+﻿"""
 WebSocket handlers for real-time video streaming
 """
 import asyncio
 import base64
+import threading
 from datetime import datetime
 import cv2
 import numpy as np
@@ -16,6 +17,7 @@ class WebSocketHandler:
 
     def __init__(self, camera_service):
         self.camera_service = camera_service
+        self._lock = threading.Lock()
         self.connections = set()
         self.frame_buffer = None
         self.latest_detections = []
@@ -27,6 +29,7 @@ class WebSocketHandler:
         camera_service.on_detection = self._on_detections
         camera_service.on_metrics = self._on_metrics
         camera_service.on_status_change = self._on_status_change
+        camera_service.on_frame = self.update_frame
 
     async def start(self):
         """Start the background broadcast task"""
@@ -80,9 +83,10 @@ class WebSocketHandler:
                 "message": "Video stream connected"
             })
 
-            # Send initial frame if available
-            if self.frame_buffer is not None:
-                await self._send_frame(websocket, self.frame_buffer)
+            with self._lock:
+                initial_frame = self.frame_buffer.copy() if self.frame_buffer is not None else None
+            if initial_frame is not None:
+                await self._send_frame(websocket, initial_frame)
 
             # Keep connection alive
             async for message in websocket:
@@ -99,7 +103,8 @@ class WebSocketHandler:
 
     async def _on_detections(self, detections: list[Detection]):
         """Callback when new detections are available"""
-        self.latest_detections = detections
+        with self._lock:
+            self.latest_detections = list(detections)
 
         # Convert detections to serializable format
         serialized_detections = []
@@ -170,64 +175,64 @@ class WebSocketHandler:
         if frame is None:
             return
 
-        # Draw detections on frame
-        annotated_frame = frame.copy()
-
         if detections:
+            # Draw detections on a copy
+            annotated = frame.copy()
             for det in detections:
                 x1, y1, x2, y2 = det.bbox
-
                 # Choose color based on class
                 colors = {
-                    "glass": (0, 255, 0),    # Green
-                    "metal": (255, 165, 0),  # Orange
-                    "paper": (0, 0, 255),    # Red
-                    "plastic": (255, 255, 0), # Yellow
-                    "trash": (128, 0, 128)   # Purple
+                    "glass": (0, 255, 0),
+                    "metal": (255, 165, 0),
+                    "paper": (0, 0, 255),
+                    "plastic": (255, 255, 0),
+                    "trash": (128, 0, 128),
                 }
-
                 color = colors.get(det.class_name.value, (255, 255, 255))
-
                 # Draw bounding box
-                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
                 # Draw label
                 label = f"{det.class_name.value}: {det.confidence:.2f}"
                 if det.track_id is not None:
                     label = f"[{det.track_id}] {label}"
-
                 # Calculate text size
                 (text_width, text_height), _ = cv2.getTextSize(
                     label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
                 )
-
                 # Draw background for text
                 cv2.rectangle(
-                    annotated_frame,
+                    annotated,
                     (x1, y1 - text_height - 4),
                     (x1 + text_width, y1),
                     color,
-                    -1
+                    -1,
                 )
-
                 # Draw text
                 cv2.putText(
-                    annotated_frame,
+                    annotated,
                     label,
                     (x1, y1 - 2),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
                     (0, 0, 0),
-                    1
+                    1,
                 )
+            to_store = annotated
+        else:
+            # No detections to draw; use original frame (no copy needed)
+            to_store = frame
 
-        # Store frame for new connections
-        self.frame_buffer = annotated_frame
+        # Store frame for new connections (thread-safe)
+        with self._lock:
+            self.frame_buffer = to_store
 
         # Convert frame to JPEG
-        _, buffer = cv2.imencode('.jpg', annotated_frame, [
+        success, buffer = cv2.imencode('.jpg', to_store, [
             cv2.IMWRITE_JPEG_QUALITY, 85
         ])
+        if not success:
+            # Failed to encode frame; skip
+            return
 
         # Encode as base64
         frame_data = base64.b64encode(buffer).decode('utf-8')

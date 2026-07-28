@@ -50,19 +50,18 @@ def test_project_config_returns_dict():
 
 
 def test_register_command():
-    from src.pipeline.registry import get_commands, register_command
+    from src.pipeline.registry import get_commands, register_command, _COMMANDS
 
     @register_command("test_cmd_pytest", "A test command")
     def _dummy(args):
         pass
 
-    commands = get_commands()
-    assert "test_cmd_pytest" in commands
-    assert commands["test_cmd_pytest"].help_text == "A test command"
-
-    # Clean up to avoid polluting global state
-    _cmds = get_commands()
-    _cmds.pop("test_cmd_pytest", None)
+    try:
+        commands = get_commands()
+        assert "test_cmd_pytest" in commands
+        assert commands["test_cmd_pytest"].help_text == "A test command"
+    finally:
+        _COMMANDS.pop("test_cmd_pytest", None)
 
 
 # ── Dataset Registry tests ──────────────────────────────────────────

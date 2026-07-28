@@ -1,7 +1,7 @@
 """Tests for MIRA shared configuration."""
 
 import pathlib
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
 def test_root_dir_is_pathlib_path():

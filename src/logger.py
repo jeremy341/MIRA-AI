@@ -72,7 +72,13 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
     """
     logger = logging.getLogger(name)
     effective_level = (level or _DEFAULT_LEVEL).upper()
-    logger.setLevel(getattr(logging, effective_level, logging.INFO))
+    try:
+        level_val = getattr(logging, effective_level)
+    except AttributeError:
+        logger.setLevel(logging.INFO)
+        logger.warning("Invalid log level '%s', falling back to INFO", effective_level)
+    else:
+        logger.setLevel(level_val)
 
     if not logger.hasHandlers():
         logger.addHandler(_make_handler())

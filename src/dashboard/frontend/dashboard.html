@@ -809,7 +809,7 @@
           const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
           let data = {};
           try { data = await response.json(); } catch (_) { data = {}; }
-          if (!response.ok) throw new Error(data.message || `HTTP ${response.status}`);
+          if (!response.ok) throw new Error(data.message || data.detail?.message || data.detail || `HTTP ${response.status}`);
           return data;
         } catch (error) {
           if (!silent) showToast(`API Error (API-Fehler): ${error.message}`, "error");
@@ -852,7 +852,12 @@
           elements.cameraPlaceholder.style.display = "flex";
           elements.detectionCountValue.textContent = "0";
           elements.liveConfidenceValue.textContent = "— %";
+          elements.fpsValue.textContent = "—";
+          elements.latencyValue.textContent = "— ms";
           clearBoundingBoxes();
+          updateCharts();
+          renderRecent();
+          renderSummary();
         }
       }
       function setBusy(busy) {
@@ -946,10 +951,24 @@
         if (payload.type === "response" && payload.success === false) { showToast(payload.message || "Command failed (Befehl fehlgeschlagen)", "error"); }
       }
       function handleStatus(status, message) {
-        const running = ["running", "streaming", "active"].includes(String(status || "").toLowerCase());
-        const idle = ["idle", "stopped", "ready"].includes(String(status || "").toLowerCase());
+        const lower = String(status || "").toLowerCase();
+        const running = ["running", "streaming", "active"].includes(lower);
+        const idle = ["idle", "stopped", "ready"].includes(lower);
+        const errorState = ["error", "failed"].includes(lower);
+        const initializing = ["initializing", "loading"].includes(lower);
+        const paused = ["paused"].includes(lower);
         if (running) setStreaming(true, message || "Streaming active (aktiv)");
         if (idle) setStreaming(false, message || "System ready (bereit)");
+        elements.cameraStatusLabel.textContent = message || (running ? "Streaming active (aktiv)" : "System ready (bereit)");
+        elements.cameraState.textContent = message || (running ? "Waiting for camera frame… (Warte auf Kameraframe…)" : "Waiting for stream… (Warte auf Stream…)");
+        if (errorState) {
+          showToast(message || "System error (Systemfehler)", "error");
+          if (state.streaming) setStreaming(false, message || "System error (Systemfehler)");
+        }
+        if (initializing) {
+          elements.cameraStatusLabel.textContent = message || "Initializing (Initialisiere)";
+          elements.cameraState.textContent = message || "Initializing… (Initialisiere…)";
+        }
       }
       function processDetections(items) {
         const detections = items.map(normalizeDetection);
@@ -1110,10 +1129,13 @@
           const label = `${CLASS_LABELS[detection.className]} ${Math.round(detection.confidence * 100)}%`;
           ctx.font = "600 10px 'IBM Plex Mono', monospace";
           const textWidth = ctx.measureText(label).width;
+          const labelHeight = 18;
+          const labelY = Math.max(0, sy - labelHeight);
+          const textY = labelY + 13;
           ctx.fillStyle = color;
-          ctx.fillRect(sx, sy - 18, textWidth + 10, 18);
+          ctx.fillRect(sx, labelY, textWidth + 10, labelHeight);
           ctx.fillStyle = "#ffffff";
-          ctx.fillText(label, sx + 5, sy - 5);
+          ctx.fillText(label, sx + 5, textY);
         });
       }
       function clearBoundingBoxes() {
@@ -1121,8 +1143,25 @@
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
+      function resetSessionStats() {
+        state.history = [];
+        state.classCounts = Object.fromEntries(CLASSES.map(name => [name, 0]));
+        state.totalDetections = 0;
+        state.confidenceSum = 0;
+        state.confidenceSamples = 0;
+        state.trendLabels = [];
+        state.trendValues = Object.fromEntries(CLASSES.map(name => [name, []]));
+        state.accumulatedSessionMs = 0;
+        state.sessionStartedAt = null;
+        state.perfLabels = [];
+        state.fpsHistory = [];
+        state.latencyHistory = [];
+        state.cpuHistory = [];
+        state.memHistory = [];
+      }
       function startStream() {
         if (state.streaming || state.busy) return;
+        resetSessionStats();
         setBusy(true);
         fetchJSON("/api/stream/start", { method: "POST" })
           .then(data => { showToast(data.message || "Stream started (gestartet)", "success"); handleStatus("running", "Stream started (gestartet)"); })

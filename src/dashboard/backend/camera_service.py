@@ -12,7 +12,10 @@ import psutil
 
 from ultralytics import YOLO
 from config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
+from logger import get_logger
 from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
+
+logger = get_logger(__name__)
 
 
 class CameraService:
@@ -51,6 +54,18 @@ class CameraService:
         self.on_detection = None
         self.on_metrics = None
         self.on_status_change = None
+
+    def _update_status_locked(self, status: SystemStatus, message: str):
+        """Caller must hold self._lock"""
+        self.status = status
+        self.status_message = message
+
+    def _notify_status_change(self):
+        if self.on_status_change and self._loop:
+            asyncio.run_coroutine_threadsafe(
+                self.on_status_change(self.status, self.status_message),
+                self._loop
+            )
 
     async def initialize_camera(self, config):
         """Initialize camera with configuration"""
@@ -94,6 +109,9 @@ class CameraService:
             self._update_status(SystemStatus.INITIALIZING, f"Loading model {model_name}...")
 
             try:
+                # Basic validation to prevent path traversal
+                if any(sep in model_name for sep in ('/', '\\', '..')):
+                    raise ValueError(f"Invalid model name: {model_name}")
                 model_path = DETECTION_DIR / model_name
                 model_path = model_path.resolve()
                 if not str(model_path).startswith(str(DETECTION_DIR.resolve())):
@@ -132,123 +150,117 @@ class CameraService:
     async def start_streaming(self):
         """Start the inference streaming loop"""
         with self._lock:
+            if self.is_streaming:
+                return True
+
             if not self.camera or not self.model:
-                self._update_status(
-                    SystemStatus.ERROR,
-                    "Camera or model not initialized"
-                )
+                self._update_status_locked(SystemStatus.ERROR, "Camera or model not initialized")
                 return False
 
             self.is_streaming = True
-            self._update_status(SystemStatus.RUNNING, "Streaming started")
+            self._update_status_locked(SystemStatus.RUNNING, "Streaming started")
 
-            # Start background thread
-            threading.Thread(
-                target=self._streaming_loop,
-                daemon=True
-            ).start()
+            threading.Thread(target=self._streaming_loop, daemon=True).start()
 
             return True
 
     def _streaming_loop(self):
-        """Main streaming and inference loop"""
+        """Main streaming and inference loop (runs in daemon thread)."""
         last_metrics_time = time.time()
-        metrics_interval = .5  # Update metrics twice per second
+        metrics_interval = 0.5
 
-        while self.is_streaming:
+        with self._lock:
+            local_conf = self.model_config.conf_threshold if self.model_config else 0.5
+            local_iou = self.model_config.iou_threshold if self.model_config else 0.45
+            local_img_size = self.img_size
+            local_is_tflite_int8 = self.is_tflite_int8
+            local_enable_tracking = self.model_config.enable_tracking if self.model_config else False
+            local_target_latency = self.model_config.target_latency_ms if self.model_config else 50
+
+        while True:
             try:
-                if not self.camera or not self.model:
+                with self._lock:
+                    if not self.is_streaming:
+                        break
+                    cam = self.camera
+                    mod = self.model
+                    if self.skip_frame:
+                        self.skip_frame = False
+                        continue
+
+                if cam is None or mod is None:
                     break
 
-                # Skip frame if latency is too high
-                if self.skip_frame:
-                    self.skip_frame = False
-                    continue
-
-                # Read frame
-                ret, frame = self.camera.read()
+                ret, frame = cam.read()
                 if not ret:
-                    self._disconnect_count = getattr(self, '_disconnect_count', 0) + 1
-                    if self._disconnect_count > 100:  # ~1 second at 10ms sleep
+                    with self._lock:
+                        self._disconnect_count += 1
+                        dc = self._disconnect_count > 100
+                    if dc:
                         self._update_status(SystemStatus.ERROR, "Camera disconnected")
-                        self.is_streaming = False
+                        with self._lock:
+                            self.is_streaming = False
                         break
                     time.sleep(0.01)
                     continue
-                self._disconnect_count = 0
+                with self._lock:
+                    self._disconnect_count = 0
 
                 frame_start = time.perf_counter()
 
-                # Run inference
-                if self.is_tflite_int8:
-                    results = self.model.predict(
-                        frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
-                        iou=self.model_config.iou_threshold,
-                        verbose=False,
-                        quantize=False,
+                if local_is_tflite_int8:
+                    results = mod.predict(
+                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou, verbose=False,
                     )
-                elif self.model_config.enable_tracking:
-                    results = self.model.track(
-                        frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
-                        iou=self.model_config.iou_threshold,
-                        persist=True,
-                        verbose=False,
-                        tracker=str(BYTE_TRACK_CONFIG_PATH),
-                        quantize=False,
+                elif local_enable_tracking:
+                    results = mod.track(
+                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou,
+                        persist=True, verbose=False, tracker=str(BYTE_TRACK_CONFIG_PATH),
                     )
                 else:
-                    results = self.model.predict(
-                        frame,
-                        imgsz=self.img_size,
-                        conf=self.model_config.conf_threshold,
-                        iou=self.model_config.iou_threshold,
-                        verbose=False,
-                        quantize=False,
+                    results = mod.predict(
+                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou, verbose=False,
                     )
 
                 inference_time = (time.perf_counter() - frame_start) * 1000
+                detections = self._process_results(results, local_conf)
+                self._update_performance_metrics(inference_time)
 
-                # Process detections
-                detections = self._process_results(results)
-
-                # Update performance metrics
-                self._update_performance_metrics(inference_time, detections)
-
-                # Calculate system metrics periodically
                 current_time = time.time()
                 if current_time - last_metrics_time >= metrics_interval:
                     metrics = self._calculate_system_metrics()
+                    with self._lock:
+                        self.metrics_history.append(metrics)
                     if self.on_metrics and self._loop:
-                        asyncio.run_coroutine_threadsafe(
-                            self.on_metrics(metrics),
-                            self._loop
-                        )
+                        asyncio.run_coroutine_threadsafe(self.on_metrics(metrics), self._loop)
                     last_metrics_time = current_time
 
-                # Notify about detections
                 if detections and self.on_detection and self._loop:
-                    asyncio.run_coroutine_threadsafe(
-                        self.on_detection(detections),
-                        self._loop
-                    )
+                    asyncio.run_coroutine_threadsafe(self.on_detection(detections), self._loop)
 
-                # Store in history
                 self._update_history(detections)
 
-                # Control frame skipping based on latency
-                if self.model_config and self.latency_history:
-                    avg_latency = sum(self.latency_history) / len(self.latency_history)
-                    self.skip_frame = avg_latency > self.model_config.target_latency_ms
+                if self.on_frame:
+                    try:
+                        self.on_frame(frame, detections)
+                    except Exception as e:
+                        logger.warning("Frame send error: %s", e)
+
+                with self._lock:
+                    if self.latency_history:
+                        avg_latency = sum(self.latency_history) / len(self.latency_history)
+                        self.skip_frame = avg_latency > local_target_latency
+                    else:
+                        self.skip_frame = False
 
             except Exception as e:
-                print(f"Streaming error: {e}")
-                time.sleep(0.1)
+                self._update_status(SystemStatus.ERROR, f"Streaming error: {e}")
+                logger.error("Streaming error: %s", e)
+                with self._lock:
+                    self.is_streaming = False
+                break
 
-    def _process_results(self, results):
+    def _process_results(self, results, conf_threshold: float = 0.5):
         """Process YOLO results into Detection objects"""
         detections = []
 
@@ -261,7 +273,7 @@ class CameraService:
 
         for box in boxes:
             conf = float(box.conf[0])
-            if conf < self.model_config.conf_threshold:
+            if conf < conf_threshold:
                 continue
 
             cls_id = int(box.cls[0])
@@ -293,37 +305,40 @@ class CameraService:
 
     def _update_performance_metrics(self, inference_time: float, detections: list[Detection]):
         """Update performance tracking metrics"""
-        self.latency_history.append(inference_time)
+        with self._lock:
+            self.latency_history.append(inference_time)
 
-        # Update frame times for FPS calculation
-        self.frame_times.append(time.perf_counter())
-        if len(self.frame_times) > 1:
-            # Keep only recent times for accurate FPS
-            while len(self.frame_times) > 1 and \
-                  self.frame_times[-1] - self.frame_times[0] > 2.0:
-                self.frame_times.popleft()
+            # Update frame times for FPS calculation
+            self.frame_times.append(time.perf_counter())
+            if len(self.frame_times) > 1:
+                # Keep only recent times for accurate FPS
+                while len(self.frame_times) > 1 and \
+                      self.frame_times[-1] - self.frame_times[0] > 2.0:
+                    self.frame_times.popleft()
 
     def _calculate_system_metrics(self) -> SystemMetrics:
-        """Calculate current system metrics"""
-        # Calculate FPS
-        fps = 0.0
-        if len(self.frame_times) > 1:
-            time_span = self.frame_times[-1] - self.frame_times[0]
-            if time_span > 0:
-                fps = (len(self.frame_times) - 1) / time_span
+        """Calculate current system metrics (snapshot shared state under lock)."""
+        with self._lock:
+            frame_times_snapshot = list(self.frame_times)
+            latency_history_snapshot = list(self.latency_history)
+            detection_history_snapshot = list(self.detection_history)
+            skip = self.skip_frame
 
-        # Calculate latency
+        fps = 0.0
+        if len(frame_times_snapshot) > 1:
+            time_span = frame_times_snapshot[-1] - frame_times_snapshot[0]
+            if time_span > 0:
+                fps = (len(frame_times_snapshot) - 1) / time_span
+
         inference_latency = 0.0
         avg_latency = 0.0
-        if self.latency_history:
-            inference_latency = self.latency_history[-1]
-            avg_latency = sum(self.latency_history) / len(self.latency_history)
+        if latency_history_snapshot:
+            inference_latency = latency_history_snapshot[-1]
+            avg_latency = sum(latency_history_snapshot) / len(latency_history_snapshot)
 
-        # Get system resources
         cpu_percent = psutil.cpu_percent()
         memory_percent = psutil.virtual_memory().percent
 
-        # Try to get temperature (Raspberry Pi specific)
         temperature = None
         try:
             with open("/sys/class/thermal/thermal_zone0/temp") as f:
@@ -332,15 +347,13 @@ class CameraService:
         except Exception:
             pass
 
-        # Calculate detections per second
         detections_per_second = 0.0
-        if len(self.detection_history) >= 2:
-            recent_detections = list(self.detection_history)[-10:]
+        if len(detection_history_snapshot) >= 2:
+            recent_detections = detection_history_snapshot[-10:]
             if len(recent_detections) >= 2:
-                time_diff = (recent_detections[-1].timestamp -
-                           recent_detections[0].timestamp).total_seconds()
-                if time_diff > 0:
-                    detections_per_second = len(recent_detections) / time_diff
+                time_diff = (recent_detections[-1].timestamp - recent_detections[0].timestamp).total_seconds()
+                if time_diff > 0.001:
+                    detections_per_second = (len(recent_detections) - 1) / time_diff
 
         return SystemMetrics(
             fps=fps,
@@ -350,45 +363,53 @@ class CameraService:
             memory_percent=memory_percent,
             temperature_celsius=temperature,
             detections_per_second=detections_per_second,
-            skip_frames=self.skip_frame
+            skip_frames=skip,
         )
 
     def _update_history(self, detections: list[Detection]):
-        """Update detection history"""
-        for detection in detections:
-            self.detection_history.append(detection)
-            self.class_history[detection.class_name].append(detection)
+        """Update detection history, avoiding immediate duplicates"""
+        with self._lock:
+            for detection in detections:
+                if self.detection_history:
+                    last = self.detection_history[-1]
+                    if (last.class_name == detection.class_name
+                        and last.bbox == detection.bbox):
+                        continue
+                self.detection_history.append(detection)
+                self.class_history[detection.class_name].append(detection)
 
     def _update_status(self, status: SystemStatus, message: str):
         """Update system status"""
-        self.status = status
-        self.status_message = message
-
-        if self.on_status_change and self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self.on_status_change(status, message),
-                self._loop
-            )
+        with self._lock:
+            self._update_status_locked(status, message)
+            self._notify_status_change()
 
     async def stop(self):
-        """Stop streaming and cleanup"""
+        """Stop streaming and cleanup. Signals thread first, then releases camera."""
         with self._lock:
             self.is_streaming = False
+            cam = self.camera
+            self.camera = None
 
-            if self.camera:
-                self.camera.release()
-                self.camera = None
+        if cam:
+            try:
+                cam.release()
+            except Exception as exc:
+                logger.warning("Exception releasing camera: %s", exc)
 
-            self._update_status(SystemStatus.IDLE, "System stopped")
+        with self._lock:
+            self._update_status_locked(SystemStatus.IDLE, "System stopped")
 
     def get_statistics(self, period_seconds: int = 60) -> Statistics:
-        """Get statistics for the given time period"""
-        cutoff_time = datetime.now() - timedelta(seconds=period_seconds)
+        """Get statistics for the given time period (thread-safe via lock + UTC)."""
+        from datetime import timezone
 
-        recent_detections = [
-            d for d in self.detection_history
-            if d.timestamp >= cutoff_time
-        ]
+        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=period_seconds)
+
+        with self._lock:
+            snapshot = list(self.detection_history)
+
+        recent_detections = [d for d in snapshot if d.timestamp.replace(tzinfo=timezone.utc) >= cutoff_time]
 
         class_counts = defaultdict(int)
         confidence_sums = defaultdict(float)
@@ -403,10 +424,10 @@ class CameraService:
 
         return Statistics(
             period_start=cutoff_time,
-            period_end=datetime.now(),
+            period_end=datetime.now(timezone.utc),
             total_detections=len(recent_detections),
             class_counts=dict(class_counts),
-            avg_confidence=dict(avg_confidence)
+            avg_confidence=dict(avg_confidence),
         )
 
     def get_available_models(self) -> list[dict[str, Any]]:

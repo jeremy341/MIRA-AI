@@ -12,7 +12,7 @@ readme = "README.md"
 keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
 requires-python = ">=3.11"
 dependencies = [
-    "ultralytics>=8.0",
+    "ultralytics>=8.3.0",
     "opencv-python>=4.0",
     "torch>=2.0",
     "torchvision>=0.15",
@@ -65,7 +65,7 @@ exclude = ["reference/", ".venv/", "datasets/", "models/"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
-ignore = ["E501", "E402", "I001"]
+ignore = ["E501", "E402", "I001", "UP017"]
 
 [tool.ruff.format]
 quote-style = "double"

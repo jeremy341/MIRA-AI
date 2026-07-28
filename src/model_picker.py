@@ -16,11 +16,10 @@ def _getch():
             if mapped:
                 return mapped
             # Function key or other extended key — consume remaining bytes
-            try:
-                while msvcrt.kbhit():
-                    msvcrt.getch()
-            except Exception:
-                pass
+            for _ in range(100):
+                if not msvcrt.kbhit():
+                    break
+                msvcrt.getch()
             return ""
         if ch == b"\r":
             return "ENTER"

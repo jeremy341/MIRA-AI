@@ -1,4 +1,5 @@
 @echo off
+setlocal
 rem MIRA Unified Windows CLI Wrapper
 rem All paths are relative to the batch file's location
 
@@ -17,3 +18,4 @@ set PYTHONUTF8=1
 cd /d "%PROJECT_DIR%"
 
 "%PYTHON%" -m src %*
+if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%

@@ -69,7 +69,9 @@ class _FrameBuffer:
 
     def get(self) -> tuple[bool, object | None]:
         with self._lock:
-            return self._ret, self._frame.copy() if self._frame is not None else None
+            frame = self._frame
+            ret = self._ret
+        return ret, frame.copy() if frame is not None else None
 
     @property
     def is_frozen(self) -> bool:
@@ -106,9 +108,12 @@ class USBCamera(AbstractCamera):
 
         self._buffer = _FrameBuffer()
 
-        # Warmup
+        warmup_ok = False
         for _ in range(self.WARMUP_FRAMES):
-            self.cap.read()
+            if self.cap.read()[0]:
+                warmup_ok = True
+        if not warmup_ok:
+            logger.warning(f"USB camera {index} warmup failed: all {self.WARMUP_FRAMES} frames returned False")
 
         # Prime the buffer with the first frame
         ret, frame = self.cap.read()

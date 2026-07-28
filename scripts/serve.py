@@ -160,6 +160,7 @@ async def detect(
 
     # --- Run inference via a temp file (YOLO expects a path) -------------
     t0 = time.perf_counter()
+    tmp_path = None
     try:
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
             tmp.write(contents)
@@ -170,7 +171,8 @@ async def detect(
         logger.exception("Inference failed for '%s'", file.filename)
         raise HTTPException(status_code=500, detail=f"Inference failed: {exc}") from exc
     finally:
-        tmp_path.unlink(missing_ok=True)
+        if tmp_path is not None:
+            tmp_path.unlink(missing_ok=True)
 
     latency_ms = (time.perf_counter() - t0) * 1000
 

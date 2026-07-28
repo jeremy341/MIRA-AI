@@ -197,6 +197,7 @@ class InferenceEngine:
 
     def run(self):
         """Start the real-time inference loop."""
+        self.prev_time = time.perf_counter()
         logger.info(
             f"MIRA Live Detection active (camera {self.camera_index}, "
             f"{self.cam_width}x{self.cam_height}, "
@@ -226,6 +227,9 @@ class InferenceEngine:
 
                 try:
                     results = self._infer(frame)
+                    annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
+                    self._update_metrics(results)
+                    self._draw_status(annotated, results)
                 except Exception as exc:
                     consecutive_errors += 1
                     logger.warning("Inference error (%d consecutive): %s", consecutive_errors, exc)
@@ -234,9 +238,6 @@ class InferenceEngine:
                         break
                     continue
                 consecutive_errors = 0
-                annotated = draw_boxes(frame, results, self.conf_threshold, self.reject_threshold, CLASS_NAMES)
-                self._update_metrics(results)
-                self._draw_status(annotated, results)
                 cv2.imshow("MIRA Real-Time Multi-Object Detection", annotated)
 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -283,6 +284,9 @@ class InferenceEngine:
         self.prev_time = curr_time
 
         self._current_fps = 1.0 / max(frame_time, 1e-6)
+        if not results or len(results) == 0:
+            self.skip_frame = False
+            return
         speed = getattr(results[0], "speed", None) or {}
         latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
         self.latency_history.append(latency_ms)

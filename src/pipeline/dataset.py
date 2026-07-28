@@ -37,9 +37,13 @@ def _import_merge_utils():
     import sys
 
     scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
-    return importlib.import_module("merge_utils")
+    saved_path = list(sys.path)
+    try:
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        return importlib.import_module("merge_utils")
+    finally:
+        sys.path[:] = saved_path
 
 
 def _derive_label_path(img_rel: str) -> str:
