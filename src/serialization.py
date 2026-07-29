@@ -61,7 +61,12 @@ def _atomic_write(path: Path, data: str) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(data)
-        os.replace(tmp_path, path)
+        try:
+            os.replace(tmp_path, path)
+        except OSError:
+            import shutil
+            shutil.copy2(tmp_path, path)
+            os.unlink(tmp_path)
     except Exception:
         try:
             os.unlink(tmp_path)

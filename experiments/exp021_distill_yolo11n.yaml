@@ -1,4 +1,3 @@
-name: exp021
 description: "Distilled YOLO11n from best teacher — comparison to current best EXP-014 (60.7% mAP50)"
 model: yolo11n.pt
 dataset: datasets/merged_mira/dataset.yaml

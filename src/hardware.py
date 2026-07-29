@@ -217,6 +217,12 @@ class IPCamera(AbstractCamera):
                 else:
                     logger.error(f"IP camera reconnection failed after {self.RECONNECT_ATTEMPTS} attempts")
                     self._buffer.stop()
+                    if self.cap is not None:
+                        try:
+                            self.cap.release()
+                        except Exception:
+                            pass
+                        self.cap = None
                 continue
             self._buffer.update(ret, frame)
             time.sleep(0.01)

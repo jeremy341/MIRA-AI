@@ -204,9 +204,6 @@ class YOLOAdapter(DetectionModel):
                 if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "get_input_details"):
                     inp = self._backend.backend.get_input_details()
                     self._imgsz = inp[0]["shape"][-1] if inp else DEFAULT_IMGSZ
-                elif hasattr(self._backend, "backend") and hasattr(self._backend.backend, "session"):
-                    inp = self._backend.backend.session.get_inputs()
-                    self._imgsz = inp[0].shape[-1] if inp else DEFAULT_IMGSZ
         except (IndexError, KeyError, AttributeError, TypeError):
             self._imgsz = DEFAULT_IMGSZ
         self._loaded = True
@@ -364,6 +361,7 @@ class ThirdPartyAdapter(DetectionModel):
         self.model_type = model_type
         self.class_names = class_names or CLASS_NAMES
         self._model = None
+        self._load_failed = False
 
     def load(self) -> None:
         suffix = self.path.suffix.lower()
@@ -387,6 +385,7 @@ class ThirdPartyAdapter(DetectionModel):
                 self.path.name,
                 suffix,
             )
+            self._load_failed = True
         self._loaded = False
 
     def predict(
@@ -403,7 +402,7 @@ class ThirdPartyAdapter(DetectionModel):
             raise ValueError(f"conf must be in [0, 1], got {conf}")
         if not (0.0 <= iou <= 1.0):
             raise ValueError(f"iou must be in [0, 1], got {iou}")
-        if not self._loaded:
+        if not self._loaded and not self._load_failed:
             self.load()
         if self._model is None:
             log.warning("ThirdPartyAdapter.predict() called before load() — returning empty result")
@@ -472,7 +471,7 @@ class ModelRegistry:
         sidecar_meta: dict[str, dict] = {}
 
         for p in sorted(self.detection_dir.iterdir()):
-            if p.suffix == ".yaml" and not p.name.startswith("example"):
+            if p.suffix in (".yaml", ".yml") and not p.name.startswith("example"):
                 registered = self._load_descriptor(p)
                 name = p.stem
                 if registered:

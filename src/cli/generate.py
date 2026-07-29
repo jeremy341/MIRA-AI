@@ -6,10 +6,13 @@ from pathlib import Path
 from src.config import ROOT_DIR
 from src.pipeline.registry import register_command
 
+_GENERATE_PARSER = None
+
 
 def _add_generate_args(parser):
+    global _GENERATE_PARSER
+    _GENERATE_PARSER = parser
     sub = parser.add_subparsers(dest="target", help="Target platform to generate for")
-    sub.required = True
 
     kaggle = sub.add_parser("kaggle", help="Generate a Kaggle training notebook")
     kaggle.add_argument("--config", type=str, required=True, help="Path to experiment YAML config")
@@ -29,6 +32,10 @@ def _add_generate_args(parser):
 
 @register_command("generate", "Generate cloud training scripts (kaggle, colab, docker)", add_args=_add_generate_args)
 def cmd_generate(args):
+    if args.target is None:
+        if _GENERATE_PARSER:
+            _GENERATE_PARSER.print_help()
+        return
     target = args.target
     config_path = Path(args.config)
     if not config_path.exists():
@@ -39,9 +46,16 @@ def cmd_generate(args):
 
     import yaml
 
+    if not config_path.exists():
+        print(f"Error: Config file not found: {config_path}")
+        sys.exit(1)
     with open(config_path, encoding="utf-8") as f:
         exp_config = yaml.safe_load(f)
-    with open(project_root / "mira.yaml", encoding="utf-8") as f:
+    mira_yaml_path = project_root / "mira.yaml"
+    if not mira_yaml_path.exists():
+        print(f"Error: Project config not found: {mira_yaml_path}")
+        sys.exit(1)
+    with open(mira_yaml_path, encoding="utf-8") as f:
         project_config = yaml.safe_load(f)
 
     if target == "kaggle":

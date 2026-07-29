@@ -62,7 +62,10 @@ def cmd_dashboard(args):
             sys.modules["config"] = _prev_config
         else:
             sys.modules.pop("config", None)
-    app = dashboard_main.app
+    app = getattr(dashboard_main, "app", None)
+    if app is None:
+        print("Error: dashboard backend 'main.py' does not define 'app' attribute")
+        sys.exit(1)
 
     print(f"Starting MIRA Dashboard on http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")

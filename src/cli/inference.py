@@ -1,4 +1,4 @@
-﻿"""CLI commands for model evaluation, live webcam inference, and model downloads."""
+"""CLI commands for model evaluation, live webcam inference, and model downloads."""
 
 import os
 import sys
@@ -120,7 +120,7 @@ def cmd_eval_yolo(args):
     from ultralytics import YOLO
 
     data_path = resolve_detection_data_yaml(args.data)
-    task_type = "detect" if model_path.suffix == ".tflite" else None
+    task_type = "detect"  # Always detect for both .pt and .tflite models
     model = YOLO(str(model_path), task=task_type)
     val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix == ".tflite" else 640
     model.val(data=str(data_path), imgsz=val_imgsz)
@@ -211,7 +211,7 @@ def cmd_download(args):
         for i, name in enumerate(names, 1):
             exists = (DETECTION_DIR / name).exists()
             status = " (downloaded)" if exists else ""
-            print(f"  [{i}] {name}{status} â€” {AVAILABLE_MODELS[name]['description']}")
+            print(f"  [{i}] {name}{status} — {AVAILABLE_MODELS[name]['description']}")
         print()
         choice = input("  Enter model name or number: ").strip()
         if choice.isdigit() and 1 <= int(choice) <= len(names):

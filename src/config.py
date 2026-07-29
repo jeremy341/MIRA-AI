@@ -1,4 +1,4 @@
-"""Shared configuration, constants, and utility functions for MIRA."""
+﻿"""Shared configuration, constants, and utility functions for MIRA."""
 
 from __future__ import annotations
 
@@ -26,6 +26,8 @@ except FileNotFoundError:
     raise ConfigError(f"Config file not found: {_CONFIG_PATH}") from None
 except yaml.YAMLError as e:
     raise ConfigError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
+
+_PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 
 
 def _validate_project_config(cfg: dict[str, Any]) -> list[str]:
@@ -190,8 +192,6 @@ TFLITE_INT8_CONF: float = 0.25
 # New models are discovered dynamically by ModelRegistry.
 # To add a label for a model, create a YAML sidecar file in models/detection/.
 DETECTION_MODEL_LABELS: dict[str, str] = {}
-
-_PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 
 
 def validate_config() -> list[str]:

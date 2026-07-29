@@ -1,4 +1,4 @@
-"""Interactive model picker for MIRA CLI."""
+﻿"""Interactive model picker for MIRA CLI."""
 
 import os
 import sys
@@ -31,37 +31,38 @@ def _getch():
             return ch.decode("utf-8")
         except UnicodeDecodeError:
             return ""
-    # Unix: read up to 3 bytes for longer escape sequences
-    import termios
-    import tty
-    import select
+    else:
+        # Unix: read up to 3 bytes for longer escape sequences
+        import termios
+        import tty
+        import select
 
-    fd = sys.stdin.fileno()
-    old = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd)
-        ch = sys.stdin.read(1)
-        if ch == "\x1b":
-            # Check if more bytes available (non-blocking)
-            rest = ""
-            while select.select([sys.stdin], [], [], 0.01)[0]:
-                rest += sys.stdin.read(1)
-            if rest == "[A":
-                return "UP"
-            if rest == "[B":
-                return "DOWN"
-            if rest == "[C":
-                return "RIGHT"
-            if rest == "[D":
-                return "LEFT"
-            return "ESC"  # Unknown escape sequence
-        if ch == "\r":
-            return "ENTER"
-        if ch == "\x03":
-            return "CTRL_C"
-        return ch
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            if ch == "\x1b":
+                # Check if more bytes available (non-blocking)
+                rest = ""
+                while select.select([sys.stdin], [], [], 0.01)[0]:
+                    rest += sys.stdin.read(1)
+                if rest == "[A":
+                    return "UP"
+                if rest == "[B":
+                    return "DOWN"
+                if rest == "[C":
+                    return "RIGHT"
+                if rest == "[D":
+                    return "LEFT"
+                return "ESC"  # Unknown escape sequence
+            if ch == "\r":
+                return "ENTER"
+            if ch == "\x03":
+                return "CTRL_C"
+            return ch
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
 def pick_model(items, labels=None, title="Available models", filter_func=None):
