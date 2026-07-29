@@ -37,7 +37,7 @@ training:
 inference:
   reject_threshold: 0.55
   default_conf: 0.5
-  default_iou: 0.7
+  default_iou: 0.45
 
 quantization:
   formats: ["int8", "fp32"]

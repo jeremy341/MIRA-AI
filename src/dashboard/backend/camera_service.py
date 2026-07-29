@@ -72,9 +72,9 @@ class CameraService:
         if self.status == SystemStatus.RUNNING:
             await self.stop()
 
-        with self._lock:
-            self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
+        self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
 
+        with self._lock:
             try:
                 self.camera = cv2.VideoCapture(
                     config.index,
@@ -105,9 +105,9 @@ class CameraService:
 
     async def load_model(self, model_name: str, config):
         """Load detection model"""
-        with self._lock:
-            self._update_status(SystemStatus.INITIALIZING, f"Loading model {model_name}...")
+        self._update_status(SystemStatus.INITIALIZING, f"Loading model {model_name}...")
 
+        with self._lock:
             try:
                 # Basic validation to prevent path traversal
                 if any(sep in model_name for sep in ('/', '\\', '..')):
@@ -240,9 +240,10 @@ class CameraService:
 
                 self._update_history(detections)
 
-                if self.on_frame:
+                _callback = self.on_frame  # Capture under lock
+                if _callback:
                     try:
-                        self.on_frame(frame, detections)
+                        _callback(frame, detections)
                     except Exception as e:
                         logger.warning("Frame send error: %s", e)
 
@@ -380,9 +381,8 @@ class CameraService:
 
     def _update_status(self, status: SystemStatus, message: str):
         """Update system status"""
-        with self._lock:
-            self._update_status_locked(status, message)
-            self._notify_status_change()
+        self._update_status_locked(status, message)
+        self._notify_status_change()
 
     async def stop(self):
         """Stop streaming and cleanup. Signals thread first, then releases camera."""

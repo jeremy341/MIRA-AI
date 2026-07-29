@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -93,7 +94,11 @@ class DatasetSource:
 
         root = yaml_path.parent.parent.parent  # datasets/registry/ -> project root
         input_path = (root / data["input_path"]).resolve()
-        if not input_path.is_relative_to(root.resolve()):
+        try:
+            is_rel = input_path.is_relative_to(root.resolve())
+        except AttributeError:
+            is_rel = str(input_path.resolve()).startswith(str(root.resolve()))
+        if not is_rel:
             raise ValueError(f"input_path '{data['input_path']}' escapes project root in {yaml_path.name}")
 
         # Parse class_mapping (YAML dicts have string keys)
@@ -211,6 +216,11 @@ class DatasetRegistry:
                 added, skipped = self._merge_remapped(source, output, dry_run)
                 total_added += added
                 total_skipped += skipped
+            elif source.source_format == "coco":
+                # Convert COCO annotations to YOLO format
+                added, skipped = self._merge_coco(source, output, dry_run)
+                total_added += added
+                total_skipped += skipped
             else:
                 logger.warning("Unsupported format '%s' for %s", source.source_format, key)
 
@@ -305,6 +315,112 @@ class DatasetRegistry:
                 )
                 total_added += a
                 total_skipped += s
+
+        return total_added, total_skipped
+
+    def _merge_coco(
+        self,
+        source: DatasetSource,
+        output: Path,
+        dry_run: bool,
+    ) -> tuple[int, int]:
+        """Convert COCO annotations to YOLO format and merge."""
+        if dry_run:
+            print(f"  [DRY] COCO convert: {source.input_path}")
+            return 0, 0
+
+        try:
+            from pycocotools.coco import COCO
+        except ImportError:
+            logger.warning(
+                "Cannot process COCO source '%s': pycocotools is not installed. "
+                "Install it with: pip install pycocotools",
+                source.key,
+            )
+            return 0, 0
+
+        print(f"  Converting {source.name} (COCO -> YOLO)...")
+        total_added = 0
+        total_skipped = 0
+
+        for split_name, split_rel in source.splits.items():
+            ann_file = source.input_path / split_rel
+            if not ann_file.exists():
+                logger.warning("  COCO annotation file not found: %s", ann_file)
+                continue
+
+            coco = COCO(str(ann_file))
+            img_ids = coco.getImgIds()
+            if not img_ids:
+                logger.warning("  No images found in COCO annotations: %s", ann_file)
+                continue
+
+            dst_split = "val" if split_name in ("valid", "test") else split_name
+
+            for img_id in img_ids:
+                img_info = coco.loadImgs(img_id)[0]
+                ann_ids = coco.getAnnIds(imgIds=img_id)
+                anns = coco.loadAnns(ann_ids)
+
+                if not anns:
+                    total_skipped += 1
+                    continue
+
+                # Locate the image file
+                img_filename = img_info["file_name"]
+                img_path = source.input_path / img_filename
+                if not img_path.exists():
+                    # Try inside an "images" subdirectory
+                    img_path = source.input_path / "images" / Path(img_filename).name
+                if not img_path.exists():
+                    # Try inside split-specific image folder
+                    img_path = source.input_path / "images" / split_name / Path(img_filename).name
+                if not img_path.exists():
+                    logger.debug("  Image not found for annotation: %s", img_filename)
+                    total_skipped += 1
+                    continue
+
+                # Convert annotations to YOLO format
+                img_w = img_info["width"]
+                img_h = img_info["height"]
+                yolo_lines: list[str] = []
+                for ann in anns:
+                    cat_id = ann["category_id"]
+
+                    # Apply class mapping if provided
+                    if source.class_mapping:
+                        if cat_id not in source.class_mapping:
+                            continue
+                        target_cat_id = source.class_mapping[cat_id]
+                    else:
+                        target_cat_id = cat_id
+
+                    # COCO bbox: [x, y, width, height] -> YOLO: [class x_center y_center w h] (normalized)
+                    x, y, w, h = ann["bbox"]
+                    x_center = (x + w / 2.0) / img_w
+                    y_center = (y + h / 2.0) / img_h
+                    w_norm = w / img_w
+                    h_norm = h / img_h
+                    yolo_lines.append(
+                        f"{target_cat_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n"
+                    )
+
+                if yolo_lines:
+                    dst_img_dir = output / "images" / dst_split
+                    dst_lbl_dir = output / "labels" / dst_split
+                    dst_img_dir.mkdir(parents=True, exist_ok=True)
+                    dst_lbl_dir.mkdir(parents=True, exist_ok=True)
+
+                    shutil.copy2(img_path, dst_img_dir / img_path.name)
+
+                    stem = Path(img_filename).stem
+                    lbl_path = dst_lbl_dir / f"{stem}.txt"
+                    with open(lbl_path, "w", encoding="utf-8") as f:
+                        f.writelines(yolo_lines)
+
+                    total_added += 1
+                else:
+                    total_skipped += 1
 
         return total_added, total_skipped
 

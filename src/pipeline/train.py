@@ -50,17 +50,18 @@ class TrainingPipeline:
         for fmt in formats:
             fmt_lower = fmt.lower().replace("-", "_")
             try:
-                out = (
-                    model.export(format="tflite", int8=True)
-                    if fmt_lower == "tflite_int8"
-                    else model.export(format="tflite", int8=False)
-                    if fmt_lower == "tflite_fp32"
-                    else model.export(format="onnx")
-                    if fmt_lower == "onnx"
-                    else model.export(format="engine", quantize=True, imgsz=640, workspace=4)
-                    if fmt_lower == "tensorrt"
-                    else None
-                )
+                if fmt_lower == "tflite_int8":
+                    out = model.export(format="tflite", int8=True, data=dataset)
+                elif fmt_lower == "tflite_fp32":
+                    out = model.export(format="tflite", int8=False)
+                elif fmt_lower == "tflite":
+                    out = model.export(format="tflite", int8=False)
+                elif fmt_lower == "onnx":
+                    out = model.export(format="onnx")
+                elif fmt_lower == "tensorrt":
+                    out = model.export(format="engine", quantize=True, imgsz=640, workspace=4)
+                else:
+                    out = None
                 if out is None:
                     logger.warning("Unknown export format '%s', skipping", fmt)
             except Exception as e:
@@ -73,7 +74,8 @@ class TrainingPipeline:
     def train_yolo(self, config: TrainConfig) -> TrainResult:
         import copy
         config = copy.deepcopy(config)
-        config.project = "runs/train"
+        if not config.project:
+            config.project = "runs/train"
         if config.name is None or config.name == "exp":
             config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -92,7 +94,8 @@ class TrainingPipeline:
         config.extra["base_model"] = base_model
         config.extra["fine_tune"] = fine_tune
 
-        config.project = "runs/train"
+        if not config.project:
+            config.project = "runs/train"
         if config.name is None or config.name == "exp":
             config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
 

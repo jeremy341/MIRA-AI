@@ -1,4 +1,4 @@
-"""Training strategy registry for extensible training pipelines.
+﻿"""Training strategy registry for extensible training pipelines.
 
 Allows registering new training strategies (YOLO, classifier, etc.)
 without modifying the TrainingPipeline class.
@@ -88,6 +88,9 @@ class TrainConfig:
 
         known = {f.name for f in dc_fields(cls)}
         extra = {k: v for k, v in data.items() if k not in known}
+        if extra:
+            unknown_names = list(extra.keys())
+            logger.warning("Unknown config keys will be placed in extra dict: %s", unknown_names)
         config = cls(**{k: v for k, v in data.items() if k in known}, extra=extra)
 
         errors = config.validate()
@@ -174,6 +177,8 @@ class YOLOStrategy(TrainingStrategy):
                 "seed",
                 "deterministic",
                 "optimizer",
+                "distill_model",
+                "dis",
                 "cos_lr",
                 "close_mosaic",
                 "resume",
@@ -293,7 +298,7 @@ class ClassifierStrategy(TrainingStrategy):
                     include_top=False,
                     weights="imagenet",
                 )
-                base.trainable = not fine_tune
+                base.trainable = fine_tune
                 x = keras.layers.GlobalAveragePooling2D()(base.output)
                 x = keras.layers.Dropout(0.2)(x)
                 out = keras.layers.Dense(num_classes, activation="softmax")(x)
@@ -351,7 +356,7 @@ class ClassifierStrategy(TrainingStrategy):
         return train_result
 
 
-# ── Strategy Registry ────────────────────────────────────────────────
+# â”€â”€ Strategy Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _STRATEGIES: dict[str, type[TrainingStrategy]] = {}
 _DEFAULTS_LOADED = False

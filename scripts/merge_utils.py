@@ -54,6 +54,8 @@ def copy_passthrough(src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_dir):
     Returns:
         tuple: (added, skipped) counts
     """
+    if not src_img_dir.exists():
+        return 0
     dst_img_dir.mkdir(parents=True, exist_ok=True)
     dst_lbl_dir.mkdir(parents=True, exist_ok=True)
     added = 0
@@ -144,8 +146,8 @@ def print_stats(output_dir, label):
 
 def write_dataset_yaml(output_dir):
     """Write dataset.yaml for a merged dataset."""
-    yaml_content = f"""train: {output_dir / "images" / "train"}
-val: {output_dir / "images" / "val"}
+    yaml_content = f"""train: images/train
+val: images/val
 nc: {NUM_CLASSES}
 names: {MIRA_CLASSES}
 """

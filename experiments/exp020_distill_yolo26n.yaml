@@ -1,4 +1,3 @@
-name: exp020
 description: "Distilled YOLO26n from best teacher — primary target for RPi Zero 2W deployment"
 model: yolo26n.pt
 dataset: datasets/merged_mira/dataset.yaml

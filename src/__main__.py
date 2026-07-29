@@ -1,9 +1,11 @@
+﻿import sys
+
 from .cli import main
 
 try:
     main()
 except KeyboardInterrupt:
-    pass
+    sys.exit(130)
 except Exception:
     import sys
     import traceback

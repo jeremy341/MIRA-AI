@@ -118,9 +118,7 @@ def cmd_train(args):
             if available:
                 default = available[0]
                 dataset_yaml = Path(default["path"]) / "dataset.yaml"
-                import pathlib
-
-                if pathlib.Path(dataset_yaml).exists():
+                if dataset_yaml.exists():
                     config.dataset = dataset_yaml
                     print(f"  Dataset: {default['key']}")
 

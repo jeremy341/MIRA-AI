@@ -1,4 +1,3 @@
-name: exp018
 description: "YOLO11x teacher @ 1280px — leverages 96GB Blackwell VRAM for high-res training"
 model: yolo11x.pt
 dataset: datasets/merged_mira/dataset.yaml

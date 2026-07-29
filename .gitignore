@@ -30,8 +30,15 @@ results/**/train_batch*.jpg
 results/**/val_batch*.jpg
 results/**/labels.jpg
 
-# --- Training outputs (keep models/ for LFS-tracked final models) ---
+# --- Training outputs ---
 runs/
+
+# --- Trained model files (only YAML descriptors are tracked, not binaries) ---
+models/classifier/
+models/detection/*.pt
+models/detection/*.tflite
+models/detection/*.onnx
+!models/detection/*.yaml
 *.npy
 
 # --- YOLO weights and large model files in results ---

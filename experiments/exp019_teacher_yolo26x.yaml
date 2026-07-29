@@ -1,4 +1,3 @@
-name: exp019
 description: "YOLO26x teacher @ 640px — native YOLO26 resolution, MuSGD optimizer"
 model: yolo26x.pt
 dataset: datasets/merged_mira/dataset.yaml

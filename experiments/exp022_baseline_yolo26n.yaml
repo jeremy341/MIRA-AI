@@ -1,4 +1,3 @@
-name: exp022
 description: "Baseline YOLO26n (no distillation) — measures pure data scaling effect vs EXP-020"
 model: yolo26n.pt
 dataset: datasets/merged_mira/dataset.yaml

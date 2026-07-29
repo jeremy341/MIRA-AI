@@ -1,4 +1,4 @@
-﻿"""CLI commands for merging, listing, and validating YOLO-format datasets."""
+"""CLI commands for merging, listing, and validating YOLO-format datasets."""
 
 import sys
 from pathlib import Path
@@ -22,7 +22,11 @@ def cmd_merge(args):
     n = registry.discover()
     print(f"Discovered {n} dataset sources.")
     output_path = Path(args.output).resolve()
-    if not output_path.is_relative_to(ROOT_DIR.resolve()):
+    try:
+        is_rel = output_path.is_relative_to(ROOT_DIR.resolve())
+    except AttributeError:
+        is_rel = str(output_path.resolve()).startswith(str(ROOT_DIR.resolve()))
+    if not is_rel:
         print("Error: Output path must be within the project directory.")
         sys.exit(1)
     result = registry.merge(
