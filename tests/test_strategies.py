@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import tempfile
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -91,6 +93,45 @@ def test_train_config_from_yaml_non_dict():
         with pytest.raises(ValueError):
             TrainConfig.from_yaml(f.name)
     Path(f.name).unlink()
+
+
+def test_yolo_train_only_flattens_supported_training_groups(tmp_path, monkeypatch):
+    config_path = tmp_path / "experiment.yaml"
+    config_path.write_text(
+        """
+model: test.pt
+dataset: data.yaml
+project: runs
+optimizer: AdamW
+augmentation:
+  hsv_h: 0.02
+export:
+  plots: false
+  format: onnx
+""",
+        encoding="utf-8",
+    )
+    config = TrainConfig.from_yaml(config_path)
+    train_kwargs = {}
+
+    class FakeYOLO:
+        def __init__(self, model):
+            assert model == "test.pt"
+
+        def train(self, **kwargs):
+            train_kwargs.update(kwargs)
+            return SimpleNamespace()
+
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=FakeYOLO))
+    monkeypatch.setattr("src.pipeline.strategies.serialize_config", lambda *args: None)
+    monkeypatch.setattr("src.pipeline.strategies.serialize_result", lambda *args: None)
+
+    YOLOStrategy().train(config)
+
+    assert train_kwargs["optimizer"] == "AdamW"
+    assert train_kwargs["hsv_h"] == 0.02
+    assert "plots" not in train_kwargs
+    assert "format" not in train_kwargs
 
 
 # ── TrainResult tests ────────────────────────────────────────────────

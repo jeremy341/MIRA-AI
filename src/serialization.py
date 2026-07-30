@@ -65,6 +65,7 @@ def _atomic_write(path: Path, data: str) -> None:
             os.replace(tmp_path, path)
         except OSError:
             import shutil
+
             shutil.copy2(tmp_path, path)
             os.unlink(tmp_path)
     except Exception:

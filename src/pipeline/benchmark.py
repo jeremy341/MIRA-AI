@@ -210,6 +210,8 @@ def _compute_ap_for_class(
         for j, gt in enumerate(all_gts_for_class):
             if j in gt_used:
                 continue
+            if gt["img_idx"] != det["img_idx"]:
+                continue
             iou = compute_iou(det["bbox_pixel"], gt["bbox"])
             if iou >= best_iou:
                 best_iou = iou
@@ -259,7 +261,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
                     class_preds.append({**d, "img_idx": img_idx})
             for gt in img_gts:
                 if gt["class_id"] == cid:
-                    class_gts.append(gt)
+                    class_gts.append({**gt, "img_idx": img_idx})
         ap = _compute_ap_for_class(class_preds, class_gts, iou_thresh)
         if not np.isnan(ap):
             per_class_aps.append(ap)
@@ -345,8 +347,8 @@ class ModelBenchmark:
                     )
                     gt_used = [False] * len(gt_objects)
 
-                    tp_count = defaultdict(int)
-                    fp_count = defaultdict(int)
+                    tp_count: defaultdict[str, int] = defaultdict(int)
+                    fp_count: defaultdict[str, int] = defaultdict(int)
 
                     for pi in sorted_pred_indices:
                         pred = img_preds[pi]
@@ -369,7 +371,7 @@ class ModelBenchmark:
                         else:
                             fp_count[pred_cls] += 1
 
-                    fn_count = defaultdict(int)
+                    fn_count: defaultdict[str, int] = defaultdict(int)
                     for gi, used in enumerate(gt_used):
                         if not used:
                             cid = gt_objects[gi]["class_id"]
@@ -386,7 +388,15 @@ class ModelBenchmark:
                     all_preds.append(img_preds)
                     all_gts.append(gt_objects)
 
-                except (RuntimeError, ValueError, OSError, FileNotFoundError, ImportError, AttributeError, KeyError) as exc:
+                except (
+                    RuntimeError,
+                    ValueError,
+                    OSError,
+                    FileNotFoundError,
+                    ImportError,
+                    AttributeError,
+                    KeyError,
+                ) as exc:
                     errors.append(f"{img_path.name}: {exc}")
                     all_preds.append([])
                     all_gts.append(gt_objects)

@@ -9,7 +9,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
@@ -28,27 +27,38 @@ RAW.mkdir(parents=True, exist_ok=True)
 
 # ── Class mappings ───────────────────────────────────────────────────────────
 
-SORTWASTE_MAP  = {0:3, 1:3, 2:3, 3:3, 4:3, 5:2, 6:1, 7:3}   # 8→5
+SORTWASTE_MAP = {0: 3, 1: 3, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 3}  # 8→5
 
-KEREMBERKE_NAME_MAP = {                                        # category_name → MIRA
-    "biodegradable":4, "cardboard":2, "glass":0,
-    "metal":1, "paper":2, "plastic":3,
+KEREMBERKE_NAME_MAP = {  # category_name → MIRA
+    "biodegradable": 4,
+    "cardboard": 2,
+    "glass": 0,
+    "metal": 1,
+    "paper": 2,
+    "plastic": 3,
 }
 
 DMEDHI_NAME_MAP = {
-    "Cardboard":2, "Garbage":4, "Glass":0,
-    "Metal":1, "Paper":2, "Plastic":3, "Trash":4,
+    "Cardboard": 2,
+    "Garbage": 4,
+    "Glass": 0,
+    "Metal": 1,
+    "Paper": 2,
+    "Plastic": 3,
+    "Trash": 4,
 }
 
 # Import TACO mapping from existing class_mappings module
 sys.path.insert(0, str(ROOT / "scripts"))
 from class_mappings import TACO_REMAP as _TACO_REMAP
+
 TACO_REMAP = _TACO_REMAP
 
 ROBOFLOW_MAP = {}
 _rbf_path = ROOT / "datasets" / "registry" / "roboflow.yaml"
 if _rbf_path.exists():
     import yaml as _yaml
+
     _rbf_cfg = _yaml.safe_load(_rbf_path.read_text())
     _raw_map = _rbf_cfg.get("class_mapping", {})
     ROBOFLOW_MAP = {int(k): int(v) for k, v in _raw_map.items()}
@@ -57,20 +67,25 @@ IMG_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"}
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def banner(msg: str):
-    print(f"\n{'='*50}\n  {msg}\n{'='*50}")
+    print(f"\n{'=' * 50}\n  {msg}\n{'=' * 50}")
+
 
 def ok(msg: str):
     print(f"  [OK] {msg}")
 
+
 def warn(msg: str):
     print(f"  [WARN] {msg}")
 
+
 def download(url: str, dest: Path) -> bool:
     import requests
+
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() and dest.stat().st_size > 1000:
-        ok(f"Already downloaded: {dest.name} ({dest.stat().st_size>>20} MB)")
+        ok(f"Already downloaded: {dest.name} ({dest.stat().st_size >> 20} MB)")
         return True
     print(f"  Downloading {url} -> {dest.name} ...")
     try:
@@ -79,18 +94,19 @@ def download(url: str, dest: Path) -> bool:
         total = int(resp.headers.get("content-length", 0))
         downloaded = 0
         with open(dest, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=1024*1024):
+            for chunk in resp.iter_content(chunk_size=1024 * 1024):
                 f.write(chunk)
                 downloaded += len(chunk)
                 if total:
                     pct = downloaded / total * 100
-                    print(f"\r  {pct:.0f}% ({downloaded>>20}/{total>>20} MB)", end="")
+                    print(f"\r  {pct:.0f}% ({downloaded >> 20}/{total >> 20} MB)", end="")
         print()
-        ok(f"Downloaded {dest.name} ({dest.stat().st_size>>20} MB)")
+        ok(f"Downloaded {dest.name} ({dest.stat().st_size >> 20} MB)")
         return True
     except Exception as e:
         warn(f"Download failed: {e}")
         return False
+
 
 def unzip(src: Path, dst: Path) -> bool:
     if not src.exists():
@@ -107,15 +123,19 @@ def unzip(src: Path, dst: Path) -> bool:
         warn(f"Extraction failed: {e}")
         return False
 
+
 def count_images(d: Path) -> int:
     if not d.exists():
         return 0
     return sum(1 for _ in d.rglob("*") if _.suffix.lower() in IMG_EXTS)
 
+
 # ── YOLO label remapping ─────────────────────────────────────────────────────
 
-def remap_yolo_dir(src_img: Path, src_lbl: Path, dst_img: Path, dst_lbl: Path,
-                    mapping: dict[int, int] | None = None) -> int:
+
+def remap_yolo_dir(
+    src_img: Path, src_lbl: Path, dst_img: Path, dst_lbl: Path, mapping: dict[int, int] | None = None
+) -> int:
     """Copy images + remapped YOLO labels. Returns count of copied images."""
     dst_img.mkdir(parents=True, exist_ok=True)
     dst_lbl.mkdir(parents=True, exist_ok=True)
@@ -150,11 +170,18 @@ def remap_yolo_dir(src_img: Path, src_lbl: Path, dst_img: Path, dst_lbl: Path,
         added += 1
     return added
 
+
 # ── COCO → YOLO conversion ───────────────────────────────────────────────────
 
-def coco_to_yolo(coco_json: Path, img_dir: Path, dst_img: Path, dst_lbl: Path,
-                  name_map: dict[str, int] | None = None,
-                  id_map: dict[int, int] | None = None) -> int:
+
+def coco_to_yolo(
+    coco_json: Path,
+    img_dir: Path,
+    dst_img: Path,
+    dst_lbl: Path,
+    name_map: dict[str, int] | None = None,
+    id_map: dict[int, int] | None = None,
+) -> int:
     """Convert COCO dataset to YOLO format, optionally remapping classes."""
     try:
         from pycocotools.coco import COCO
@@ -202,9 +229,9 @@ def coco_to_yolo(coco_json: Path, img_dir: Path, dst_img: Path, dst_lbl: Path,
             mc = cat_map[cid]
             x, y, w, h = ann["bbox"]
             labels.append(
-                f"{mc} {(x + w/2)/info['width']:.6f} "
-                f"{(y + h/2)/info['height']:.6f} "
-                f"{w/info['width']:.6f} {h/info['height']:.6f}"
+                f"{mc} {(x + w / 2) / info['width']:.6f} "
+                f"{(y + h / 2) / info['height']:.6f} "
+                f"{w / info['width']:.6f} {h / info['height']:.6f}"
             )
         if not labels:
             continue
@@ -215,10 +242,11 @@ def coco_to_yolo(coco_json: Path, img_dir: Path, dst_img: Path, dst_lbl: Path,
 
     return count
 
+
 # ── HuggingFace Parquet → YOLO ───────────────────────────────────────────────
 
-def parquet_to_yolo(dataset_id: str, dst_img: Path, dst_lbl: Path,
-                     name_map: dict[str, int]) -> int:
+
+def parquet_to_yolo(dataset_id: str, dst_img: Path, dst_lbl: Path, name_map: dict[str, int]) -> int:
     """Download HuggingFace Parquet dataset and convert to YOLO."""
     try:
         from datasets import load_dataset
@@ -282,10 +310,7 @@ def parquet_to_yolo(dataset_id: str, dst_img: Path, dst_lbl: Path,
             if cat_name is None or cat_name not in name_map:
                 continue
             mc = name_map[cat_name]
-            labels.append(
-                f"{mc} {(x + w/2)/width:.6f} {(y + h/2)/height:.6f} "
-                f"{w/width:.6f} {h/height:.6f}"
-            )
+            labels.append(f"{mc} {(x + w / 2) / width:.6f} {(y + h / 2) / height:.6f} {w / width:.6f} {h / height:.6f}")
         if not labels:
             continue
         (dst_lbl / f"img_{count:06d}.txt").write_text("\n".join(labels))
@@ -294,7 +319,9 @@ def parquet_to_yolo(dataset_id: str, dst_img: Path, dst_lbl: Path,
     print(f"  {dataset_id}: {count} images converted")
     return count
 
+
 # ── Dataset processors ───────────────────────────────────────────────────────
+
 
 def process_sortwaste() -> int:
     banner("SortWaste (5,261 images, top-down camera)")
@@ -311,10 +338,7 @@ def process_sortwaste() -> int:
         sw_img = img_base / split / "images"
         sw_lbl = yolo_base / split / "labels"
         if sw_lbl.exists() and sw_img.exists():
-            n = remap_yolo_dir(sw_img, sw_lbl,
-                               MERGED / "images" / "all",
-                               MERGED / "labels" / "all",
-                               SORTWASTE_MAP)
+            n = remap_yolo_dir(sw_img, sw_lbl, MERGED / "images" / "all", MERGED / "labels" / "all", SORTWASTE_MAP)
             ok(f"SortWaste {split}: {n} images")
             total += n
         else:
@@ -324,14 +348,14 @@ def process_sortwaste() -> int:
     sw_test_img = yolo_base / "test" / "images"
     sw_test_lbl = yolo_base / "test" / "labels"
     if sw_test_lbl.exists() and sw_test_img.exists():
-        n = remap_yolo_dir(sw_test_img, sw_test_lbl,
-                           MERGED / "images" / "all",
-                           MERGED / "labels" / "all",
-                           SORTWASTE_MAP)
+        n = remap_yolo_dir(
+            sw_test_img, sw_test_lbl, MERGED / "images" / "all", MERGED / "labels" / "all", SORTWASTE_MAP
+        )
         ok(f"SortWaste test: {n} images")
         total += n
 
     return total
+
 
 def process_keremberke() -> int:
     banner("keremberke/garbage-object-detection (10,464 images, COCO)")
@@ -351,13 +375,13 @@ def process_keremberke() -> int:
         if coco_json is None:
             warn(f"keremberke {split}: no COCO JSON found")
             continue
-        n = coco_to_yolo(coco_json, split_dir,
-                          MERGED / "images" / "all",
-                          MERGED / "labels" / "all",
-                          name_map=KEREMBERKE_NAME_MAP)
+        n = coco_to_yolo(
+            coco_json, split_dir, MERGED / "images" / "all", MERGED / "labels" / "all", name_map=KEREMBERKE_NAME_MAP
+        )
         ok(f"keremberke {split}: {n} images")
         total += n
     return total
+
 
 def process_dmedhi() -> int:
     banner("dmedhi/garbage-image-classification-detection (3,490 images, Parquet)")
@@ -410,10 +434,7 @@ def process_dmedhi() -> int:
                 if cat_name is None or cat_name not in DMEDHI_NAME_MAP:
                     continue
                 mc = DMEDHI_NAME_MAP[cat_name]
-                labels.append(
-                    f"{mc} {(x+bw/2)/w:.6f} {(y+bh/2)/h:.6f} "
-                    f"{bw/w:.6f} {bh/h:.6f}"
-                )
+                labels.append(f"{mc} {(x + bw / 2) / w:.6f} {(y + bh / 2) / h:.6f} {bw / w:.6f} {bh / h:.6f}")
             if not labels:
                 continue
             (MERGED / "labels" / "all" / f"{img_name}.txt").write_text("\n".join(labels))
@@ -421,6 +442,7 @@ def process_dmedhi() -> int:
 
     ok(f"dmedhi: {total} images")
     return total
+
 
 def process_taco() -> int:
     banner("TACO (1,500 images, COCO, local)")
@@ -439,12 +461,10 @@ def process_taco() -> int:
     # Build TACO name→id map from the string→int mapping
     taco_names = {k: v for k, v in TACO_REMAP.items() if isinstance(k, str)}
 
-    n = coco_to_yolo(coco_json, img_dir,
-                      MERGED / "images" / "all",
-                      MERGED / "labels" / "all",
-                      name_map=taco_names)
+    n = coco_to_yolo(coco_json, img_dir, MERGED / "images" / "all", MERGED / "labels" / "all", name_map=taco_names)
     ok(f"TACO: {n} images")
     return n
+
 
 def process_roboflow() -> int:
     banner("Roboflow (2,783 images, YOLO, local)")
@@ -456,26 +476,24 @@ def process_roboflow() -> int:
         img_d = rbf_root / split / "images"
         lbl_d = rbf_root / split / "labels"
         if img_d.exists():
-            n = remap_yolo_dir(img_d, lbl_d,
-                               MERGED / "images" / "all",
-                               MERGED / "labels" / "all",
-                               ROBOFLOW_MAP)
+            n = remap_yolo_dir(img_d, lbl_d, MERGED / "images" / "all", MERGED / "labels" / "all", ROBOFLOW_MAP)
             ok(f"Roboflow {split}: {n} images")
             total += n
     return total
 
+
 # ── Merge & split ────────────────────────────────────────────────────────────
+
 
 def create_train_val_split(val_ratio: float = 0.15, seed: int = 42):
     banner("Creating train/val split")
 
     import random
+
     all_img = MERGED / "images" / "all"
     all_lbl = MERGED / "labels" / "all"
 
-    stems = sorted([
-        f.stem for f in all_img.iterdir() if f.suffix.lower() in IMG_EXTS
-    ])
+    stems = sorted([f.stem for f in all_img.iterdir() if f.suffix.lower() in IMG_EXTS])
     if not stems:
         warn("No images to split!")
         return
@@ -518,6 +536,7 @@ def create_train_val_split(val_ratio: float = 0.15, seed: int = 42):
 
     ok(f"Train: {len(train_stems)} images, Val: {len(val_stems)} images")
 
+
 def print_stats():
     banner("Dataset statistics")
     class_counts = {i: 0 for i in range(NUM_CLASSES)}
@@ -542,6 +561,7 @@ def print_stats():
         bar = "#" * int(pct / 2)
         print(f"  {MIRA_CLASSES[cid]:8s}: {class_counts[cid]:5d} ({pct:5.1f}%) {bar}")
 
+
 def write_yaml():
     (MERGED / "images" / "train").mkdir(parents=True, exist_ok=True)
     (MERGED / "images" / "val").mkdir(parents=True, exist_ok=True)
@@ -553,13 +573,14 @@ names: {MIRA_CLASSES}
     (MERGED / "dataset.yaml").write_text(yaml_content)
     ok(f"Written {MERGED / 'dataset.yaml'}")
 
+
 # ── Main ─────────────────────────────────────────────────────────────────────
+
 
 def main():
     parser = argparse.ArgumentParser(description="Download and merge MIRA datasets")
-    parser.add_argument("--skip-download", action="store_true",
-                        help="Skip downloading, only merge existing raw data")
-    args = parser.parse_args()
+    parser.add_argument("--skip-download", action="store_true", help="Skip downloading, only merge existing raw data")
+    parser.parse_args()
 
     # Clean old merge output
     old_all = MERGED / "images" / "all"
@@ -594,6 +615,7 @@ def main():
     print(f"\n  Dataset ready at: {MERGED}")
     print(f"  Config: {MERGED / 'dataset.yaml'}")
     print(f"  Next: run training on molab with --data {MERGED / 'dataset.yaml'}")
+
 
 if __name__ == "__main__":
     main()

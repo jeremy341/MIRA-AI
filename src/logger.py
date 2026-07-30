@@ -56,6 +56,7 @@ def _make_handler(stream=None) -> logging.Handler:
 def _add_file_handler(logger: logging.Logger, path: str) -> None:
     """Add a rotating file handler to the logger."""
     from pathlib import Path
+
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler(path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
     formatter: logging.Formatter = _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()

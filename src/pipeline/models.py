@@ -10,10 +10,12 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import cv2
-import numpy as np
+
+if TYPE_CHECKING:
+    import torch
 
 from ..config import (
     CLASS_NAMES,
@@ -33,7 +35,7 @@ log = get_logger(__name__)
 def letterbox_preprocess(
     image_path: str | Path,
     imgsz: int,
-) -> tuple[np.ndarray, int, int, int, int, float, int, int]:
+) -> tuple[torch.Tensor, int, int, int, int, float, int, int]:
     """Load and preprocess an image for YOLO inference.
 
     Returns (tensor, top, bottom, left, right, scale, orig_w, orig_h).
@@ -321,9 +323,7 @@ class YOLOTFLiteAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = _nms(
-            raw_preds, conf_thres=tflite_conf, iou_thres=iou, max_det=300, multi_label=True
-        )[0]
+        preds = _nms(raw_preds, conf_thres=tflite_conf, iou_thres=iou, max_det=300, multi_label=True)[0]
 
         detections: list[Detection] = []
         if len(preds) > 0:
@@ -649,6 +649,7 @@ class ModelRegistry:
         info = self.get_model(name)
         model_type = info["model_type"]
         path = info["path"]
+        adapter: DetectionModel
 
         if info.get("is_third_party"):
             adapter = ThirdPartyAdapter(

@@ -59,7 +59,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
             result.is_valid = False
             continue
 
-        images = {}
+        images: dict[str, Path] = {}
         for p in img_dir.glob("*"):
             if p.suffix.lower() in (".jpg", ".jpeg", ".png"):
                 stem = p.stem

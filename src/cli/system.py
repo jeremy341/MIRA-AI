@@ -1,4 +1,4 @@
-﻿"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
+"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
 
 import sys
 
@@ -243,4 +243,3 @@ def cmd_benchmark(args):
     print(ModelBenchmark.comparison_table(results))
     if args.output:
         ModelBenchmark.export(results, args.output)
-

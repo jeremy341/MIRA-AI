@@ -1,4 +1,4 @@
-﻿"""Training strategy registry for extensible training pipelines.
+"""Training strategy registry for extensible training pipelines.
 
 Allows registering new training strategies (YOLO, classifier, etc.)
 without modifying the TrainingPipeline class.
@@ -149,13 +149,6 @@ class YOLOStrategy(TrainingStrategy):
             "deterministic": False,
         }
         if config.extra:
-            for key in list(config.extra.keys()):
-                val = config.extra[key]
-                if isinstance(val, dict):
-                    for subkey, subval in val.items():
-                        if subkey not in kwargs:
-                            kwargs[subkey] = subval
-
             training_keys = {
                 "data",
                 "epochs",
@@ -216,6 +209,11 @@ class YOLOStrategy(TrainingStrategy):
             }
             filtered = {k: v for k, v in config.extra.items() if k in training_keys}
             kwargs.update(filtered)
+
+            for group in ("augmentation",):
+                values = config.extra.get(group)
+                if isinstance(values, dict):
+                    kwargs.update({k: v for k, v in values.items() if k in training_keys})
 
         t0 = time.time()
         results = model.train(**kwargs)

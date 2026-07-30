@@ -86,7 +86,7 @@ class InferenceEngine:
 
         # Tracking state
         self.prev_time = time.perf_counter()
-        self.latency_history = deque(maxlen=30)
+        self.latency_history: deque[float] = deque(maxlen=30)
         self.skip_frame = False
         self._current_fps = 0.0
 

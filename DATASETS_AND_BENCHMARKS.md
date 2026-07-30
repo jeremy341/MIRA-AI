@@ -1,69 +1,64 @@
-# MIRA-AI: Datasets & Benchmarks
+# MIRA-AI: Datasets and Benchmarks
 
-## Training Datasets
+This document separates current repository evidence from future work. See
+[`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md) for claim-level evidence.
 
-### Primary training sources
+## Current Training Dataset
 
-| # | Dataset | Images | Classes | Size | License | URL | Notes |
-|---|---------|--------|---------|------|---------|-----|-------|
-| 1 | **SortWaste** (WACV 2026) | 5,261 | 8→5 remap | ~12.4 GB | Research | `https://sortwaste.di.ubi.pt/datasets/dataset.zip` | Top-down camera, matches deployment geometry |
-| 2 | **dmedhi/garbage-image-classification-detection** | 3,491 | 7→5 remap | ~300 MB | CC-BY-4.0 | `https://huggingface.co/datasets/dmedhi/garbage-image-classification-detection` | Has explicit Trash/Garbage boxes; strong glass source |
+The current locally generated dataset is `merged_mira_balanced`, also archived
+locally as `merged_mira_balanced_no_sortwaste.zip`. It **excludes SortWaste**.
+Both artifacts are gitignored and are not available in a fresh clone.
 
-### Existing (local, already in repo)
+| Source | Train images/boxes | Val images/boxes | Test images/boxes | Total images/boxes |
+|---|---:|---:|---:|---:|
+| dmedhi | 2,156 / 2,762 | 0 / 0 | 316 / 496 | 2,472 / 3,258 |
+| Roboflow | 969 / 2,722 | 0 / 0 | 609 / 1,404 | 1,578 / 4,126 |
+| TACO | 554 / 2,035 | 0 / 0 | 450 / 1,569 | 1,004 / 3,604 |
+| TrashNet | 1,429 / 1,429 | 415 / 415 | 0 / 0 | 1,844 / 1,844 |
+| **Total** | **5,108 / 8,948** | **415 / 415** | **1,375 / 3,469** | **6,898 / 12,832** |
 
-| # | Dataset | Images | Classes | Size | License | Notes |
-|---|---------|--------|---------|------|---------|-------|
-| 3 | **TACO** | 1,500 | 60→5 remap | ~2.6 GB | MIT | Outdoor litter — domain randomization |
-| 4 | **Roboflow Raw** | 2,783 | 64→5 remap | ~2.6 GB | CC-BY | Diverse scraped sources — domain randomization |
-| 5 | **TrashNet SAM-labeled** | 2,527 | Already 5-class | Local | Existing project data | Clean tabletop examples; held-out val used as tabletop test |
+Evidence: `datasets/merged_mira_balanced/manifest.jsonl`. The builder and split
+policy are documented in `scripts/build_balanced_dataset.py`. TrashNet supplies
+the validation set; non-TrashNet held-out records supply the test set.
 
-SortWaste is capped during training to prevent its plastic-heavy annotations from dominating. The final training target is approximately balanced by annotation count; validation and test retain their natural source distributions.
+### Why SortWaste Is Excluded
 
-**Excluded:**
-- mira_warp (user preference)
-- TrashNet (classification only, no bounding boxes)
-- keremberke/garbage-object-detection (biodegradable→trash creates 45k trash boxes and overwhelms the primary mix)
-- alexNova/MRS-Trash-Detection (unknown class names, can't verify trash content)
-- ZeroWaste (inaccessible download link)
-- Recycle Trash NAVER (120 GB + access-gated)
-- WaRP (no public download)
+SortWaste was investigated but is not part of this build. The builder records
+the reason as a severe plastic-class skew and a domain mismatch with the
+tabletop robot-arm use case. Historical SortWaste download-size and annotation
+claims are therefore not current MIRA dataset statistics.
 
-### Target Classes (MIRA)
+### Classes
 
-| ID | Class | Priority |
-|----|-------|----------|
-| 0 | glass | Normal |
-| 1 | metal | Normal |
-| 2 | paper | Normal |
-| 3 | plastic | Normal |
-| 4 | trash | **Weakest (7.1% mAP50) — main improvement target** |
+| ID | Class |
+|---:|---|
+| 0 | glass |
+| 1 | metal |
+| 2 | paper |
+| 3 | plastic |
+| 4 | trash |
 
----
+## Measured Model Results
 
-## Benchmark Models
+| Model/artifact | Dataset/protocol | Result | Status |
+|---|---|---|---|
+| EXP-014 FP32 | Historical 6,802-image TACO + TrashNet + Roboflow validation set | 60.7% mAP50; 50.6% mAP50-95 | Measured |
+| EXP-014 INT8 | Export of EXP-014 | 2.90 MiB | Measured size; INT8 detection mAP not measured |
+| EXP-017 FP32 | Historical 9,774-image four-source dataset | 59.3% mAP50; 46.5% mAP50-95 | Measured |
+| Field benchmark | 805-image `mira_v2` validation set | Image-level class-presence F1 | Preliminary; threshold-inconsistent and not detection mAP |
 
-Pre-trained YOLO11n/YOLOv8n models for comparison against our distilled model.
+Evidence: `results/experiments_log.md` and
+`results/field_benchmark_results.md`. EXP-014/017 results predate the current
+6,898-image no-SortWaste dataset and must not be represented as evaluations on
+it.
 
-| # | Model | Architecture | mAP50 | License | Size | Has Weights | Use |
-|---|-------|-------------|-------|---------|------|-------------|-----|
-| 1 | **Tikusu** | YOLO11n | **0.840** | MIT | 5.9 MB | ✅ | Best documented, 6-class recyclables |
-| 2 | **Alope/trash-detection-yolo11n** | YOLO11n | not reported | AGPL-3.0 | 5.43 MB | ✅ | 4-class, easy HF download |
-| 3 | **benl4212/trash-bot-models** | YOLO11n box+seg | not reported | AGPL-3.0 | unknown | ✅ | Has Edge-TPU .tflite for edge comparison |
+## Pending Benchmarks
 
-### Download Links
+- Evaluate an FP32 baseline on the current 6,898-image dataset.
+- Evaluate each INT8 export using the same held-out detection protocol as FP32.
+- Repeat the image-level field benchmark with one fixed threshold policy.
+- Measure latency and memory on the Raspberry Pi Zero 2W.
+- Verify dashboard camera/model/browser integration and robot-arm operation.
 
-- Tikusu: `https://github.com/Tikusu/yolo11n-recycle-waste-detection/raw/main/models/backbone-partial-freeze/best.pt`
-- Alope: `https://huggingface.co/Alope/trash-detection-yolo11n/resolve/main/best.pt`
-- benl4212: `https://github.com/benl4212/trash-bot-models`
-
-### Note on TrashMonkey
-
-TrashMonkey (YOLO11n, 0.805 val mAP50 / 0.498 RealWaste) is well documented but **no public weights**. Useful as a reference number only, not for direct benchmarking.
-
----
-
-## Reference
-
-- MIRA EXP-014 (current best): YOLO11n INT8, 60.7% mAP50, ~2.9 MB
-- Target: distilled YOLO26n INT8, 65-68% mAP50, ~2.5 MB
-- Deployment: RPi Zero 2W, 512 MB RAM, TFLite INT8
+Teacher/student training, knowledge distillation, and expected accuracy or
+model-size ranges are **projections**, not measured outcomes.

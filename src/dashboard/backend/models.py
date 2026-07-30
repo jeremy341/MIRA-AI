@@ -1,6 +1,7 @@
 """
 Data models for MIRA Control Center API
 """
+
 from datetime import datetime
 from typing import Any
 from pydantic import BaseModel, Field
@@ -17,6 +18,7 @@ class WasteClass(StrEnum):
 
 class Detection(BaseModel):
     """Single detection result"""
+
     class_name: WasteClass
     confidence: float = Field(ge=0.0, le=1.0)
     bbox: list[int]  # [x1, y1, x2, y2]
@@ -26,9 +28,10 @@ class Detection(BaseModel):
 
 class CameraConfig(BaseModel):
     """Camera configuration"""
+
     index: int = 0
     width: int = 640
-    height: int =   360
+    height: int = 360
     fps: int = 30
     autofocus: bool = False
     auto_exposure: bool = True
@@ -36,6 +39,7 @@ class CameraConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     """Model inference configuration"""
+
     name: str
     conf_threshold: float = 0.5
     reject_threshold: float = 0.55
@@ -46,6 +50,7 @@ class ModelConfig(BaseModel):
 
 class SystemMetrics(BaseModel):
     """System performance metrics"""
+
     timestamp: datetime = Field(default_factory=datetime.now)
     fps: float
     inference_latency_ms: float
@@ -59,6 +64,7 @@ class SystemMetrics(BaseModel):
 
 class Statistics(BaseModel):
     """Detection statistics"""
+
     period_start: datetime
     period_end: datetime
     total_detections: int
@@ -69,6 +75,7 @@ class Statistics(BaseModel):
 
 class ModelInfo(BaseModel):
     """Detection model information"""
+
     name: str
     label: str
     path: str
@@ -89,6 +96,7 @@ class SystemStatus(StrEnum):
 
 class StatusUpdate(BaseModel):
     """System status update"""
+
     status: SystemStatus
     message: str
     timestamp: datetime = Field(default_factory=datetime.now)

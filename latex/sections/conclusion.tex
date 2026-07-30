@@ -1,29 +1,11 @@
 \section{Fazit und Ausblick}
 
 \subsection{Fazit}
-Das Projekt \mira hat erfolgreich demonstriert, dass die Kombination aus Transfer Learning, gezielter Datensatz-Fusion und Post-Training-Quantisierung zu einem potenziell praxistauglichen, ressourceneffizienten KI-System für die automatische Wertstoffsortierung führt. Die drei zentralen Hypothesen H1--H3 sowie das Entwurfsziel E1 wurden durch die Ergebnisse im Wesentlichen bestätigt:
-\begin{itemize}
-    \item \textbf{H1:} Transfer Learning mit MobileNetV2 übertraf das Scratch-CNN um +26,42~pp (\SI{87.42}{\percent} vs.\ \SI{61.00}{\percent}).
-    \item \textbf{H2:} INT8-Quantisierung reduzierte die Modellgröße um den Faktor 9 auf \SI{2.61}{\mega\byte} bei vernachlässigbarem Genauigkeitsverlust ($-$0,07~pp) und 74,2\% Latenzsenkung.
-    \item \textbf{H3:} Der Übergang zur lokalisierten Objekterkennung (YOLO11n) ermöglicht die gleichzeitige Erkennung mehrerer Objekte im Kamerabild und erreicht eine mAP50 von 60,7\% auf dem vereinten Datensatz (TACO + TrashNet + Roboflow). Die Hypothese wird als teilweise validiert bewertet, da die Objekterkennung funktioniert, die Trash-Klasse jedoch mit 26,9\% mAP50 noch erheblichen Verbesserungsbedarf aufweist.
-    \item \textbf{E1 (Entwurfsziel):} Der EMA-Filter ($\alpha=0{,}15$) eliminiert erfolgreich Signalflackern ohne kritischen mechanischen Verzug (ca.\ \SI{250}{\milli\second}).
-\end{itemize}
+\mira demonstriert eine funktionsfähige Softwarepipeline zur Klassifikation und Mehrfachobjekterkennung von Recyclingobjekten. In Stage A erreichte MobileNetV2 mit Fine-Tuning \SI{87.42}{\percent} Validierungsgenauigkeit; wegen der kleineren Datengrundlage von EXP-001 ist der Abstand zum Scratch-CNN jedoch kein kontrollierter Architektureffekt. Das Keras-Quellmodell umfasst \SI{23.48}{\mebi\byte}, der FP32-TFLite-Export \SI{8.49}{\mebi\byte} und der INT8-TFLite-Export \SI{2.61}{\mebi\byte}, bei nahezu unveränderter protokollierter Validierungsgenauigkeit zwischen den beiden TFLite-Varianten. Eine belastbare Latenzaussage folgt daraus nicht. In Stage B erreichte EXP-014 auf seinem eigenen Validierungssplit \SI{60.7}{\percent} mAP50, zeigte aber insbesondere bei \textit{Trash} deutliche Schwächen.
 
-Der entscheidende Durchbruch gelang durch die Erkenntnis, dass Datenqualität und -vielfalt die Modellleistung stärker beeinflussen als reine Architektur-Optimierungen \cite{zha2023datacentric}. Der GIGO-Effekt beim Auto-Labeling (EXP-005) zwang zur Adaption professioneller Datensätze, was die Generalisierungsfähigkeit dramatisch verbesserte. Der 4-Wege-Datensatzvergleich (EXP-013 bis EXP-016) belegt, dass die Kombination aus TACO, TrashNet und Roboflow das beste generalisierbare Ergebnis liefert (\SI{60.7}{\percent} mAP50, \SI{85.8}{\percent} F1 im Praxistest).
+Die historischen Ergebnisse stützen die ursprünglichen Hypothesen damit nur teilweise und vorläufig. Der fehlerhafte Auto-Labeling-Versuch zeigt, wie stark Leakage und Datensatzgestaltung interne Metriken verfälschen können. Die aktuelle Forschungsfrage nach dem kontrolliert gemessenen Zielkonflikt von Detektionsgüte, Modellgröße und CPU-Latenz ist noch nicht abschließend beantwortet, weil Training und formatgleiche Auswertung auf dem neuen Datensatz ausstehen. Demonstriert sind Softwarefunktionen und protokollierte Modellwerte, nicht zuverlässige Materialbestimmung, Generalisierung in einem unabhängigen Feldtest oder automatische physische Sortierung.
 
 \subsection{Ausblick}
-Aus den Ergebnissen ergeben sich folgende nächste Schritte zur Fertigstellung des physischen Gesamtsystems:
+Als nächstes müssen die ausstehenden Trainingsläufe auf dem bereits erstellten balancierten Datensatz abgeschlossen und auf dem eingefrorenen Testset ausgewertet werden. Knowledge Distillation \cite{hinton2015distilling} ist dabei eine zu prüfende Kompressionsmethode, noch kein Projektergebnis.
 
-\begin{enumerate}
-    \item \textbf{Mechatronischer Aufbau:} Das System wird als 3-DOF-Roboterarm realisiert. Ein Raspberry Pi Zero 2W oder Raspberry Pi 4 führt die Bildverarbeitung aus und sendet die Objektkoordinaten via Serial-Protokoll an einen ESP32-S3-Mikrocontroller, der die Servomotoren (MG996R) präzise ansteuert. Ein Time-of-Flight-Lasersensor (VL53L0X) am Greifer misst die Z-Achse für den Greifvorgang.
-    
-    \item \textbf{Modellkompression:} Durch Knowledge Distillation \cite{hinton2015distilling} könnte ein kleineres Studenten-Netzwerk das Verhalten des YOLO11n-Modells imitieren und die Inferenzlatenz weiter reduzieren. Ergänzend sollte Pruning die Modellstruktur verschlanken.
-    
-    \item \textbf{Erweiterung der Klassifikation:} Das fünfklassige System sollte um Biomüll, Elektroschrott oder Textilien erweitert werden. Um das Klassenungleichgewicht bei \textit{Trash} zu lösen, ist eine Pipeline zur synthetischen Datengenerierung mittels Diffusionsmodellen vorgesehen.
-    
-    \item \textbf{Cloud-IoT-Erweiterung:} Das lokale Flask+SocketIO-Dashboard wird um eine MQTT-Schnittstelle zur Fernüberwachung mehrerer dezentraler Sortiereinheiten erweitert.
-    
-    \item \textbf{Online-Lernen:} Ein Feedback-Loop, der falsch klassifizierte Objekte in den Trainingsdatensatz zurückführt, soll die langfristige Robustheit des Systems erhöhen.
-\end{enumerate}
-
-Die Kosten für ein solches System könnten bei Serienproduktion auf unter \SI{100}{\euro} gesenkt werden. Insgesamt zeigt diese Arbeit, dass Deep Learning nicht nur in Cloud-Umgebungen, sondern auch auf extrem ressourcenbeschränkter Hardware praktikable Lösungen für reale Probleme liefern kann.
+Anschließend sind reproduzierbare Latenz-, Speicher- und Energiemessungen auf dem Raspberry Pi erforderlich. Erst danach soll die geprüfte Pipeline mit Kamera und Roboterarm gekoppelt und anhand von Greiferfolg, Fehlwurfquote und Durchsatz vermessen werden. Diese Schritte entscheiden, ob sich die bisher ausschließlich softwareseitigen Befunde auf das geplante Gesamtsystem übertragen lassen.

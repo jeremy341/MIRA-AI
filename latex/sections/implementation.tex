@@ -1,44 +1,25 @@
 \section{Implementierung}
 
-Die funktionale \mira-Softwarearchitektur wurde vollständig modularisiert. Die wichtigsten Steuerungsskripte sind in Python geschrieben, während die mechatronische Aktorik auf einer C++-Firmware basieren soll, die sich noch in Entwicklung befindet.
+Implementiert ist ein Software-Prototyp für die reproduzierbare Datenaufbereitung, Detektion und Ergebnisdarstellung. Die physische Sortieranlage ist davon klar getrennt.
 
-\subsection{Systemarchitektur}
-Das Gesamtsystem verbindet die High-Speed-Bildverarbeitung und -Verfolgung auf dem Host-Rechner mit der präzisen mechatronischen Steuerung des Roboterarms. Abbildung~\ref{fig:sys-arch} visualisiert den Signalfluss und die geschlossene Handshake-Schleife der MIRA-Sortierpipeline.
+\subsection{Konfiguration und Kommandozeile}
+Projektweite Klassen, Pfade sowie Standardwerte für Training und Inferenz liegen in \texttt{mira.yaml}. Eine modulare Kommandozeile stellt unter anderem Befehle zum Zusammenführen und Prüfen von Datensätzen, zum Trainieren, Exportieren und Evaluieren von Modellen sowie für Live-Inferenz und Dashboard bereit. Experimentparameter können in YAML-Dateien festgehalten und dadurch erneut ausgeführt werden.
 
-\begin{figure}[H]
-    \centering
-    \begin{tikzpicture}[
-        box/.style={rectangle, draw=black, fill=blue!10, rounded corners, minimum width=6cm, minimum height=0.8cm, align=center, font=\footnotesize},
-        arrow/.style={thick, ->, >=stealth}
-    ]
-        \node (input) [box] {Kamerabild (Webcam Feed)};
-        \node (prep) [box, below of=input, node distance=1.3cm] {Vorverarbeitung (BGR $\rightarrow$ RGB, zentrierter quadratischer Crop)};
-        \node (model) [box, below of=prep, node distance=1.3cm] {YOLO11n-INT8 Inferenz (Begrenzungsrahmen \& Konfidenz)};
-        \node (tracker) [box, below of=model, node distance=1.3cm] {ByteTrack-Algorithmus (Objekt-ID-Zuweisung \& Interpolation)};
-        \node (filter) [box, below of=tracker, node distance=1.3cm] {EMA-Filter ($\alpha=0,15$ Glättung der Konfidenzen)};
-        \node (serial) [box, below of=filter, node distance=1.3cm] {USB Serial-Sender (Queue-basiertes Senden, 115200 Baud)};
-        \node (arm) [box, below of=serial, node distance=1.3cm, fill=green!10] {ESP32-S3-Aktorik (Inverse Kinematik \& Servo-Sweeps)};
-        
-        \draw [arrow] (input) -- (prep);
-        \draw [arrow] (prep) -- (model);
-        \draw [arrow] (model) -- (tracker);
-        \draw [arrow] (tracker) -- (filter);
-        \draw [arrow] (filter) -- (serial);
-        \draw [arrow] (serial) -- (arm);
-        \draw [arrow] (arm.east) -- ++(1,0) |- node[right, pos=0.25, align=left] {done Handshake\\(Inferenz-Freigabe)} (input.east);
-    \end{tikzpicture}
-    \caption{Systemarchitektur und Datenflusspipeline des MIRA-Sortiersystems.}
-    \label{fig:sys-arch}
-\end{figure}
+\subsection{Datensatzaufbereitung}
+Der generische Merger der Kommandozeile liest Quellen aus einem YAML-basierten Register ein. Er kann vorhandene YOLO-Daten übernehmen, Klassen-IDs abbilden und COCO-Annotationen in das YOLO-Format umwandeln. Beim Zusammenführen entstehen Trainings- und Validierungsordner sowie eine passende Dataset-YAML; ein Dry-Run und eine Strukturprüfung erlauben Kontrollen vor dem Training.
 
-\subsection{Die fehlerbereinigte Live-Inferenz}
-Während der Entwicklung der Live-Inferenz zeigte sich ein systematischer Fehler: Die mittels OpenCV erfassten Kamerabilder erreichten im Live-Betrieb eine deutlich niedrigere Klassifikationsgenauigkeit als im vortrainierten Modell unter Laborbedingungen. Die systematische Fehleranalyse -- beginnend mit der Überprüfung der Vorverarbeitungspipeline -- führte zur Entdeckung einer stillen Inkompatibilität zwischen OpenCV- und TensorFlow-Farbraumkonventionen. OpenCVs \texttt{imread()}-Funktion dekodiert Bilddaten standardmäßig im Blue-Green-Red-Farbraum (BGR) -- eine historisch bedingte Konvention aus frühen Kamera-APIs. TensorFlow beziehungsweise Keras hingegen erwarten Eingabedaten im Red-Green-Blue-Format (RGB). Diese Diskrepanz führte dazu, dass der Farbkanal, den das Modell als Rot interpretierte, tatsächlich die Blauwerte des Quellbildes enthielt, was die Erkennungsleistung drastisch beeinträchtigte. Die eigenständige Diagnose und Korrektur bestand in einer einzigen Zeile: \texttt{cv2.cvtColor(frame, cv2.COLOR\_BGR2RGB)}. Die anschließende Optimierung der asynchronen OpenCV-Inferenzschleifen (Threading, Frame-Skipping) wurde unterstützt durch den Einsatz eines KI-Sprachmodells zur Code-Review. Nach der Farbumstellung entsprach die Live-Genauigkeit wieder den Erwartungen aus der Modellvalidierung.
+Der tatsächlich verwendete Bestand \texttt{merged\_mira\_balanced} wurde dagegen mit dem separaten Builder \texttt{scripts/build\_balanced\_dataset.py} erzeugt. Dieser lädt die vier festgelegten Quellen, wendet deren projektspezifische Klassenabbildungen und Splitregeln an, wählt die Trainingsbilder mit Seed~42 annähernd nach Boxanzahl aus, entfernt dateiidentische Bilder anhand von SHA-256-Prüfsummen und schreibt zusätzlich Testsplit und Herkunftsmanifest. Der Registry-Merger und dieser Builder sind somit zwei unterschiedliche Aufbereitungswege.
 
-\subsection{Objektverfolgung mit ByteTrack}
-Zur Stabilisierung kurzzeitig fehlender Detektionen wurde ByteTrack integriert; es verknüpft Detektionen über mehrere Frames und verbessert die Objektkohärenz ohne zusätzliche Modellinferenz.
+\subsection{YOLO-Inferenz und Tracking}
+Die Live-Inferenz lädt Ultralytics-kompatible Detektoren und verarbeitet Bilder einer USB-Kamera. Ausgegeben werden Begrenzungsrahmen, Klassen und Konfidenzen. Konfidenz-, IoU- und Bildgrößenschwellen sind konfigurierbar; unsichere Treffer können in der Visualisierung gesondert markiert werden.
 
-\subsection{Das MIRA-Control-Center (Dashboard)}
-Zur interaktiven Visualisierung und Live-Inventarisierung wurde ein Web-Dashboard mittels \textit{Flask-Dashboard} mit SocketIO implementiert. Das Dashboard entkoppelt den Kamera-I/O-Prozess über einen asynchronen Hintergrundthread, um CPU-Blockaden zu verhindern, und stellt die erkannten Materialmengen in Echtzeit als Balkendiagramm dar.
+ByteTrack ist für PyTorch-Modelle (\texttt{.pt}) optional eingebunden und vergibt persistente Objekt-IDs über aufeinanderfolgende Frames. Für TFLite-Modelle ist Tracking im aktuellen Inferenzpfad deaktiviert. Damit ist ByteTrack Bestandteil des PT-Prototyps, aber kein nachgewiesener Teil einer Edge-Pipeline.
 
-\subsection{Mechatronische Ansteuerung und Handshake-Protokoll}
-Um die hohe Verarbeitungsgeschwindigkeit der KI (21,7\,Frames per Second (FPS)) mit der mechanischen Trägheit des Roboterarms (ca. 1.5s für einen Sortiersweep) zu synchronisieren, wurde ein serielles Handshake-Protokoll via USB entworfen. Der ESP32-S3 empfängt Sortierbefehle über die serielle Schnittstelle, steuert die Pulsweitenmodulation (PWM) für die Servomotoren an und sendet nach Abschluss eine Fertigmeldung, woraufhin die nächste Inferenz freigegeben wird. Die C++-Firmware für die physische Aktorik befindet sich in Entwicklung.
+\subsection{Dashboard-Prototyp}
+Das Control Center ist als FastAPI-Anwendung mit REST- und WebSocket-Schnittstellen umgesetzt. Es kann Kamerastatus, Modellwahl, Videoframes, Detektionen und Laufzeitmetriken an eine Browseroberfläche übertragen. Der aktuelle Stand ist ein Dashboard-Prototyp zur Beobachtung und Konfiguration der Inferenz, keine Steuerung einer Sortiermaschine.
+
+\subsection{Modellexport}
+Trainierte YOLO-Modelle können über die Pipeline nach FP32-TFLite, INT8-TFLite oder ONNX exportiert werden. Für den INT8-Export wird ein Kalibrierungsdatensatz angegeben. Die erzeugten Formate werden getrennt bewertet; aus einem erfolgreichen Export folgt noch keine Aussage zur Geschwindigkeit auf der Zielhardware.
+
+\subsection{Nicht implementierte Systemteile}
+Eine Ausführung auf Raspberry Pi, die Robotermechanik und eine serielle Verbindung zur Aktorik sind \textbf{nicht implementiert beziehungsweise ausstehend}. Entsprechend existieren derzeit weder ein geschlossener Regelkreis noch ein getestetes Handshake-Protokoll zwischen Erkennung und Roboter.

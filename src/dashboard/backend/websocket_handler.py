@@ -1,6 +1,7 @@
-﻿"""
+"""
 WebSocket handlers for real-time video streaming
 """
+
 import asyncio
 import base64
 import threading
@@ -77,11 +78,7 @@ class WebSocketHandler:
         """Handle video streaming WebSocket connection"""
         self.connections.add(websocket)
         try:
-            await websocket.send_json({
-                "type": "status",
-                "status": "connected",
-                "message": "Video stream connected"
-            })
+            await websocket.send_json({"type": "status", "status": "connected", "message": "Video stream connected"})
 
             with self._lock:
                 initial_frame = self.frame_buffer.copy() if self.frame_buffer is not None else None
@@ -109,26 +106,21 @@ class WebSocketHandler:
         # Convert detections to serializable format
         serialized_detections = []
         for det in detections:
-            serialized_detections.append({
-                "class": det.class_name.value,
-                "confidence": det.confidence,
-                "bbox": det.bbox,
-                "track_id": det.track_id,
-                "timestamp": det.timestamp.isoformat()
-            })
+            serialized_detections.append(
+                {
+                    "class": det.class_name.value,
+                    "confidence": det.confidence,
+                    "bbox": det.bbox,
+                    "track_id": det.track_id,
+                    "timestamp": det.timestamp.isoformat(),
+                }
+            )
 
         # Send to all connected clients
-        message = {
-            "type": "detections",
-            "detections": serialized_detections,
-            "count": len(detections)
-        }
+        message = {"type": "detections", "detections": serialized_detections, "count": len(detections)}
 
         if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self._broadcast_queue.put(message),
-                self._loop
-            )
+            asyncio.run_coroutine_threadsafe(self._broadcast_queue.put(message), self._loop)
         else:
             try:
                 self._broadcast_queue.put_nowait(message)
@@ -147,14 +139,11 @@ class WebSocketHandler:
             "temperature_celsius": round(metrics.temperature_celsius, 1) if metrics.temperature_celsius else None,
             "detections_per_second": round(metrics.detections_per_second, 1),
             "skip_frames": metrics.skip_frames,
-            "timestamp": metrics.timestamp.isoformat()
+            "timestamp": metrics.timestamp.isoformat(),
         }
 
         if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self._broadcast_queue.put(message),
-                self._loop
-            )
+            asyncio.run_coroutine_threadsafe(self._broadcast_queue.put(message), self._loop)
         else:
             try:
                 self._broadcast_queue.put_nowait(message)
@@ -163,12 +152,9 @@ class WebSocketHandler:
 
     async def _on_status_change(self, status, message):
         """Callback when system status changes"""
-        await self._broadcast_queue.put({
-            "type": "status",
-            "status": status.value,
-            "message": message,
-            "timestamp": datetime.now().isoformat()
-        })
+        await self._broadcast_queue.put(
+            {"type": "status", "status": status.value, "message": message, "timestamp": datetime.now().isoformat()}
+        )
 
     def update_frame(self, frame: np.ndarray, detections: list[Detection] = None):
         """Update the current frame with detections drawn"""
@@ -196,9 +182,7 @@ class WebSocketHandler:
                 if det.track_id is not None:
                     label = f"[{det.track_id}] {label}"
                 # Calculate text size
-                (text_width, text_height), _ = cv2.getTextSize(
-                    label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
-                )
+                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
                 # Draw background for text
                 cv2.rectangle(
                     annotated,
@@ -227,29 +211,20 @@ class WebSocketHandler:
             self.frame_buffer = to_store
 
         # Convert frame to JPEG
-        success, buffer = cv2.imencode('.jpg', to_store, [
-            cv2.IMWRITE_JPEG_QUALITY, 85
-        ])
+        success, buffer = cv2.imencode(".jpg", to_store, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not success:
             # Failed to encode frame; skip
             return
 
         # Encode as base64
-        frame_data = base64.b64encode(buffer).decode('utf-8')
+        frame_data = base64.b64encode(buffer).decode("utf-8")
 
         # Create message
-        message = {
-            "type": "frame",
-            "frame": frame_data,
-            "timestamp": datetime.now().isoformat()
-        }
+        message = {"type": "frame", "frame": frame_data, "timestamp": datetime.now().isoformat()}
 
         # Push to broadcast queue (non-blocking, thread-safe)
         if self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self._broadcast_queue.put(message),
-                self._loop
-            )
+            asyncio.run_coroutine_threadsafe(self._broadcast_queue.put(message), self._loop)
         else:
             try:
                 self._broadcast_queue.put_nowait(message)
@@ -261,22 +236,17 @@ class WebSocketHandler:
         if frame is None:
             return
 
-        _, buffer = cv2.imencode('.jpg', frame, [
-            cv2.IMWRITE_JPEG_QUALITY, 85
-        ])
+        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
 
-        frame_data = base64.b64encode(buffer).decode('utf-8')
+        frame_data = base64.b64encode(buffer).decode("utf-8")
 
-        await websocket.send_json({
-            "type": "frame",
-            "frame": frame_data,
-            "timestamp": datetime.now().isoformat()
-        })
+        await websocket.send_json({"type": "frame", "frame": frame_data, "timestamp": datetime.now().isoformat()})
 
     async def _handle_config(self, websocket, config_json: str):
         """Handle configuration updates from client"""
         try:
             import json
+
             config = json.loads(config_json)
 
             # Update camera configuration
@@ -289,13 +259,7 @@ class WebSocketHandler:
                 # Apply configuration changes...
                 pass
 
-            await websocket.send_json({
-                "type": "config_updated",
-                "message": "Configuration updated successfully"
-            })
+            await websocket.send_json({"type": "config_updated", "message": "Configuration updated successfully"})
 
         except Exception as e:
-            await websocket.send_json({
-                "type": "error",
-                "message": f"Configuration error: {str(e)}"
-            })
+            await websocket.send_json({"type": "error", "message": f"Configuration error: {str(e)}"})

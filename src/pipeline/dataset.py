@@ -401,9 +401,7 @@ class DatasetRegistry:
                     y_center = (y + h / 2.0) / img_h
                     w_norm = w / img_w
                     h_norm = h / img_h
-                    yolo_lines.append(
-                        f"{target_cat_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n"
-                    )
+                    yolo_lines.append(f"{target_cat_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
 
                 if yolo_lines:
                     dst_img_dir = output / "images" / dst_split

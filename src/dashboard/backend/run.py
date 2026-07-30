@@ -1,4 +1,5 @@
 """Launcher for the old dashboard — pre-registers src.config as 'config'."""
+
 import sys
 from pathlib import Path
 
@@ -10,6 +11,7 @@ sys.path.insert(0, str(src_dir))
 sys.path.insert(0, str(backend_dir))
 
 import src.config
+
 sys.modules["config"] = src.config
 
 import uvicorn

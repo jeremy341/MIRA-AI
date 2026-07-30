@@ -1,4 +1,4 @@
-﻿"""CLI command for generating cloud training notebooks and Docker infrastructure."""
+"""CLI command for generating cloud training notebooks and Docker infrastructure."""
 
 import sys
 from pathlib import Path
@@ -106,4 +106,3 @@ def cmd_generate(args):
     else:
         print(f"Unknown target: {target}")
         sys.exit(1)
-

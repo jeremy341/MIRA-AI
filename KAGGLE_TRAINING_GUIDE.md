@@ -1,21 +1,37 @@
 # Kaggle Training Guide
 
-## Uploads
+## Prepare The Dataset
 
-### Notebook 1: YOLO11x Teacher
+From the repository root, build and archive the dataset:
+
+```powershell
+py scripts/build_balanced_dataset.py
+Compress-Archive -Path datasets\merged_mira_balanced -DestinationPath merged_mira_balanced.zip -Force
+```
+
+The generated `dataset.yaml` uses `images/train`, `images/val`, and
+`images/test` relative to the YAML file.
+
+## Upload And Run
+
+### Notebook 1: YOLO11n Exploratory/Reference Teacher
+
+YOLO11n is intentionally retained because it was selected under the limited
+Kaggle quota. It is an exploratory/reference teacher for this run, not a
+high-capacity teacher. Any comparison must account for that limitation.
 
 Add the dataset ZIP as a Kaggle input:
 
 ```text
-merged_mira_balanced (2).zip
+merged_mira_balanced.zip
 ```
 
-Paste and run `kaggle/notebook_1_teacher_yolo11x.py` as one cell.
+Paste and run `kaggle/notebook_1_teacher_yolo11n.py` as one cell.
 
 Download the output:
 
 ```text
-/kaggle/working/teacher_yolo11x.zip
+/kaggle/working/teacher_yolo11n.zip
 ```
 
 ### Notebook 2: YOLO26n Baseline
@@ -23,7 +39,7 @@ Download the output:
 Add the same dataset ZIP:
 
 ```text
-merged_mira_balanced (2).zip
+merged_mira_balanced.zip
 ```
 
 Run this notebook in parallel with Notebook 1:
@@ -40,11 +56,11 @@ Download the output:
 
 ### Notebook 3: Distilled YOLO26n
 
-Add two Kaggle inputs:
+After Notebook 1 has produced its artifact, add exactly these two Kaggle inputs:
 
 ```text
-merged_mira_balanced (2).zip
-teacher_yolo11x.zip
+merged_mira_balanced.zip
+teacher_yolo11n.zip
 ```
 
 Run:
@@ -53,7 +69,15 @@ Run:
 kaggle/notebook_3_distill_yolo26n.py
 ```
 
-Download:
+At startup, Notebook 3 installs Ultralytics in the same way as Notebooks 1 and 2
+and immediately validates support for `distill_model`, `dis`, and `MuSGD`. This
+compatibility check runs before dataset extraction or training. Distillation is
+only expected to start if the installed release passes the check; otherwise the
+notebook fails with the installed version and the unsupported capability. Do not
+assume that an arbitrary current or preinstalled Ultralytics release supports
+this training interface.
+
+If compatibility validation and training complete, download:
 
 ```text
 /kaggle/working/distill_yolo26n_results.zip
@@ -63,15 +87,31 @@ Download:
 
 - 120 epochs
 - No `patience` or early stopping
-- Teacher time budget: 8.8 hours
+- Exploratory/reference YOLO11n teacher time budget: 8.8 hours
 - Baseline time budget: 8.8 hours
 - Distillation time budget: 10.8 hours
 - Total planned GPU usage: 28.4 hours
 
-If a session ends before epoch 120, rerun the same cell. It resumes from `last.pt`.
+Automatic resume works only while the same Kaggle session still has `last.pt` in
+`/kaggle/working`. To resume in a new session, attach the ZIP produced by the
+interrupted run as an additional Kaggle input, then run the same script:
+
+```text
+Notebook 1: teacher_yolo11n.zip
+Notebook 2: baseline_yolo26n.zip
+Notebook 3: distill_yolo26n_results.zip (plus teacher_yolo11n.zip)
+```
+
+The scripts restore the attached run's `last.pt`. They fail if multiple matching
+dataset, checkpoint, or teacher artifacts are attached.
+
+Notebook 3 also refuses to begin a new long run when its installed Ultralytics
+release lacks the required distillation arguments or optimizer support.
 
 ## Important
 
-The dataset ZIP contains a portable `dataset.yaml`, but each script rewrites it again after extraction so paths remain relative on Kaggle.
+The dataset ZIP contains a portable `dataset.yaml` whose split paths are relative
+to the YAML location. Each Kaggle script rewrites those split paths as absolute
+paths after extraction.
 
 Do not run the old Phase 0 download pipeline. The dataset has already been prepared locally.

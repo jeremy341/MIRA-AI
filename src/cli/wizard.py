@@ -1,4 +1,4 @@
-﻿"""CLI command for the interactive training setup wizard."""
+"""CLI command for the interactive training setup wizard."""
 
 import sys
 
@@ -144,4 +144,3 @@ def cmd_wizard(args):
     from .train import cmd_train
 
     cmd_train(train_args)
-

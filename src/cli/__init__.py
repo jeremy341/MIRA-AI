@@ -1,4 +1,4 @@
-﻿"""CLI entry point for MIRA â€” registers and dispatches all subcommands."""
+"""CLI entry point for MIRA â€” registers and dispatches all subcommands."""
 
 import sys
 
@@ -75,4 +75,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-

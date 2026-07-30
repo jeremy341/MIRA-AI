@@ -177,6 +177,7 @@ class TestHandleConfig:
     async def test_valid_config(self, handler):
         mock_ws = AsyncMock()
         import json
+
         await handler._handle_config(mock_ws, json.dumps({"camera": {"index": 1}}))
         mock_ws.send_json.assert_called_once()
         sent = mock_ws.send_json.call_args[0][0]

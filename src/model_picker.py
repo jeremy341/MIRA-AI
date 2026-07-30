@@ -1,4 +1,4 @@
-﻿"""Interactive model picker for MIRA CLI."""
+"""Interactive model picker for MIRA CLI."""
 
 import os
 import sys

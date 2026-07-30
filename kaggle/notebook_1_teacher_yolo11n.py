@@ -1,4 +1,4 @@
-"""Kaggle single-cell script: train the YOLO26n baseline."""
+"""Kaggle single-cell script: train the YOLO11n teacher."""
 
 import shutil
 import subprocess
@@ -54,11 +54,11 @@ print("YAML configuration written to:", yaml_path)
 
 # 3. SET UP OUTPUT PATHS & CHECKPOINTS
 runs = WORK / "runs"
-run_dir = runs / "baseline_yolo26n"
+run_dir = runs / "teacher_yolo11n"
 last = run_dir / "weights" / "last.pt"
 
 # Restore a previous run only when this session has no working checkpoint.
-checkpoint_archive = find_unique(INPUT, "baseline_yolo26n.zip", "baseline checkpoint ZIP", required=False)
+checkpoint_archive = find_unique(INPUT, "teacher_yolo11n.zip", "teacher checkpoint ZIP", required=False)
 if not last.exists() and checkpoint_archive is not None:
     with zipfile.ZipFile(checkpoint_archive) as archive:
         archive.extractall(run_dir)
@@ -67,16 +67,16 @@ print("GPU Available:", torch.cuda.get_device_name(0) if torch.cuda.is_available
 
 # 4. EXECUTE TRAINING / RESUME
 if last.exists():
-    print("Resuming baseline training from:", last)
+    print("Resuming teacher training from:", last)
     model = YOLO(str(last))
     model.train(resume=True)
 else:
-    print("Starting fresh YOLO26n Baseline training...")
-    model = YOLO("yolo26n.pt")
+    print("Starting fresh YOLO11n Teacher training...")
+    model = YOLO("yolo11n.pt")
     model.train(
         data=str(yaml_path),
         project=str(runs),
-        name="baseline_yolo26n",
+        name="teacher_yolo11n",
         exist_ok=True,
         device=0,
         workers=4,
@@ -85,23 +85,24 @@ else:
         time=8.8,
         batch=32,
         imgsz=640,
-        optimizer="auto",
+        optimizer="AdamW",
+        lr0=0.001,
         cos_lr=True,
         close_mosaic=10,
     )
 
 # 5. ZIP RESULTS AND DISPLAY DOWNLOAD LINK
 if run_dir.exists():
-    zip_path = WORK / "baseline_yolo26n"
+    zip_path = WORK / "teacher_yolo11n"
     shutil.make_archive(
         str(zip_path),
         "zip",
         root_dir=str(run_dir),
     )
     print("\n" + "="*80)
-    print("[SUCCESS] Baseline training results zipped successfully!")
+    print("[SUCCESS] Teacher training results zipped successfully!")
     print("Click the link below to download your artifact:")
     print("="*80)
-    display(FileLink("baseline_yolo26n.zip"))
+    display(FileLink("teacher_yolo11n.zip"))
 else:
     print(f"[ERROR] Run directory not found at: {run_dir}")

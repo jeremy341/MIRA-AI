@@ -1,4 +1,4 @@
-﻿"""CLI commands for training, exporting, and auto-detecting training parameters."""
+"""CLI commands for training, exporting, and auto-detecting training parameters."""
 
 import argparse
 import re
@@ -10,7 +10,7 @@ from src.pipeline.registry import register_command
 
 
 def _validate_name(name):
-    if not re.match(r'^[a-zA-Z0-9_\-]+$', name):
+    if not re.match(r"^[a-zA-Z0-9_\-]+$", name):
         raise argparse.ArgumentTypeError(f"Invalid name '{name}'. Use only letters, numbers, hyphens, underscores.")
     return name
 
@@ -195,4 +195,3 @@ def cmd_export(args):
             print(f"  {p}")
     else:
         print("No files exported.")
-

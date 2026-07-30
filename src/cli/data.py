@@ -97,4 +97,3 @@ def cmd_validate(args):
 
     if not result.is_valid:
         sys.exit(1)
-
