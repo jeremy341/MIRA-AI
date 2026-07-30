@@ -1,26 +1,22 @@
 \section{Einleitung und Motivation}
 
-\subsection{Problemstellung und ökologische Relevanz}
-In modernen Kreislaufsystemen stellt die Reinheit der gesammelten Fraktionen den kritischsten Faktor für die ökonomische Tragfähigkeit von Recycling dar. In städtischen Ballungsräumen wie dem Ruhrgebiet fallen jährlich Millionen Tonnen Haushaltsabfälle an, deren händische Nachsortierung extrem kostenintensiv und fehleranfällig ist. 
+\subsection{Problemstellung}
+Getrennt erfasste Abfälle können nur dann gezielt weiterverarbeitet werden, wenn Materialarten zuverlässig unterschieden werden. Kamerabasierte Objekterkennung ist dafür ein möglicher Baustein: Sie liefert zu einer Klasse auch die Position eines Gegenstands im Bild. Visuell ähnliche oder verformte Gegenstände, wechselnde Hintergründe und begrenzte Rechenleistung erschweren jedoch den Einsatz. MIRA untersucht dieses Problem zunächst als reproduzierbaren Softwareprototyp; Aussagen über die Sortierleistung einer vollständigen Anlage sind damit noch nicht möglich.
 
-Bereits eine Fehlwurfquote von \SI{15}{\percent} in der Papiertonne kann den Marktwert des Altpapiers halbieren, da Kunststoffe und Verbundmaterialien den anschließenden Recyclingprozess blockieren \cite{uba2023verpackungsabfall}. 
+\subsection{Ziel und Forschungsfrage}
+Ziel ist eine nachvollziehbare Pipeline für fünf Klassen: \textit{glass, metal, paper, plastic} und \textit{trash}. Im Mittelpunkt steht nicht der Nachweis eines fertigen Sortierroboters, sondern die folgende Forschungsfrage:
 
-Traditionelle mechatronische Sortieranlagen stoßen jedoch an physikalische Grenzen, wenn es um die Unterscheidung visuell ähnlicher, aber stofflich unterschiedlicher Verpackungsmaterialien geht. Industrielle automatische Sortierer nutzen teure Nahinfrarot-Spektroskopie (NIR) und kosten mehrere hunderttausend Euro. Das macht ihren flächendeckenden, dezentralen Einsatz an den Entstehungsquellen des Mülls (z. B. in Schulen, Bürogebäuden oder kleineren Betrieben) unmöglich.
+\begin{quote}
+\emph{Welcher messbare Zielkonflikt zwischen Detektionsgüte, Modellgröße und CPU-Latenz ergibt sich beim Training und bei der INT8-Quantisierung eines kompakten YOLO11n-Modells für fünf Abfallklassen?}
+\end{quote}
 
-\subsection{Zielsetzung der Arbeit}
-Das primäre Ziel dieses Projekts ist die Entwicklung und systematische Evaluation der softwareseitigen Grundlagen für einen autonomen Recycling-Sortierarm namens \emph{\mira} (Machine Intelligence for Recycling Automation). Es soll empirisch bewiesen werden, dass ein ressourceneffizientes Deep-Learning-Modell auf kostengünstiger Edge-Hardware (Raspberry Pi Zero 2W oder Raspberry Pi 4) prinzipiell im Echtzeitbetrieb operieren kann \cite{deng2020model}. Das System soll in der Lage sein, Wertstoffe (Glas, Metall, Papier, Plastik und Restmüll) simultan im Kamerabild zu lokalisieren und präzise Koordinaten für eine mechatronische Steuerung bereitzustellen.
+Die Detektionsgüte wird mit mAP50--95 als Hauptmetrik sowie mAP50, Precision, Recall und dem schwellenwertabhängigen $F_1$-Score beschrieben. Modellgröße und Latenz werden für dasselbe exportierte Modell erfasst. Messungen auf einem Raspberry Pi und die Kopplung an einen Roboterarm bilden eine spätere Projektstufe.
 
 \subsection{Themenfindung}
-Die Fragestellung ergab sich aus der Beobachtung der ineffizienten händischen Mülltrennung im schulischen Alltag sowie bei Besuchen lokaler Recyclinghöfe in Mülheim an der Ruhr. Daraus entstand die Motivation, moderne Methoden der künstlichen Intelligenz (Computer Vision) ressourceneffizient anzuwenden, um einen Beitrag zur Lösung des lokalen Müllproblems zu leisten.
+Die Projektidee entstand aus Beobachtungen der Mülltrennung im schulischen Alltag und bei Besuchen lokaler Recyclinghöfe. Daraus entwickelte sich die technische Frage, wie weit eine kleine, lokal ausführbare Computer-Vision-Pipeline mit dokumentierten Daten und Messgrößen kommt.
 
-\subsection{Forschungshypothesen und Entwurfsziele}
-Auf Basis der theoretischen Vorüberlegungen werden in dieser Arbeit drei zentrale wissenschaftliche Hypothesen sowie ein übergeordnetes Entwurfsziel untersucht:
-\begin{enumerate}
-    \item \textbf{H1 (Transfer Learning):} Ein auf dem ImageNet-Datensatz vortrainiertes Modell (MobileNetV2) erzielt auf einem limitierten Recycling-Datensatz eine um mindestens \num{20} Prozentpunkte höhere Validierungsgenauigkeit als ein klassisches, dreischichtiges Convolutional Neural Network (CNN), das von Grund auf trainiert wurde.
-    \item \textbf{H2 (Quantisierung):} Die Post-Training-Quantisierung (INT8) reduziert den Speicherbedarf um mindestens den Faktor 4 und senkt die CPU-Inferenzlatenz um über \SI{40}{\percent}, bei einem Genauigkeitsverlust von unter 2 Prozentpunkten im statischen Testdatensatz \cite{deng2020model}.
-    \item \textbf{H3 (Multi-Objekt-Erkennung):} Der Übergang von globaler Klassifikation zu lokalisierter Objekterkennung mittels des Modells YOLO11n (You Only Look Once) erlaubt die gleichzeitige Lokalisierung mehrerer Objekte im Raum, was die Voraussetzung für einen kontinuierlichen Betrieb darstellt \cite{ultralyticsyolov8}.
-    \item \textbf{E1 (Entwurfsziel -- Signalstabilisierung):} Vorhersageschwankungen im Live-Stream sollen durch einen Exponential Moving Average (EMA) Filter algorithmisch so gedämpft werden, dass künftige mechatronische Fehltriggerungen eines angeschlossenen Sortierarms vermieden werden.
-\end{enumerate}
+\subsection{Abgrenzung der Projektphasen}
+Stage~A ist ein abgeschlossener Machbarkeitsnachweis zur Klassifikation einzelner Bilder in vier Klassen. Die späteren EXP-013 bis EXP-017 sind historische Fünfklassen-Detektionsläufe mit unterschiedlichen Datenmischungen. Sie motivieren die aktuelle Untersuchung, ersetzen wegen ihrer unterschiedlichen Datengrundlagen aber keinen kontrollierten Vergleich. Der neu aufgebaute, annähernd ausgeglichene Datensatz und der darauf geplante Lauf bilden den aktuellen Arbeitsstand. Raspberry Pi, Kameraaufbau und Roboterarm sind noch nicht experimentell integriert.
 
 \subsection{Aufbau der Arbeit}
-Kapitel~1 führt in die Problematik der manuellen Recycling-Sortierung ein und leitet die Forschungsfragen ab. Kapitel~2 erläutert die theoretischen Grundlagen des Deep Learning, Transfer Learnings, der Modellkompression und der Objekterkennung. Kapitel~3 beschreibt die Methodik, den experimentellen Aufbau und die Datenerhebung. Kapitel~4 dokumentiert die softwareseitige Implementierung des MIRA-Systems -- eine gesonderte Darstellung der Implementierungsdetails ist für ein Software-Entwicklungsprojekt mit mehreren Iterationszyklen (Fehlerbehebung, Architekturmigration, Quantisierung) notwendig, um die Nachvollziehbarkeit der technischen Lösungen zu gewährleisten. Kapitel~5 stellt die quantitativen Ergebnisse der Stage-A- und Stage-B-Experimente vor. Kapitel~6 diskutiert die Ergebnisse im Kontext der Hypothesen und identifiziert Limitationen. Kapitel~7 fasst die Ergebnisse zusammen und gibt einen Ausblick auf zukünftige Entwicklungen.
+Nach den notwendigen Grundlagen werden Datensätze, Trennregeln und Messgrößen beschrieben. Anschließend folgen Implementierung, bisherige Ergebnisse, deren Grenzen und die geplanten nächsten Versuche.

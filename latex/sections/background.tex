@@ -1,51 +1,27 @@
 \section{Theoretische Grundlagen}
 
-\subsection{Edge AI und Ressourceneffizienz}
-Die herkömmliche Verarbeitung von Machine-Learning-Modellen erfolgt meist auf leistungsstarken Cloud-Servern mit dedizierter Grafikbeschleunigung (GPU). Im Kontext der dezentralen Wertstoffsortierung stößt dieser Ansatz jedoch auf signifikante Hürden: Hohe Latenzzeiten bei der Datenübertragung, Abhängigkeit von einer permanenten Internetverbindung und erhebliche Betriebskosten. 
-
-Das Paradigma der \emph{Edge AI} beschreibt die Ausführung von KI-Modellen direkt auf lokalen, ressourcenbeschränkten Endgeräten wie Einplatinencomputern (z.B. Raspberry Pi) oder Mikrocontrollern \cite{deng2020model, wang2020survey}. Für ein mechanisches Sortiersystem wie \mira ergeben sich daraus drei kritische Zielgrößen, die in einem permanenten Spannungsverhältnis stehen:
-\begin{enumerate}
-    \item \textbf{Minimierung der Modellgröße:} Der lokale Speicher (RAM/Flash) ist stark begrenzt \cite{deng2020model}.
-    \item \textbf{Maximierung der Inferenzgeschwindigkeit:} Um Objekte auf einem bewegten Förderband präzise zu greifen, muss die Latenz im zweistelligen Millisekundenbereich liegen \cite{deng2020model}.
-    \item \textbf{Erhaltung der Robustheit:} Das System muss trotz wechselnder Beleuchtung und verrauschter Hintergründe stabile Vorhersagen liefern.
-\end{enumerate}
-
-Die technologische Herausforderung besteht darin, diese drei Parameter durch gezielte Modellwahl und Kompressionstechniken zu optimieren \cite{deng2020model}.
+\subsection{Lokale Inferenz und Zielkonflikt}
+\emph{Edge AI} bezeichnet hier die lokale Modellausführung auf einem Gerät mit begrenztem Speicher und begrenzter Rechenleistung \cite{deng2020model,wang2020survey}. Kleinere oder ganzzahlig quantisierte Modelle benötigen gewöhnlich weniger Speicher; eine geringere numerische Präzision kann jedoch Vorhersagen verändern. Deshalb werden Detektionsgüte, Dateigröße und Latenz getrennt gemessen. Eine niedrige Latenz auf einer Entwicklungs-CPU belegt noch keine entsprechende Leistung auf einem Raspberry Pi.
 
 \subsection{Convolutional Neural Networks (CNNs)}
-Für Aufgaben der Computer Vision haben sich Convolutional Neural Networks (CNNs) als Standard etabliert \cite{lecun2015deep, bengio2013representation}. Im Gegensatz zu klassischen, vollverknüpften Netzen nutzen CNNs die räumliche Struktur von Bildern aus, indem sie Merkmale schrittweise über zweidimensionale Faltungsoperationen extrahieren. Frühe Schichten lernen elementare geometrische Strukturen wie Kanten und Farbgradienten, während tiefere Schichten diese zu komplexen semantischen Konzepten kombinieren. Nachgeschaltete Aktivierungsfunktionen wie die Rectified Linear Unit ($\text{ReLU}(x) = \max(0, x)$) führen Nichtlinearitäten ein, und eine abschließende Softmax-Schicht wandelt die berechneten Rohwerte in eine Wahrscheinlichkeitsverteilung über die Klassen um.
-
-Die Evaluierung der Modellgüte erfolgt über Precision / Recall und den $F_1$-Score:
-\begin{equation}
-F_1 = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
-\end{equation}
+CNNs verarbeiten Bilder mit lernbaren Filtern und nutzen deren räumliche Struktur \cite{lecun2015deep,bengio2013representation}. Ein Klassifikator gibt eine Klasse für das Gesamtbild aus. Ein Detektor sagt dagegen für jedes gefundene Objekt Klasse, Konfidenz und Begrenzungsrahmen voraus. Diese Unterscheidung ist wichtig, weil Accuracy aus Stage~A nicht mit Detektionsmetriken aus Stage~B verglichen werden kann.
 
 \subsection{Transfer Learning und MobileNetV2}
-Das Training tiefer Netze von Grund auf erfordert zehntausende annotierte Bilder. Beim \emph{Transfer Learning} wird ein auf einem sehr großen Datensatz (ImageNet mit 1,4 Millionen Bildern) vortrainiertes Modell als Feature-Extractor wiederverwendet \cite{yosinski2014transferable}. 
-
-Als Rückgrat (Backbone) der Klassifikationsstufe von \mira wurde die MobileNetV2-Architektur gewählt \cite{sandler2018mobilenetv2}. Diese ist speziell für mobile Endgeräte optimiert und basiert auf \emph{Depthwise Separable Convolutions}. Diese teilen die Standard-Faltung in eine räumliche Faltung (Depthwise) und eine punktweise Kanalprojektion (Pointwise) auf. Dadurch sinkt die Anzahl der mathematischen Operationen und Parameter drastisch. Eine Standard-Faltung mit Kernelgröße $k \times k$, $C_{\text{in}}$ Eingabekanälen und $C_{\text{out}}$ Ausgabekanälen erfordert $k \times k \times C_{\text{in}} \times C_{\text{out}}$ Multiplikationen pro Pixel. Die depthwise-separable Variante zerlegt dies in einen räumlichen Filter ($k \times k \times C_{\text{in}}$) und eine punktweise $1 \times 1$-Kanalprojektion ($C_{\text{in}} \times C_{\text{out}}$), wodurch die Rechenkomplexität um einen Faktor von ungefähr $k^2$ (bei typischen $3 \times 3$-Kerneln ca.\ $8$--$9 \times$) reduziert wird. Diese Dekomposition ist möglich, da räumliche und kanalbezogene Korrelationen in Bildern weitgehend entkoppelt vorliegen. 
-
-MobileNetV2 nutzt zudem \emph{Inverted Residual Blocks} mit \emph{Linear Bottlenecks}, um den Informationsverlust in schmalen Schichten zu minimieren. Die „invertierte" Struktur erweitert die Kanaldimension zunächst (Expansionsfaktor $6 \times$), wendet die Depthwise-Faltung an und komprimiert anschließend wieder zurück -- im Gegensatz zum klassischen ResNet-Bottleneck, der zuerst komprimiert. Die lineare (ReLU-freie) Bottleneck-Schicht verhindert Informationsverlust in der niedrigdimensionalen Projektion, und Skip-Connections überspringen die dünne Bottleneck-Schicht direkt. Im Projekt wurde der Backbone zunächst eingefroren, um generische Filter zu erhalten, und anschließend ab Layer 100 feingetunt, um sich an die spezifischen Reflexionen von Wertstoffen anzupassen. Die Fein-Tuning-Parameter umfassen den Adam-Optimierer mit Lernrate $\eta = 10^{-5}$, 15 Trainingsepochen und eine Batch-Größe von 32. Die ersten 100 Schichten des MobileNetV2-Backbones bleiben eingefroren; ab Schicht 100 werden insgesamt 1.866.564 Parameter feingetunt (von 2.263.108 gesamt).
+Beim Transfer Learning werden vortrainierte Merkmale als Ausgangspunkt für eine neue Aufgabe genutzt \cite{yosinski2014transferable}. Stage~A verglich dazu ein von Grund auf trainiertes CNN mit MobileNetV2. MobileNetV2 reduziert Rechenaufwand unter anderem durch tiefenweise separierbare Faltungen und verwendet invertierte Residualblöcke \cite{sandler2018mobilenetv2}. Diese Klassifikationsversuche sind ein Vorversuch; die aktuelle Forschungsfrage betrifft den Detektor.
 
 \subsection{Post-Training-Quantisierung (INT8)}
-Die Post-Training-Quantisierung (PTQ) reduziert Modellgröße und Rechenaufwand durch Umwandlung in INT8-Formate. Die Quantisierungsabbildung lautet kompakt
+Bei der Post-Training-Quantisierung werden Gleitkommawerte durch skalierte Ganzzahlen dargestellt. Vereinfacht gilt
 \begin{equation}
 q = \mathrm{round}\left(\frac{r}{S}\right) + Z
 \end{equation}
-mit kontinuierlichem Wert $r$, Skalierungsfaktor $S$ und Nullpunkt $Z$.
-
-Die Reduktion von FP32 auf INT8 funktioniert, weil die Gewichte und Aktivierungen eines neuralen Netzwerks typischerweise in einem engen Wertebereich konzentriert sind \cite{krishnamoorthi2018quantizing}. Ganzzahlarithmetik (INT8) ist auf ARM-Prozessoren mit NEON-SIMD-Einheit deutlich effizienter als Gleitkommaarithmetik (FP32), da die Integer-Alu höhere Durchsatzraten bei niedrigerer Leistungsaufnahme erreicht. Für MIRA wurde eine Kalibrierung mit 100 repräsentativen Trainingsbildern durchgeführt, deren Aktivierungsbereiche (min/max) die Skalierungsfaktoren $S$ und $Z$ bestimmen \cite{krishnamoorthi2018quantizing}. Ein potenzielles Risiko stellt die Sättigung (Clipping) dar: Werden Ausreißer-Aktivierungen abgeschnitten, kann dies zu systematischen Fehlern führen, weshalb die Kalibrierungsstichprobe repräsentativ sein muss.
+mit Realwert $r$, Skala $S$ und Nullpunkt $Z$ \cite{krishnamoorthi2018quantizing}. Kalibrierungsdaten bestimmen geeignete Wertebereiche. Rundung und Begrenzung können die Detektionen verändern; eine kleinere Datei allein belegt daher weder höhere Geschwindigkeit noch gleichbleibende Güte. Beides muss auf denselben Daten und derselben Hardware geprüft werden.
 
 \subsection{Echtzeit-Objekterkennung mit You Only Look Once (YOLO11n)}
-Für den mechatronischen Sortierprozess reicht eine reine Klassifikation ("Was ist im Bild?") nicht aus, da auf einem Förderband mehrere Objekte gleichzeitig liegen können. Das System benötigt exakte Ortskoordinaten.
+YOLO formuliert Objekterkennung als einstufige Vorhersage: Ein Netz erzeugt aus Merkmalen mehrerer Auflösungen Klassenwerte und Begrenzungsrahmen; anschließend werden konkurrierende Rahmen gefiltert \cite{redmon2016yolo,neubeck2006efficient}. Die verbreitete Erklärung über ein festes $S\times S$-Raster beschreibt vor allem die erste YOLO-Generation und ist keine hinreichende Beschreibung von YOLO11n. MIRA verwendet YOLO11n über die Ultralytics-Software \cite{ultralyticsyolov8}. Die Bezeichnung \enquote{n} kennzeichnet die kleinste Modellvariante der Familie, sagt aber noch nichts über ihre Eignung für die konkrete Zielhardware aus.
 
-MIRA nutzt hierfür das Single-Shot-Detektionsmodell YOLO11n \cite{ultralyticsyolov8}. YOLO-Architekturen \cite{redmon2016yolo} verzichten auf komplexe, zweistufige Vorschlagsnetzwerke wie Faster R-CNN \cite{ren2015faster} und berechnen stattdessen in einem einzigen Vorwärtspass (Single Pass) über ein neuronales Netz sowohl die Begrenzungsrahmen (Bounding Boxes) als auch die Klassenwahrscheinlichkeiten für jedes Objekt. Konkret unterteilt YOLO das Eingabebild in ein $S \times S$ Raster; jede Rasterzelle sagt Begrenzungsrahmen, einen Objektscore (Klassenwahrscheinlichkeit $\times$ Überlappungsgrad) und Klassenwahrscheinlichkeiten vorher. Nicht-maximale Unterdrückung (Non-Maximum Suppression, NMS) \cite{neubeck2006efficient} eliminiert dabei überlappende Vorhersagen desselben Objekts.
-
-In den frühen Experimenten (EXP-005 bis EXP-008) wurde YOLOv8-Nano als Ausgangsarchitektur verwendet. Ab EXP-013 wurde auf YOLO11n migriert, dessen aktualisierte Architektur eine effizientere Feature-Pyramide und verbesserte Loss-Funktionen bietet.
-
-\subsection{Temporale Signalstabilisierung (EMA-Filter)}
-In der Live-Inferenz wurde ein EMA-Filter zur Dämpfung von Fluktuationen verwendet:
+\subsection{Metriken der Detektion}
+Eine Vorhersage zählt bei festgelegter Konfidenz- und IoU-Schwelle als richtig, wenn Klasse und räumliche Überlappung mit einer Referenzannotation passen. Precision beschreibt den Anteil richtiger unter den ausgegebenen Detektionen, Recall den Anteil gefundener Referenzobjekte. Der $F_1$-Score ist ihr harmonisches Mittel und hängt von der gewählten Konfidenzschwelle ab:
 \begin{equation}
-p_{\mathrm{smooth}}(t)=\alpha\,p_{\mathrm{raw}}(t)+(1-\alpha)\,p_{\mathrm{smooth}}(t-1)
+F_1=2\frac{\mathrm{Precision}\cdot\mathrm{Recall}}{\mathrm{Precision}+\mathrm{Recall}}.
 \end{equation}
-Im Projekt wurde $\alpha=0{,}15$ gewählt (siehe Anhang für Parameterstudie).
+Average Precision (AP) fasst die Precision-Recall-Kurve einer Klasse zusammen; mAP mittelt über Klassen. mAP50 nutzt eine IoU-Schwelle von 0,5. mAP50--95 mittelt zusätzlich über IoU-Schwellen von 0,50 bis 0,95 und bewertet die Lokalisierung strenger. Werte aus verschiedenen Testbeständen sind nicht ohne Weiteres direkt vergleichbar.

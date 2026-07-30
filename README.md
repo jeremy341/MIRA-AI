@@ -6,10 +6,10 @@
 [![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
 [![Last Commit](https://img.shields.io/github/last-commit/jeremy341/MIRA-AI)](https://github.com/jeremy341/MIRA-AI/commits/main)
 
-A lightweight, edge-AI-optimized computer vision system for automated recycling sorting — targeting deployment on resource-constrained hardware such as the Raspberry Pi Zero 2W. MIRA progresses from image classification (Stage A) to real-time multi-object detection with tracking (Stage B), with a systematic 4-model comparison to find the optimal training data mix for YOLO11n.
+A computer-vision research project for recycling detection, targeting eventual deployment on a Raspberry Pi Zero 2W and tabletop sorting robot. Detection models and historical experiments exist; Raspberry Pi benchmarking, robot integration, distillation, and end-to-end dashboard verification are pending.
 
-> **Quick start:** `.\mira live` → interactive model picker → live webcam detection
-> **Dashboard:** `.\mira dashboard` → http://localhost:8000 → Clean light theme with JUFO/StarDance modes
+> **Local demo:** `.\mira live` opens the model picker when compatible local model binaries are present.
+> **Dashboard status:** an implementation exists under `src/dashboard/`, but end-to-end camera/model/browser integration has not yet been verified.
 
 <!-- ============================================================ -->
 <!-- PLACEHOLDER: Add a 10-second GIF of live detection here       -->
@@ -22,12 +22,11 @@ A lightweight, edge-AI-optimized computer vision system for automated recycling 
 
 ## Features
 
-- **17 systematic experiments** — from baseline CNN to YOLO11n with full quantitative metrics (EXP-001–017)
-- **21+ trained models** committed via Git LFS — ready to use without retraining
+- **17 documented historical experiments** — measured results are separated from current plans
 - **Research Pipeline** — YAML-driven config, plugin CLI registry, dataset registry, model adapters, configurable training
 - **Third-party model support** — drop `.pt`/`.tflite`/`.pth` + optional YAML descriptor in `models/detection/` for instant benchmarking
-- **Clean Light Theme Dashboard** — FastAPI+WebSocket dashboard with JUFO/StarDance dual modes, real-time inventory chart, live detection feed
-- **Edge-optimized** — INT8 quantized models as small as **2.6 MB** (classifier) and **2.9 MB** (detector)
+- **Dashboard implementation** — FastAPI, WebSocket, and browser UI components; integration verification pending
+- **Compact exports** — local INT8 artifacts include a 2.61 MB classifier and 2.90 MiB detector; target-device performance is unmeasured
 - **Multi-dataset fusion** — TACO + TrashNet + Roboflow + WaRP, tested in 4 combinations
 
 ---
@@ -70,6 +69,8 @@ pip install -r requirements.txt
 
 > **Note:** Development dependencies (pytest, mypy, ruff) are included in `requirements.txt`. For a production-only install, install only the core packages listed at the top of the file.
 
+> **Fresh-clone note:** datasets and trained model binaries are gitignored. Although `.gitattributes` contains LFS patterns, current HEAD tracks no LFS model objects. The configured Hugging Face model endpoint required authentication when checked on 2026-07-30, so `mira download` is not currently a verified unauthenticated setup path.
+
 ### Live Detection
 
 > **Platform note:** On Windows, use `.\mira` (PowerShell) or `launchers\mira.bat` (CMD). On Linux/macOS, use `python -m src` or `./launchers/mira.sh`.
@@ -86,6 +87,8 @@ pip install -r requirements.txt
 ```
 
 ### Dashboard
+
+The command is retained for development. Do not treat it as a verified demo until camera, model loading, streaming, and the browser UI pass an end-to-end integration check.
 
 ```bash
 .\mira dashboard                           # Opens at http://127.0.0.1:8000
@@ -123,8 +126,8 @@ pip install -r requirements.txt
 |---|---|---|
 | `.\mira live` | Interactive model picker — arrow keys to choose, Enter to confirm |
 | `.\mira live --model <file>` | Bypass picker — launch directly with a specific model |
-| `.\mira dashboard` | Launch FastAPI+WebSocket dashboard (clean light theme) |
-| `.\mira dashboard --host 0.0.0.0 --port 8000` | Expose dashboard on custom host/port |
+| `.\mira dashboard` | Start the unverified dashboard implementation for development |
+| `.\mira dashboard --host 0.0.0.0 --port 8000` | Bind the development dashboard to a custom host/port |
 | `.\mira train` | Train a YOLO detection model via the research pipeline |
 | `.\mira train --config <file>` | Train from experiment YAML |
 | `.\mira train --model yolo11n.pt --dataset <path> --epochs 50` | Train with inline flags |
@@ -203,14 +206,20 @@ CLI flags override `mira.yaml` defaults:
 
 ## Dataset Access
 
-Training datasets are not included in this repository due to size. To reproduce training:
+Training datasets are not included in Git. The current no-SortWaste build uses:
 
-1. **TACO** (Trash Annotations in Context): Download from [GitHub](https://github.com/AlessandroSaviolo/TACO), place in `datasets/taco/`
-2. **TrashNet**: Download from [Kaggle](https://www.kaggle.com/datasets/techsash/waste-classification-data), place in `datasets/trashnet/`
-3. **Roboflow Trash Detection**: Download via Roboflow API, place in `datasets/roboflow/`
-4. **WaRP** (Waste Recognition Protocol): Download from [GitHub](https://github.com/DTUGreenAmbition/WaRP), place in `datasets/warp/`
+1. **dmedhi garbage image classification/detection**
+2. **TACO** (Trash Annotations in Context)
+3. **Roboflow Raw**
+4. **SAM-labeled TrashNet**
 
-After downloading, merge sources into training datasets via the CLI:
+`scripts/build_balanced_dataset.py` documents the expected local directories,
+remapping, deterministic TACO split, balancing, and manifest generation. Verify
+the resulting manifest against the counts in
+[`DATASETS_AND_BENCHMARKS.md`](DATASETS_AND_BENCHMARKS.md). The commands below
+belong to the older EXP-014 through EXP-017 dataset-comparison workflow and do
+not recreate the current balanced dataset:
+
 ```bash
 .\mira merge --sources taco_trashnet roboflow              # → datasets/mira_tnr/
 .\mira merge --sources taco_trashnet warp                  # → datasets/mira_tnw/
@@ -246,8 +255,8 @@ Webcam Input
 │  Input (640×640) → YOLO11n → NMS →              │
 │  Bounding Boxes + Class Labels + ByteTrack IDs      │
 │                                                     │
-│  Best model (EXP-014): YOLO11n 60.7% mAP50         │
-│  Dataset: TACO + TrashNet + Roboflow (multi-source)│
+│  Historical EXP-014 FP32: 60.7% mAP50              │
+│  Older 6,802-image TACO + TrashNet + Roboflow set  │
 └─────────────────────────────────────────────────────┘
      │
      ▼
@@ -262,7 +271,7 @@ Webcam Input
 └─────────────────────────────────────────────────────┘
 ```
 
-> **Note:** Stage A classifiers were trained on 4 classes (glass, metal, paper, plastic) without the trash class. The 87.42% accuracy applies to this 4-class task. Stage B detectors operate on all 5 classes including trash.
+> **Note:** Stage A classifiers were trained on 4 classes (glass, metal, paper, plastic) without the trash class. The 87.42% accuracy applies to this 4-class task. Stage B detectors operate on all 5 classes including trash. Stage C and target-hardware deployment remain pending.
 
 ![MIRA System Architecture](assets/architecture.png)
 
@@ -347,13 +356,13 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | `mira_classifier_transfer.keras` | 84.28% | 9.25 MB | ~50 FPS | MobileNetV2 frozen base, fast to train |
 | `mira_classifier_tuned.keras` | **87.42%** | 23.48 MB | ~35 FPS | MobileNetV2 fine-tuned, best Keras accuracy |
 | `mira_classifier_fp32.tflite` | 87.42% | 8.49 MB | ~70 FPS | TFLite export, no quality loss |
-| `mira_classifier_int8.tflite` | **87.42%** | **2.61 MB** | **~97 FPS** | **Best for deployment** — INT8 quantized |
+| `mira_classifier_int8.tflite` | **87.42%** | **2.61 MB** | **~97 FPS** | Compact INT8 export; target-hardware validation pending |
 
 ### Stage B — Detection
 
 | Model | mAP50 | Params | Size | Notes |
 |---|---|---|---|---|---|
-| `mira_exp014.pt` | **60.7%** | 2.58M | 5.21 MB | **TOP PERFORMER** — YOLO11n + Roboflow |
+| `mira_exp014.pt` | **60.7%** | 2.58M | 5.21 MB | Historical FP32 result; 50.6% mAP50-95 |
 | `mira_exp017.pt` | 59.3% | 2.58M | 5.21 MB | YOLO11n + all 4 sources |
 | `mira_exp016.pt` | 58.8% | 2.58M | 5.21 MB | YOLO11n + WaRP only |
 | `mira_exp015.pt` | 56.0% | 2.58M | 5.21 MB | YOLO11n + WaRP + TrashNet |
@@ -361,10 +370,10 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | `mira_exp006.pt` | 39.4% | 3.01M | 5.94 MB | YOLOv8n multi-dataset, proven in demos |
 | `mira_exp011.pt` | 35.0% | 3.01M | 5.94 MB | YOLOv8n TACO-only |
 | `mira_exp009_int8.tflite` | 72.8% | 3.01M | 3.18 MB | **WEAK** — inflated by clean backgrounds |
-| `mira_exp014_int8.tflite` | 60.7% | 2.58M | 2.90 MB | INT8 quantized (edge deployment) |
-| `mira_exp017_int8.tflite` | 59.3% | 2.58M | 2.90 MB | INT8 quantized (all 4 sources) |
+| `mira_exp014_int8.tflite` | Not measured | 2.58M | 2.90 MiB | INT8 export; size measured, detection mAP pending |
+| `mira_exp017_int8.tflite` | Not measured | 2.58M | 2.90 MiB | INT8 export; size measured, detection mAP pending |
 
-> **Recommendation:** Use `mira_exp014.pt` for desktop demos and `mira_exp014_int8.tflite` for edge deployment on Raspberry Pi.
+> **Status:** EXP-014 FP32 is the strongest recorded historical detector result. INT8 accuracy and Raspberry Pi suitability require separate evaluation.
 
 ---
 
@@ -395,10 +404,10 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | EXP-011 | YOLOv8n | TACO only (3,365 img) | 35.0% | Kaggle T4 |
 | EXP-012 | YOLOv8n INT8 | TACO only (quantized) | 35.0% | — |
 | **EXP-013** | **YOLO11n** | **TACO + TrashNet (4,024 img)** | **55.1%** | **Kaggle T4** |
-| **EXP-014** | **YOLO11n** | **mira_tnr (6,802 img)** | **60.7%** | **Kaggle T4** |
+| **EXP-014** | **YOLO11n FP32** | **mira_tnr (6,802 img)** | **60.7% mAP50 / 50.6% mAP50-95** | **Kaggle T4** |
 | **EXP-015** | **YOLO11n** | **mira_tnw (~6,800 img)** | **56.0%** | **Kaggle T4** |
 | **EXP-016** | **YOLO11n** | **mira_warp_only (~3,000 img)** | **58.8%** | **Kaggle T4** |
-| **EXP-017** | **YOLO11n** | **mira_all (~17,000 img)** | **59.3%** | **Kaggle T4** |
+| **EXP-017** | **YOLO11n** | **mira_all (9,774 img)** | **59.3%** | **Kaggle T4** |
 
 ![Detection mAP Comparison](latex/figures/det-map-comparison.png)
 
@@ -411,7 +420,7 @@ To find the optimal training data mix, we trained YOLO11n on 4 dataset combinati
 | Model 1 (EXP-014) | TACO + TrashNet + Roboflow | 6,802 | **60.7%** | `py mira merge --sources taco_trashnet roboflow` |
 | Model 2 (EXP-015) | TACO + TrashNet + WaRP | ~6,800¹ | 56.0% | `py mira merge --sources taco_trashnet warp` |
 | Model 3 (EXP-016) | WaRP only | ~3,000 | 58.8% | `py mira merge --sources warp` |
-| Model 4 (EXP-017) | All four datasets | ~17,000 | 59.3% | `py mira merge --sources taco_trashnet roboflow warp` |
+| Model 4 (EXP-017) | All four datasets | 9,774 | 59.3% | `py mira merge --sources taco_trashnet roboflow warp` |
 
 ¹ Raw WaRP contains ~10,000 images across 28 classes; only images with one of the 5 MIRA-mapped classes are kept, yielding ~2,800. Combined with TACO+TrashNet (3,924), the actual training set is ~6,800 images — consistent with EXP-015.
 
@@ -421,9 +430,9 @@ To find the optimal training data mix, we trained YOLO11n on 4 dataset combinati
 
 ### Field Benchmark — Real-World Validation
 
-11 models tested on real webcam images with manually labeled ground truth.
+The existing table covers 11 models on the 805-image `mira_v2` validation set, not a documented real-webcam field collection.
 
-(**Image-level class-presence F1** — see [field_benchmark_results.md](results/field_benchmark_results.md) for details. This is different from detection mAP50 which measures bounding-box localization quality.)
+(**Preliminary image-level class-presence F1** — see [field_benchmark_results.md](results/field_benchmark_results.md). It is not detection mAP, and the recorded FP32/INT8 threshold policy is inconsistent, so cross-format conclusions are not final.)
 
 ![Field Benchmark F1 Comparison](latex/figures/field-benchmark-f1.png)
 
@@ -433,7 +442,12 @@ Full per-class metrics, confusion matrices, and training curves: [`results/exper
 
 ## Dataset
 
+The current no-SortWaste build is **6,898 images and 12,832 boxes**: 5,108/415/1,375 train/validation/test images. Exact split and source counts are in [`DATASETS_AND_BENCHMARKS.md`](DATASETS_AND_BENCHMARKS.md) and [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md). This local dataset is gitignored and differs from the historical datasets used for EXP-014 and EXP-017.
+
 ### Sources
+
+The following is the historical source catalog used by EXP-013 through
+EXP-017, not the composition table for the current no-SortWaste build.
 
 | Dataset | Classes | Images | Format | Use | License |
 |---|---|---|---|---|---|
@@ -458,6 +472,9 @@ All datasets are remapped to 5 unified classes:
 
 ### Merge Scripts
 
+These commands reproduce historical merge recipes, not the current balanced
+dataset protocol.
+
 ```bash
 # CLI merge (preferred — reads registry from datasets/registry/*.yaml)
 .\mira merge --sources taco_trashnet roboflow               # → datasets/mira_tnr/
@@ -481,7 +498,7 @@ All datasets are remapped to 5 unified classes:
 <!-- ============================================================ -->
 <!-- ![MIRA Control Center](assets/dashboard-screenshot.png) -->
 
-The MIRA Control Center is a FastAPI+WebSocket web dashboard with a clean light theme. It features two modes: **JUFO** (Jugend forscht presentation) and **StarDance** (hackathon variant), allowing model swapping, confidence/IoU adjustments, and real-time inventory tracking.
+The repository contains a FastAPI+WebSocket dashboard implementation and browser UI. Its advertised camera, model-swapping, streaming, and inventory workflow has not yet been verified end to end, so the items below describe intended implementation behavior rather than a validated product.
 
 ### Features
 
@@ -516,7 +533,7 @@ All commands are accessed via `.\mira <command>` (Windows) or `python -m src <co
 | **Detection** | `live` | Interactive model picker → real-time webcam detection |
 | | `live --model <file> --conf 0.5` | Bypass picker with custom threshold |
 | | `eval-yolo --model <file>` | Evaluate a YOLO detection model on test set |
-| **Dashboard** | `dashboard` | Launch web control center (light theme, JUFO/StarDance modes) |
+| **Dashboard** | `dashboard` | Start the dashboard implementation; integration unverified |
 | | `dashboard --host 0.0.0.0 --port 8000` | Custom host/port |
 | **Training** | `train --config <file>` | Train from experiment YAML config |
 | | `train --model yolo11n.pt --dataset <path>` | Train with inline flags |
@@ -681,16 +698,16 @@ MIRA-AI/
 │   ├── serve.py                    # Model serving API
 │   └── compare.py                  # Model comparison utility
 │
-├── models/                         # All trained model exports (Git LFS)
+├── models/                         # Local ignored binaries + tracked YAML descriptors
 │   ├── classifier/                 # Stage A: Keras + TFLite
 │   │   ├── mira_classifier_baseline.keras
 │   │   ├── mira_classifier_transfer.keras
 │   │   ├── mira_classifier_tuned.keras
 │   │   ├── mira_classifier_fp32.tflite
-│   │   └── mira_classifier_int8.tflite      ← Best deployment model
+│   │   └── mira_classifier_int8.tflite      ← Local compact export
 │   └── detection/                  # Stage B: YOLO .pt + .tflite + third-party
-│       ├── mira_exp014.pt                 ← CURRENT BEST (60.7% mAP50)
-│       ├── mira_exp014_int8.tflite        ← Best for edge deployment
+│       ├── mira_exp014.pt                 ← Local historical FP32 artifact
+│       ├── mira_exp014_int8.tflite        ← Local INT8 export; mAP pending
 │       ├── mira_exp017.pt                 ← All 4 sources (59.3% mAP50)
 │       ├── mira_exp017_int8.tflite
 │       ├── mira_exp017.onnx
@@ -702,7 +719,7 @@ MIRA-AI/
 │       ├── mira_exp009_int8.tflite
 │       ├── gianlucasposito_yolov8n.pt      # Third-party benchmark
 │       ├── example_third_party.yaml        # Template: drop .pt/.tflite + YAML here
-│       └── ... (18 models total)
+│       └── ... (binary files are not included in a fresh clone)
 │
 ├── experiments/                    # Training experiment configs (YAML)
 │   ├── exp009_yolov8n_int8.yaml
@@ -767,7 +784,9 @@ MIRA-AI/
 - **End-on metal cans** — cans facing the camera opening-first cause detection drop-outs due to limited training samples for this orientation.
 - **Overlapping objects** — heavily stacked or occluded items reduce bounding box accuracy, particularly for paper and trash.
 - **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 7.1% mAP50) due to its inherent visual diversity.
-- **No RPi benchmarks** — all latency measurements are on Intel i7 / NVIDIA T4, not the target Raspberry Pi Zero 2W.
+- **No RPi or robot integration benchmark** — target-hardware latency, memory, and end-to-end sorting remain pending.
+- **Dashboard integration unverified** — components and unit tests exist, but no tracked end-to-end camera/model/browser verification artifact exists.
+- **Distillation pending** — EXP-018 through EXP-023 are plans/configs, not measured results.
 - **Windows launcher** — `mira.bat` works on Windows CMD/PowerShell. Linux/macOS users use `python -m src` or the provided `mira.sh`.
 
 ---
@@ -788,9 +807,9 @@ Training datasets are downloaded from specific versions:
 - **Roboflow:** [Roboflow Universe](https://universe.roboflow.com/robotics-world) — specific export versions linked in experiment logs
 - **WaRP:** [GitHub repo](https://github.com/DTUGreenAmbition/WaRP)
 
-### Model Checksums
+### Model Availability
 
-All trained models are available in the `models/` directory. Run `.\mira download --verify` to verify SHA-256 hashes of all downloaded models against Hugging Face Hub records.
+Trained model binaries are local, gitignored files; a fresh clone includes only the tracked YAML descriptors. The `mira download` command contains Hugging Face URLs and prints a downloaded file's SHA-256, but the repository contains no expected hashes to verify against, and the configured endpoint required authentication when checked on 2026-07-30.
 
 ### Kaggle / Colab Training
 
@@ -809,7 +828,7 @@ Results were generated on Intel i7 / NVIDIA T4. Run `.\mira diagnostics` to chec
 | Nasien et al. (2025) | YOLO11 | 5 | 10,464 custom | ~94% acc | Accuracy metric, not mAP |
 | Marwah & Chowanda (2025) | YOLO11s | household | TACO + custom | 72.6% | After quantization |
 | Messai et al. (2025) | YOLO11-x | 8 | Industrial | 62.8% | 56.9M params vs MIRA's 2.58M |
-| **MIRA EXP-014** | **YOLO11n** | **5** | **TACO+TrashNet+Roboflow** | **60.7%** | **2.9 MB INT8, edge-optimized** |
+| **MIRA EXP-014** | **YOLO11n** | **5** | **TACO+TrashNet+Roboflow** | **60.7% FP32** | **Historical older-dataset result; INT8 size 2.90 MiB, INT8 mAP pending** |
 
 > Direct comparison is difficult because every study uses different class schemas, datasets, and evaluation protocols. MIRA's *trash* class (residual waste) is particularly challenging — most recycling datasets omit it entirely.
 

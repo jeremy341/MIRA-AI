@@ -131,7 +131,9 @@ async def start_stream():
     if success:
         return {"success": True, "message": "Streaming started", "timestamp": datetime.now().isoformat()}
 
-    raise HTTPException(status_code=500, detail="The stream could not be started. Check the camera connection and configuration.")
+    raise HTTPException(
+        status_code=500, detail="The stream could not be started. Check the camera connection and configuration."
+    )
 
 
 @app.post("/api/stream/stop")

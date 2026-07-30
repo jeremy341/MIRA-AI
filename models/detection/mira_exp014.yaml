@@ -9,6 +9,6 @@ training:
   epochs: 120
 metrics:
   map50: 0.607
-  map50_95: 0.455
+  map50_95: 0.506
 tags: [\"yolo11n\", \"multidataset\", \"best-so-far\"]
-recommended_for: \"raspberry_pi\"
+deployment_status: pending_target_hardware_validation

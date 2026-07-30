@@ -171,12 +171,12 @@ def generate_colab_notebook(exp: dict, project: dict) -> dict:
             _code_cell(
                 "# Write dataset.yaml\n"
                 "yaml_path = Path('/content/dataset.yaml')\n"
-                "names_yaml = \"[\" + \", \".join(f\"'{c}'\" for c in {class_names}) + \"]\"\n"
+                f'names_yaml = "[" + ", ".join(f"\'{{c}}\'" for c in {class_names}) + "]"\n'
                 'yaml_content = f"""\\\n'
                 "train: {data_root}/images/train\n"
                 "val: {data_root}/images/val\n"
                 f"nc: {num_classes}\n"
-                f"names: {names_yaml}\n"
+                "names: {names_yaml}\n"
                 '"""\n'
                 "yaml_path.write_text(yaml_content.strip())\n"
                 "print(f'Written: {yaml_path}')"

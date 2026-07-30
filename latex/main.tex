@@ -1,4 +1,4 @@
-\documentclass[10pt,a4paper,bibliography=totoc,abstract=true]{scrartcl}
+\documentclass[11pt,a4paper,bibliography=totoc,abstract=true]{scrartcl}
 
 % --- SPRACHE UND SCHRIFTARTEN ---
 \usepackage[ngerman]{babel}
@@ -50,6 +50,11 @@
 
 \renewcommand*{\nameyeardelim}{\addcomma\space}
 
+% Der Leitfaden fordert mindestens 10 pt. Bei 11 pt Grundschrift bleiben auch
+% Beschriftungen und Fußnoten in der Regel mindestens 10 pt groß.
+\captionsetup{font=normalsize}
+\renewcommand{\footnotesize}{\fontsize{10}{12}\selectfont}
+
 % --- CODING STYLE DEFINITION (Verhindert den Compiler-Absturz!) ---
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -60,7 +65,7 @@
     backgroundcolor=\color{backcolour},   
     commentstyle=\color{codegreen},
     keywordstyle=\color{blue},
-    numberstyle=\tiny\color{codegray},
+    numberstyle=\footnotesize\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\ttfamily\footnotesize,
     breakatwhitespace=false,         
@@ -78,9 +83,9 @@
     literate={ä}{{\"a}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {Ä}{{\"A}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1 {ß}{{\ss}}1
 }
 
-% --- REGELKONFORME GEOMETRIE (Jugend forscht Richtlinien) ---
-\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm} % Exakte Ränder [2]
-\onehalfspacing % Exakt 1.5 Zeilenabstand [2]
+% --- FORM NACH JUGEND-FORSCHT-LEITFADEN (Stand Juli 2025) ---
+\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+\onehalfspacing
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.45em}
 \setcounter{secnumdepth}{3}
@@ -108,30 +113,30 @@
 \begin{document}
 
 % ==============================================================================
-% TEIL A: EXKLUDIERTER BEREICH (Zählt NICHT zu den 15 Seiten) [2]
+% NICHT MITGEZÄHLT: Deckblatt, Projektüberblick und Inhaltsverzeichnis
 % ==============================================================================
 \pagenumbering{roman} % Römische Seitenzahlen für den Vorspann [2]
 
 % 1. Titelseite
 \input{sections/title}
 
-% 2. Das eine Inhaltsverzeichnis (auf einer eigenen Seite!)
+% 2. Projektüberblick (maximal eine Seite)
 \clearpage
+\input{sections/projektueberblick}
+\clearpage
+
+% 3. Inhaltsverzeichnis
 \tableofcontents
 \clearpage
 
-% 3. Projektüberblick + Zusammenfassung (zählen laut Regeln nicht mit, teilen sich eine Seite)
-\input{sections/projektueberblick}
-\vspace{1em}
-\input{sections/abstract}
-\clearpage             % Beendet die römische Nummerierung und erzeugt einen sauberen Umbruch
-
 % ==============================================================================
-% TEIL B: HAUPTBEREICH (Exakt maximal 15 Seiten ab hier) [2]
+% MITGEZÄHLT: Fachliche Kurzfassung bis einschließlich Fazit und Ausblick
 % ==============================================================================
-\pagenumbering{arabic} % Umschalten auf arabische Seitenzahlen (Seite 1 startet hier) [2]
+\pagenumbering{arabic}
 \setcounter{page}{1}
 
+\input{sections/abstract}
+\clearpage
 \input{sections/introduction}
 \input{sections/background}
 \input{sections/methodology}
@@ -143,6 +148,8 @@
 \clearpage
 \printbibliography[title={Quellen- und Literaturverzeichnis}]
 
+% Unterstützungsleistungen werden gemäß Leitfaden nicht in die 15 Seiten
+% eingerechnet und bilden keinen Anhang.
 \clearpage
 \input{sections/appendix}
 

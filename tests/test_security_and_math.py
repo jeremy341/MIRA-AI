@@ -10,6 +10,7 @@ import pytest
 # resolve_safe_path  (src/config.py)
 # ---------------------------------------------------------------------------
 
+
 class TestResolveSafePath:
     """Path-traversal prevention for user-supplied file paths."""
 
@@ -66,6 +67,7 @@ class TestResolveSafePath:
 # compute_iou  (src/pipeline/benchmark.py)
 # ---------------------------------------------------------------------------
 
+
 class TestComputeIoU:
     """Intersection-over-Union calculation for axis-aligned bounding boxes."""
 
@@ -119,8 +121,37 @@ class TestComputeIoU:
 # compute_map  (src/pipeline/benchmark.py)
 # ---------------------------------------------------------------------------
 
+
 class TestComputeMap:
     """Mean Average Precision across classes."""
+
+    def test_identical_coordinates_on_different_images_do_not_match(self):
+        from src.pipeline.benchmark import compute_map
+
+        preds = [
+            [{"class_id": 0, "confidence": 0.9, "bbox_pixel": [10, 10, 50, 50]}],
+            [],
+        ]
+        gts = [
+            [],
+            [{"class_id": 0, "bbox": [10, 10, 50, 50]}],
+        ]
+
+        assert compute_map(preds, gts) == pytest.approx(0.0)
+
+    def test_prediction_matches_ground_truth_on_same_image(self):
+        from src.pipeline.benchmark import compute_map
+
+        preds = [
+            [],
+            [{"class_id": 0, "confidence": 0.9, "bbox_pixel": [10, 10, 50, 50]}],
+        ]
+        gts = [
+            [],
+            [{"class_id": 0, "bbox": [10, 10, 50, 50]}],
+        ]
+
+        assert compute_map(preds, gts) == pytest.approx(1.0)
 
     def test_perfect_predictions(self):
         from src.pipeline.benchmark import compute_map
@@ -194,6 +225,7 @@ class TestComputeMap:
 # ---------------------------------------------------------------------------
 # setup_camera_properties  (src/config.py)
 # ---------------------------------------------------------------------------
+
 
 class TestSetupCameraProperties:
     """Camera property initialisation (mocked, no real hardware)."""

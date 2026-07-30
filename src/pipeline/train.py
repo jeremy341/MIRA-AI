@@ -73,6 +73,7 @@ class TrainingPipeline:
 
     def train_yolo(self, config: TrainConfig) -> TrainResult:
         import copy
+
         config = copy.deepcopy(config)
         if not config.project:
             config.project = "runs/train"
@@ -89,6 +90,7 @@ class TrainingPipeline:
         self, config: TrainConfig, base_model: str = "mobilenetv2", fine_tune: bool = False
     ) -> TrainResult:
         import copy
+
         config = copy.deepcopy(config)
 
         config.extra["base_model"] = base_model

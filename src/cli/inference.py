@@ -283,5 +283,3 @@ def _download_with_progress(url: str, dest: Path):
                     print(f"\r    Downloaded {downloaded} bytes", end="", flush=True)
         print()
         print(f"    SHA-256: {sha256.hexdigest()}")
-
-

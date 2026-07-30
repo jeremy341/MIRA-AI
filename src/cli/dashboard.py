@@ -1,4 +1,4 @@
-﻿"""CLI command to launch the real-time detection dashboard server."""
+"""CLI command to launch the real-time detection dashboard server."""
 
 import sys
 
@@ -39,8 +39,9 @@ def cmd_dashboard(args):
     if str(backend_dir) not in sys.path:
         sys.path.insert(0, str(backend_dir))
 
-# Register src.config as "config" so "from config import ..." in camera_service.py works
+    # Register src.config as "config" so "from config import ..." in camera_service.py works
     import src.config
+
     _prev_config = sys.modules.get("config")
     sys.modules["config"] = src.config
 
@@ -69,4 +70,3 @@ def cmd_dashboard(args):
 
     print(f"Starting MIRA Dashboard on http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
-

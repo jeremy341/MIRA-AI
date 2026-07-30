@@ -1,6 +1,7 @@
 """
 Camera service managing inference pipeline
 """
+
 import asyncio
 import threading
 import time
@@ -21,6 +22,8 @@ logger = get_logger(__name__)
 class CameraService:
     """Main service handling camera, inference, and statistics"""
 
+    _STOP_JOIN_TIMEOUT_SECONDS = 1.0
+
     def __init__(self, loop=None):
         self._lock = threading.Lock()
         self.status = SystemStatus.IDLE
@@ -33,6 +36,8 @@ class CameraService:
         self.camera = None
         self.camera_config = None
         self.is_streaming = False
+        self._disconnect_count = 0
+        self._streaming_thread = None
 
         # Model state
         self.model = None
@@ -54,6 +59,7 @@ class CameraService:
         self.on_detection = None
         self.on_metrics = None
         self.on_status_change = None
+        self.on_frame = None
 
     def _update_status_locked(self, status: SystemStatus, message: str):
         """Caller must hold self._lock"""
@@ -61,11 +67,24 @@ class CameraService:
         self.status_message = message
 
     def _notify_status_change(self):
-        if self.on_status_change and self._loop:
-            asyncio.run_coroutine_threadsafe(
-                self.on_status_change(self.status, self.status_message),
-                self._loop
-            )
+        callback = self.on_status_change
+        loop = self._loop
+        if callback and loop:
+            notification = self._run_status_callback(callback, self.status, self.status_message)
+            try:
+                asyncio.run_coroutine_threadsafe(notification, loop)
+            except Exception as exc:
+                notification.close()
+                logger.warning("Status callback scheduling failed: %s", exc)
+
+    @staticmethod
+    async def _run_status_callback(callback, status, message):
+        try:
+            result = callback(status, message)
+            if result is not None:
+                await result
+        except Exception as exc:
+            logger.warning("Status callback failed: %s", exc)
 
     async def initialize_camera(self, config):
         """Initialize camera with configuration"""
@@ -76,20 +95,12 @@ class CameraService:
 
         with self._lock:
             try:
-                self.camera = cv2.VideoCapture(
-                    config.index,
-                    cv2.CAP_DSHOW if hasattr(cv2, 'CAP_DSHOW') else 0
-                )
+                self.camera = cv2.VideoCapture(config.index, cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else 0)
 
                 if not self.camera.isOpened():
                     raise RuntimeError(f"Failed to open camera index {config.index}")
 
-                setup_camera_properties(
-                    self.camera,
-                    config.width,
-                    config.height,
-                    config.fps
-                )
+                setup_camera_properties(self.camera, config.width, config.height, config.fps)
 
                 # Warmup camera
                 for _ in range(10):
@@ -110,7 +121,7 @@ class CameraService:
         with self._lock:
             try:
                 # Basic validation to prevent path traversal
-                if any(sep in model_name for sep in ('/', '\\', '..')):
+                if any(sep in model_name for sep in ("/", "\\", "..")):
                     raise ValueError(f"Invalid model name: {model_name}")
                 model_path = DETECTION_DIR / model_name
                 model_path = model_path.resolve()
@@ -153,6 +164,10 @@ class CameraService:
             if self.is_streaming:
                 return True
 
+            if self._streaming_thread and self._streaming_thread.is_alive():
+                self._update_status_locked(SystemStatus.ERROR, "Previous streaming thread is still shutting down")
+                return False
+
             if not self.camera or not self.model:
                 self._update_status_locked(SystemStatus.ERROR, "Camera or model not initialized")
                 return False
@@ -160,7 +175,8 @@ class CameraService:
             self.is_streaming = True
             self._update_status_locked(SystemStatus.RUNNING, "Streaming started")
 
-            threading.Thread(target=self._streaming_loop, daemon=True).start()
+            self._streaming_thread = threading.Thread(target=self._streaming_loop, daemon=True)
+            self._streaming_thread.start()
 
             return True
 
@@ -192,6 +208,9 @@ class CameraService:
                     break
 
                 ret, frame = cam.read()
+                with self._lock:
+                    if not self.is_streaming:
+                        break
                 if not ret:
                     with self._lock:
                         self._disconnect_count += 1
@@ -210,16 +229,29 @@ class CameraService:
 
                 if local_is_tflite_int8:
                     results = mod.predict(
-                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou, verbose=False,
+                        frame,
+                        imgsz=local_img_size,
+                        conf=local_conf,
+                        iou=local_iou,
+                        verbose=False,
                     )
                 elif local_enable_tracking:
                     results = mod.track(
-                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou,
-                        persist=True, verbose=False, tracker=str(BYTE_TRACK_CONFIG_PATH),
+                        frame,
+                        imgsz=local_img_size,
+                        conf=local_conf,
+                        iou=local_iou,
+                        persist=True,
+                        verbose=False,
+                        tracker=str(BYTE_TRACK_CONFIG_PATH),
                     )
                 else:
                     results = mod.predict(
-                        frame, imgsz=local_img_size, conf=local_conf, iou=local_iou, verbose=False,
+                        frame,
+                        imgsz=local_img_size,
+                        conf=local_conf,
+                        iou=local_iou,
+                        verbose=False,
                     )
 
                 inference_time = (time.perf_counter() - frame_start) * 1000
@@ -289,12 +321,7 @@ class CameraService:
             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
             track_id = int(box.id[0]) if box.id is not None else None
 
-            detection = Detection(
-                class_name=waste_class,
-                confidence=conf,
-                bbox=[x1, y1, x2, y2],
-                track_id=track_id
-            )
+            detection = Detection(class_name=waste_class, confidence=conf, bbox=[x1, y1, x2, y2], track_id=track_id)
 
             detections.append(detection)
 
@@ -304,7 +331,7 @@ class CameraService:
         """Map class ID to name"""
         return CLASS_NAMES[class_id] if class_id < len(CLASS_NAMES) else "unknown"
 
-    def _update_performance_metrics(self, inference_time: float, detections: list[Detection]):
+    def _update_performance_metrics(self, inference_time: float):
         """Update performance tracking metrics"""
         with self._lock:
             self.latency_history.append(inference_time)
@@ -313,8 +340,7 @@ class CameraService:
             self.frame_times.append(time.perf_counter())
             if len(self.frame_times) > 1:
                 # Keep only recent times for accurate FPS
-                while len(self.frame_times) > 1 and \
-                      self.frame_times[-1] - self.frame_times[0] > 2.0:
+                while len(self.frame_times) > 1 and self.frame_times[-1] - self.frame_times[0] > 2.0:
                     self.frame_times.popleft()
 
     def _calculate_system_metrics(self) -> SystemMetrics:
@@ -373,8 +399,7 @@ class CameraService:
             for detection in detections:
                 if self.detection_history:
                     last = self.detection_history[-1]
-                    if (last.class_name == detection.class_name
-                        and last.bbox == detection.bbox):
+                    if last.class_name == detection.class_name and last.bbox == detection.bbox:
                         continue
                 self.detection_history.append(detection)
                 self.class_history[detection.class_name].append(detection)
@@ -390,12 +415,33 @@ class CameraService:
             self.is_streaming = False
             cam = self.camera
             self.camera = None
+            streaming_thread = self._streaming_thread
+
+        thread_alive = False
+        if streaming_thread and streaming_thread is not threading.current_thread():
+            await asyncio.to_thread(streaming_thread.join, self._STOP_JOIN_TIMEOUT_SECONDS)
+            thread_alive = streaming_thread.is_alive()
+            if thread_alive:
+                logger.warning(
+                    "Streaming thread did not stop within %.2f seconds; releasing camera to unblock it",
+                    self._STOP_JOIN_TIMEOUT_SECONDS,
+                )
 
         if cam:
             try:
                 cam.release()
             except Exception as exc:
                 logger.warning("Exception releasing camera: %s", exc)
+
+        if thread_alive:
+            await asyncio.to_thread(streaming_thread.join, self._STOP_JOIN_TIMEOUT_SECONDS)
+            thread_alive = streaming_thread.is_alive()
+            if thread_alive:
+                logger.error("Streaming thread remains blocked after camera release; retaining daemon for tracking")
+
+        with self._lock:
+            if self._streaming_thread is streaming_thread and not thread_alive:
+                self._streaming_thread = None
 
         with self._lock:
             self._update_status_locked(SystemStatus.IDLE, "System stopped")
@@ -447,15 +493,17 @@ class CameraService:
                 except Exception:
                     input_size = 640
 
-                models.append({
-                    "name": model_file.name,
-                    "label": model_file.name.replace("_", " ").title(),
-                    "path": str(model_file),
-                    "model_type": "yolo_tflite" if is_tflite else "yolo_pt",
-                    "size_mb": round(model_file.stat().st_size / 1024 / 1024, 2),
-                    "is_tflite_int8": is_int8,
-                    "input_size": input_size,
-                    "recommended": is_int8  # INT8 models recommended for Raspberry Pi
-                })
+                models.append(
+                    {
+                        "name": model_file.name,
+                        "label": model_file.name.replace("_", " ").title(),
+                        "path": str(model_file),
+                        "model_type": "yolo_tflite" if is_tflite else "yolo_pt",
+                        "size_mb": round(model_file.stat().st_size / 1024 / 1024, 2),
+                        "is_tflite_int8": is_int8,
+                        "input_size": input_size,
+                        "recommended": is_int8,  # INT8 models recommended for Raspberry Pi
+                    }
+                )
 
         return sorted(models, key=lambda x: x["name"])

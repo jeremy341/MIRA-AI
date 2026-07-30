@@ -11,7 +11,7 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Self
+from typing import Self, cast
 
 import cv2
 import numpy as np
@@ -64,7 +64,7 @@ class _FrameBuffer:
     def update(self, ret: bool, frame: object | None) -> None:
         with self._lock:
             self._ret = ret
-            self._frame = frame
+            self._frame = cast(np.ndarray | None, frame)
             self._last_update = time.perf_counter()
 
     def get(self) -> tuple[bool, object | None]:
@@ -181,8 +181,9 @@ class IPCamera(AbstractCamera):
         self._cam_height = height
         self._released = False
 
-        self.cap = cv2.VideoCapture(rtsp_url)
-        if not self.cap.isOpened():
+        cap = cv2.VideoCapture(rtsp_url)
+        self.cap: cv2.VideoCapture | None = cap
+        if not cap.isOpened():
             safe_url = rtsp_url.split("@")[-1] if "@" in rtsp_url else rtsp_url
             raise CameraError(f"Failed to open IP camera at rtsp://<redacted>@{safe_url}.")
 
@@ -194,7 +195,7 @@ class IPCamera(AbstractCamera):
     def _reader(self) -> None:
         while self._buffer.running:
             try:
-                ret, frame = self.cap.read()
+                ret, frame = cast(cv2.VideoCapture, self.cap).read()
             except Exception as exc:
                 logger.warning(f"IP camera read error: {exc}")
                 time.sleep(0.05)
@@ -210,8 +211,9 @@ class IPCamera(AbstractCamera):
                             old_cap.release()
                         except Exception:
                             pass
-                    self.cap = cv2.VideoCapture(self._rtsp_url)
-                    if self.cap.isOpened():
+                    new_cap = cv2.VideoCapture(self._rtsp_url)
+                    self.cap = new_cap
+                    if new_cap.isOpened():
                         logger.info(f"IP camera reconnected after {attempt + 1} attempt(s)")
                         break
                 else:
@@ -237,7 +239,7 @@ class IPCamera(AbstractCamera):
         self._buffer.stop()
         self._thread.join(timeout=5.0)
         try:
-            self.cap.release()
+            cast(cv2.VideoCapture, self.cap).release()
         except Exception as exc:
             logger.warning(f"Exception releasing IP camera: {exc}")
 

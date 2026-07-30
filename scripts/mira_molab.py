@@ -54,6 +54,7 @@ RAW_GARBAGE = RAW / "garbage_detection"
 
 # -- Helpers ------------------------------------------------------------------
 
+
 def ok(msg: str):
     print(f"  [OK] {msg}")
 
@@ -67,17 +68,18 @@ def info(msg: str):
 
 
 def step(n, total, label: str):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  STEP {n}/{total}: {label}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 def check_gpu() -> str:
     try:
         out = subprocess.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total,driver_version",
-             "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=30,
+            ["nvidia-smi", "--query-gpu=name,memory.total,driver_version", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         if out.returncode == 0:
             return out.stdout.strip()
@@ -100,9 +102,15 @@ def download_file(url: str, dest: Path, desc: str = "") -> bool:
         resp = requests.get(url, stream=True, timeout=30, allow_redirects=True)
         resp.raise_for_status()
         total = int(resp.headers.get("content-length", 0))
-        with open(dest, "wb") as f, tqdm(
-            desc=desc, total=total, unit="B", unit_scale=True,
-        ) as pbar:
+        with (
+            open(dest, "wb") as f,
+            tqdm(
+                desc=desc,
+                total=total,
+                unit="B",
+                unit_scale=True,
+            ) as pbar,
+        ):
             for chunk in resp.iter_content(chunk_size=8192):
                 f.write(chunk)
                 pbar.update(len(chunk))
@@ -161,6 +169,7 @@ def print_stats(img_dir: Path, lbl_dir: Path, label: str):
 # ==============================================================================
 # CELLS
 # ==============================================================================
+
 
 @app.cell
 def setup_cell():
@@ -221,10 +230,18 @@ def download_recycle_trash():
     info("Option B: Kaggle Garbage Classification (4133 images, 7 classes)")
     try:
         r = subprocess.run(
-            ["kaggle", "datasets", "download", "-d",
-             "karansolanki01/garbage-classification",
-             "-p", str(RAW_RECYCLE / "kaggle")],
-            capture_output=True, text=True, timeout=300,
+            [
+                "kaggle",
+                "datasets",
+                "download",
+                "-d",
+                "karansolanki01/garbage-classification",
+                "-p",
+                str(RAW_RECYCLE / "kaggle"),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=300,
         )
         if r.returncode == 0:
             n = len(list((RAW_RECYCLE / "kaggle").rglob("*.jpg")))
@@ -285,11 +302,20 @@ def download_garbage_detection():
 def convert_and_merge(img_exts):
     step(4, 7, "Convert & Merge All Datasets to MIRA 5-class")
 
-    MIRA_MAP = {"glass": 0, "metal": 1, "paper": 2, "plastic": 3, "trash": 4}
+    mira_map = {"glass": 0, "metal": 1, "paper": 2, "plastic": 3, "trash": 4}
 
     # -- Recycle Trash: COCO to YOLO ------------------------------------------
-    RECYCLE_MAP = {
-        0: 4, 1: 3, 2: 2, 3: 3, 4: 3, 5: 1, 6: 0, 7: 2, 8: 4, 9: 4,
+    recycle_map = {
+        0: 4,
+        1: 3,
+        2: 2,
+        3: 3,
+        4: 3,
+        5: 1,
+        6: 0,
+        7: 2,
+        8: 4,
+        9: 4,
     }
 
     def coco_to_yolo(coco_path: Path, out_dir: Path, mapping: dict) -> int:
@@ -332,7 +358,7 @@ def convert_and_merge(img_exts):
         return count
 
     # -- SortWaste: remap YOLO labels -----------------------------------------
-    SW_MAP = {0: 3, 1: 3, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 3}
+    sw_map = {0: 3, 1: 3, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 3}
 
     def process_sortwaste(src: Path, dst: Path) -> int:
         total = 0
@@ -356,8 +382,8 @@ def convert_and_merge(img_exts):
                         old = int(parts[0])
                     except ValueError:
                         continue
-                    if old in SW_MAP:
-                        new.append(f"{SW_MAP[old]} " + " ".join(parts[1:]))
+                    if old in sw_map:
+                        new.append(f"{sw_map[old]} " + " ".join(parts[1:]))
                 if not new:
                     continue
                 (dst / "images" / split).mkdir(parents=True, exist_ok=True)
@@ -368,7 +394,7 @@ def convert_and_merge(img_exts):
         return total
 
     # -- Garbage Detection: remap YOLO ----------------------------------------
-    GD_MAP = {0: 4, 1: 2, 2: 4, 3: 0, 4: 4, 5: 1, 6: 4, 7: 2, 8: 3, 9: 4, 10: 4}
+    gd_map = {0: 4, 1: 2, 2: 4, 3: 0, 4: 4, 5: 1, 6: 4, 7: 2, 8: 3, 9: 4, 10: 4}
 
     def process_gd(src: Path, dst: Path) -> int:
         total = 0
@@ -392,8 +418,8 @@ def convert_and_merge(img_exts):
                         old = int(parts[0])
                     except ValueError:
                         continue
-                    if old in GD_MAP:
-                        new.append(f"{GD_MAP[old]} " + " ".join(parts[1:]))
+                    if old in gd_map:
+                        new.append(f"{gd_map[old]} " + " ".join(parts[1:]))
                 if not new:
                     continue
                 (dst / "images" / split).mkdir(parents=True, exist_ok=True)
@@ -404,17 +430,17 @@ def convert_and_merge(img_exts):
         return total
 
     # -- TADA COCO remap ----------------------------------------------------
-    TADA_MAP = {  # noqa: F841
-        0: 3,   # Plastic
-        1: 2,   # Paper
-        2: 4,   # General trash
-        3: 4,   # Clothing
-        4: 0,   # Glass
-        5: 1,   # Metal
-        6: 3,   # Styrofoam
-        7: 3,   # Plastic bag
-        8: 2,   # Paper pack
-        9: 4,   # Battery
+    tada_map = {  # noqa: F841
+        0: 3,  # Plastic
+        1: 2,  # Paper
+        2: 4,  # General trash
+        3: 4,  # Clothing
+        4: 0,  # Glass
+        5: 1,  # Metal
+        6: 3,  # Styrofoam
+        7: 3,  # Plastic bag
+        8: 2,  # Paper pack
+        9: 4,  # Battery
     }
 
     # -- Execute --------------------------------------------------------------
@@ -428,7 +454,7 @@ def convert_and_merge(img_exts):
         for jp in src_dir.rglob("*.json"):
             if "train" in jp.name or "test" in jp.name or "val" in jp.name:
                 sn = "val" if "test" in jp.stem or "val" in jp.stem else "train"
-                n = coco_to_yolo(jp, MERGED / sn, RECYCLE_MAP)
+                n = coco_to_yolo(jp, MERGED / sn, recycle_map)
                 ok(f"COCO source ({jp.parent.name}/{jp.name}): {n} images")
                 total += n
 
@@ -446,7 +472,7 @@ def convert_and_merge(img_exts):
         if img_d.exists():
             print_stats(img_d, lbl_d, split.capitalize())
 
-    return (coco_to_yolo, SW_MAP, GD_MAP, RECYCLE_MAP, MIRA_MAP)
+    return (coco_to_yolo, sw_map, gd_map, recycle_map, mira_map)
 
 
 @app.cell
@@ -482,14 +508,30 @@ def train_teacher_yolo11x():
     model = YOLO("yolo11x.pt")
     model.train(
         data=str(yaml_path),
-        epochs=200, batch=16, imgsz=1280,
-        optimizer="AdamW", lr0=0.001, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/teachers", name="yolo11x_1280", exist_ok=True,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=16,
+        imgsz=1280,
+        optimizer="AdamW",
+        lr0=0.001,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/teachers",
+        name="yolo11x_1280",
+        exist_ok=True,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-018 done")
 
@@ -513,14 +555,30 @@ def train_teacher_yolo26x():
     model = YOLO("yolo26x.pt")
     model.train(
         data=str(yaml_path),
-        epochs=200, batch=32, imgsz=640,
-        optimizer="MuSGD", lr0=0.01, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/teachers", name="yolo26x_640", exist_ok=True,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=32,
+        imgsz=640,
+        optimizer="MuSGD",
+        lr0=0.01,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/teachers",
+        name="yolo26x_640",
+        exist_ok=True,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-019 done")
 
@@ -551,15 +609,32 @@ def distill_yolo26n():
     student = YOLO("yolo26n.pt")
     student.train(
         data=str(yaml_path),
-        epochs=200, batch=32, imgsz=640,
-        optimizer="MuSGD", lr0=0.01, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/students", name="distill_yolo26n", exist_ok=True,
-        distill_model=teacher, dis=6.0,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=32,
+        imgsz=640,
+        optimizer="MuSGD",
+        lr0=0.01,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/students",
+        name="distill_yolo26n",
+        exist_ok=True,
+        distill_model=teacher,
+        dis=6.0,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-020 done")
 
@@ -589,15 +664,32 @@ def distill_yolo11n():
     student = YOLO("yolo11n.pt")
     student.train(
         data=str(yaml_path),
-        epochs=200, batch=32, imgsz=640,
-        optimizer="AdamW", lr0=0.01, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/students", name="distill_yolo11n", exist_ok=True,
-        distill_model=teacher, dis=6.0,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=32,
+        imgsz=640,
+        optimizer="AdamW",
+        lr0=0.01,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/students",
+        name="distill_yolo11n",
+        exist_ok=True,
+        distill_model=teacher,
+        dis=6.0,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-021 done")
 
@@ -621,14 +713,30 @@ def baseline_yolo26n():
     model = YOLO("yolo26n.pt")
     model.train(
         data=str(yaml_path),
-        epochs=200, batch=32, imgsz=640,
-        optimizer="MuSGD", lr0=0.01, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/baselines", name="baseline_yolo26n", exist_ok=True,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=32,
+        imgsz=640,
+        optimizer="MuSGD",
+        lr0=0.01,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/baselines",
+        name="baseline_yolo26n",
+        exist_ok=True,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-022 done")
 
@@ -652,14 +760,30 @@ def baseline_yolo11n():
     model = YOLO("yolo11n.pt")
     model.train(
         data=str(yaml_path),
-        epochs=200, batch=32, imgsz=640,
-        optimizer="AdamW", lr0=0.01, cos_lr=True,
-        close_mosaic=10, patience=30, amp=True,
-        device=0, workers=8,
-        project="runs/baselines", name="baseline_yolo11n", exist_ok=True,
-        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
-        degrees=0, translate=0.1, scale=0.5,
-        shear=0, flipud=0, fliplr=0.5, mosaic=1.0,
+        epochs=200,
+        batch=32,
+        imgsz=640,
+        optimizer="AdamW",
+        lr0=0.01,
+        cos_lr=True,
+        close_mosaic=10,
+        patience=30,
+        amp=True,
+        device=0,
+        workers=8,
+        project="runs/baselines",
+        name="baseline_yolo11n",
+        exist_ok=True,
+        hsv_h=0.015,
+        hsv_s=0.7,
+        hsv_v=0.4,
+        degrees=0,
+        translate=0.1,
+        scale=0.5,
+        shear=0,
+        flipud=0,
+        fliplr=0.5,
+        mosaic=1.0,
     )
     ok("EXP-023 done")
 
@@ -726,25 +850,26 @@ def evaluate_models():
         try:
             m = YOLO(str(pt))
             val = m.val(data=str(yaml_path), imgsz=640, device=0, half=True)
-            results.append({
-                "name": name,
-                "mAP50": val.box.map50,
-                "mAP50-95": val.box.map,
-                "P": val.box.mp,
-                "R": val.box.mr,
-            })
+            results.append(
+                {
+                    "name": name,
+                    "mAP50": val.box.map50,
+                    "mAP50-95": val.box.map,
+                    "P": val.box.mp,
+                    "R": val.box.mr,
+                }
+            )
             ok(f"{name}: mAP50={val.box.map50:.3f}, mAP50-95={val.box.map:.3f}")
         except Exception as e:
             warn(f"{name}: eval failed: {e}")
 
     if results:
-        print(f"\n{'='*70}")
+        print(f"\n{'=' * 70}")
         print(f"  {'Model':<22s} {'mAP50':>8s} {'mAP50-95':>10s} {'P':>8s} {'R':>8s}")
-        print(f"{'='*70}")
+        print(f"{'=' * 70}")
         for r in sorted(results, key=lambda x: x["mAP50"], reverse=True):
-            print(f"  {r['name']:<22s} {r['mAP50']:>8.3f} {r['mAP50-95']:>10.3f} "
-                  f"{r['P']:>8.3f} {r['R']:>8.3f}")
-        print(f"{'='*70}")
+            print(f"  {r['name']:<22s} {r['mAP50']:>8.3f} {r['mAP50-95']:>10.3f} {r['P']:>8.3f} {r['R']:>8.3f}")
+        print(f"{'=' * 70}")
 
 
 @app.cell
@@ -798,22 +923,31 @@ if __name__ == "__main__":
     if "marimo" in sys.modules:
         _mo = sys.modules["marimo"]
     else:
+
         class _MockMo:
             def __getattr__(self, _):
                 return lambda *a, **kw: None
+
         _mo = _MockMo()
         sys.modules["marimo"] = _mo
 
     parser = argparse.ArgumentParser(description="MIRA-AI Training Pipeline")
-    parser.add_argument("--phase", type=int, default=-1,
-                        help="Phase: 0=download, 1=teachers, 2=distill, "
-                             "3=baselines, 4=export+eval, -1=all")
+    parser.add_argument(
+        "--phase",
+        type=int,
+        default=-1,
+        help="Phase: 0=download, 1=teachers, 2=distill, 3=baselines, 4=export+eval, -1=all",
+    )
     args = parser.parse_args()
 
     phases = {
-        0: [download_sortwaste, download_recycle_trash, download_garbage_detection,
+        0: [
+            download_sortwaste,
+            download_recycle_trash,
+            download_garbage_detection,
             lambda: convert_and_merge({".jpg", ".jpeg", ".png"}),
-            create_merged_yaml],
+            create_merged_yaml,
+        ],
         1: [train_teacher_yolo11x, train_teacher_yolo26x],
         2: [distill_yolo26n, distill_yolo11n],
         3: [baseline_yolo26n, baseline_yolo11n],

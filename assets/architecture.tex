@@ -8,20 +8,17 @@
     box/.style={rectangle, draw=white, fill=#1, rounded corners, minimum width=6cm, minimum height=0.9cm, align=center, font=\footnotesize, text=white},
     arrow/.style={thick, ->, >=stealth, white}
 ]
-    \node (input) [box=black] {Kamerabild (Webcam Feed)};
-    \node (prep) [box=black, below of=input, node distance=1.4cm] {Vorverarbeitung (BGR $\rightarrow$ RGB, zentrierter quadratischer Crop)};
-    \node (model) [box=black, below of=prep, node distance=1.4cm] {YOLO11n-INT8 Inferenz (Begrenzungsrahmen \& Konfidenz)};
-    \node (tracker) [box=black, below of=model, node distance=1.4cm] {ByteTrack-Algorithmus (Objekt-ID-Zuweisung \& Interpolation)};
-    \node (filter) [box=black, below of=tracker, node distance=1.4cm] {EMA-Filter ($\alpha=0{,}15$ Gl\"attung der Konfidenzen)};
-    \node (serial) [box=black, below of=filter, node distance=1.4cm] {USB Serial-Sender (Queue-basiertes Senden, 115200 Baud)};
-    \node (arm) [box=gray!40, below of=serial, node distance=1.4cm] {ESP32-S3-Aktorik (Inverse Kinematik \& Servo-Sweeps)};
+    \node (input) [box=black] {Bild oder USB-Kameraframe};
+    \node (model) [box=black, below of=input, node distance=1.4cm] {Ultralytics-kompatible Detektion (\texttt{.pt} oder TFLite)};
+    \node (detections) [box=black, below of=model, node distance=1.4cm] {Begrenzungsrahmen, Klassen und Konfidenzen};
+    \node (tracker) [box=black, below of=detections, node distance=1.4cm] {Optional: ByteTrack für \texttt{.pt}-Modelle};
+    \node (api) [box=black, below of=tracker, node distance=1.4cm] {FastAPI Control Center (REST und WebSocket)};
+    \node (browser) [box=black, below of=api, node distance=1.4cm] {Browser-Dashboard zur Beobachtung und Konfiguration};
 
-    \draw [arrow] (input) -- (prep);
-    \draw [arrow] (prep) -- (model);
-    \draw [arrow] (model) -- (tracker);
-    \draw [arrow] (tracker) -- (filter);
-    \draw [arrow] (filter) -- (serial);
-    \draw [arrow] (serial) -- (arm);
-    \draw [arrow, dashed] (arm.east) -- ++(1.2,0) |- node[right, pos=0.25, align=left, text=white, font=\scriptsize] {done Handshake\\(Inferenz-Freigabe)} (input.east);
+    \draw [arrow] (input) -- (model);
+    \draw [arrow] (model) -- (detections);
+    \draw [arrow] (detections) -- (tracker);
+    \draw [arrow] (tracker) -- (api);
+    \draw [arrow] (api) -- (browser);
 \end{tikzpicture}
 \end{document}

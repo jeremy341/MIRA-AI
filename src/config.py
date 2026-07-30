@@ -1,4 +1,4 @@
-﻿"""Shared configuration, constants, and utility functions for MIRA."""
+"""Shared configuration, constants, and utility functions for MIRA."""
 
 from __future__ import annotations
 
@@ -165,7 +165,7 @@ def setup_camera_properties(cap, width: int, height: int, fps: int = 30):
 
     if not cap.isOpened():
         raise CameraError("Camera is not opened before setting properties.")
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # type: ignore[attr-defined]
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
     cap.set(cv2.CAP_PROP_FPS, fps)
