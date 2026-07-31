@@ -38,7 +38,7 @@ from pipeline.models import DetectionModel, ModelRegistry
 logger = logging.getLogger("evaluate")
 
 # ---------------------------------------------------------------------------
-# Plotting style (matches generate_report_plots.py conventions)
+# Plotting style shared by the evaluation outputs.
 # ---------------------------------------------------------------------------
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Arial", "Helvetica"]

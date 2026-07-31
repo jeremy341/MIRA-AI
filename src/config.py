@@ -188,6 +188,12 @@ DEFAULT_IMGSZ: int = _TRAINING.get("default_imgsz", 640)
 DEFAULT_MODEL: str = _TRAINING.get("default_model", "yolo11n.pt")
 TFLITE_INT8_CONF: float = 0.25
 
+# Camera basic mode defaults. These intentionally favor visible detections and
+# smooth output over automatic frame skipping on CPU systems.
+CAMERA_DEFAULT_CONF: float = 0.25
+CAMERA_DEFAULT_REJECT: float = 0.25
+CAMERA_DEFAULT_TARGET_LATENCY_MS: int = 1000
+
 # Legacy model labels — kept for backward compatibility.
 # New models are discovered dynamically by ModelRegistry.
 # To add a label for a model, create a YAML sidecar file in models/detection/.

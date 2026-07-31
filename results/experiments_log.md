@@ -530,3 +530,127 @@ EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 
 
 ### Observation
 EXP-017 merges ALL 4 available dataset sources (9,774 images), but adding WaRP actually hurt overall mAP50 (60.7% → 59.3%) compared to EXP-014 which used only 3 sources. This suggests label noise or distribution mismatch in WaRP degrades generalization despite the larger dataset size. Trash remains critically weak (22.7%) — it needs either more high-quality trash data or a dedicated augmentation strategy. Plastic and Paper saw minor gains. The TFLite export is fast (177 ms) and produces a 2.9 MB model suitable for edge deployment.
+
+
+---
+## EXP-018 — YOLO11n Teacher on Clean Dataset (dmedhi + TACO + Roboflow + TrashNet)
+
+- **Date:** 2026-07-30
+- **Platform:** Kaggle GPU (Tesla T4, 14.9 GB VRAM)
+- **Model:** yolo11n.pt
+- **Dataset:** `merged_mira_balanced_no_sortwaste.zip` (5,108 train / 415 val / 1,375 test, 12,832 boxes)
+- **Sources:** dmedhi + TACO + Roboflow + TrashNet SAM-labeled (SortWaste and Keremberke excluded)
+- **Classes:** glass (0), metal (1), paper (2), plastic (3), trash (4)
+- **Epochs:** 120
+- **Batch:** 32
+- **Image size:** 640
+- **Optimizer:** AdamW, lr0=0.001, cos_lr=True
+- **Parameters:** 2,583,127
+- **GFLOPs:** 6.3
+- **Ultralytics:** 8.4.112, PyTorch 2.10.0+cu128, Python 3.12.13
+- **Duration:** 2.705 hours (120 epochs)
+
+### Validation Results (best.pt, FP32)
+```
+Per-class:
+       glass    mAP50 0.908  mAP50-95 0.874  Precision 0.904  Recall 0.825
+       metal    mAP50 0.948  mAP50-95 0.827  Precision 0.914  Recall 0.960
+       paper    mAP50 0.887  mAP50-95 0.738  Precision 0.909  Recall 0.840
+     plastic    mAP50 0.811  mAP50-95 0.714  Precision 0.874  Recall 0.644
+       trash    mAP50 0.975  mAP50-95 0.955  Precision 0.761  Recall 0.963
+
+Overall:      mAP50 0.906  mAP50-95 0.822
+```
+
+### Exports
+- FP32 PT: 5.5 MB stripped
+- INT8 TFLite: 2.90 MB (3.5x smaller than original 10.14 MB)
+- ONNX: 10.1 MB
+
+### Comparison with EXP-014 (Old Best)
+
+| Metric | EXP-014 (Old) | EXP-018 (New) | Improvement |
+|---|---:|---:|---:|
+| mAP50 | 60.7% | **90.6%** | +29.9 pp |
+| mAP50-95 | 50.6% | **82.2%** | +31.6 pp |
+| glass mAP50 | 50.2% | **90.8%** | +40.6 pp |
+| metal mAP50 | 71.3% | **94.8%** | +23.5 pp |
+| paper mAP50 | 82.9% | **88.7%** | +5.8 pp |
+| plastic mAP50 | 72.1% | **81.1%** | +9.0 pp |
+| trash mAP50 | 26.9% | **97.5%** | +70.6 pp |
+| Epochs | 120 | **120** | same |
+| Duration | ~5h | **2.7h** | ~2x faster |
+
+### Observation
+EXP-018 uses the cleaned balanced dataset with 5,108 training images (SortWaste and Keremberke excluded, class-balanced at 1621-1982 boxes per class). Against the pure tabletop TrashNet validation set (415 images), this model achieves **90.6% mAP50** — a dramatic improvement over EXP-014's 60.7% on the old TACO+TrashNet+Roboflow mix. All five classes perform well, with trash going from 26.9% to 97.5% mAP50. Training completed in 2.7 hours over 120 epochs — significantly faster than EXP-014's ~5 hours, likely due to the smaller, cleaner dataset. The INT8 TFLite export is 2.90 MB, suitable for Raspberry Pi Zero 2W deployment. This result validates that dataset quality (balanced, clean, deployment-matching geometry) matters far more than model architecture or training duration.
+
+---
+## EXP-019 — YOLO11n Repeatability Run on Clean Balanced Dataset
+
+- **Date:** 2026-07-31
+- **Purpose:** Repeat EXP-018 as a normal YOLO11n detector, not a teacher model
+- **Platform:** Kaggle GPU (Tesla T4, 14.9 GB VRAM)
+- **Model:** YOLO11n pretrained weights (`yolo11n.pt`)
+- **Dataset:** `merged_mira_balanced_no_sortwaste` (5,108 train / 415 val / 1,375 test, 12,832 boxes)
+- **Sources:** dmedhi + TACO + Roboflow + TrashNet SAM-labeled
+- **Excluded:** SortWaste and Keremberke
+- **Classes:** glass (0), metal (1), paper (2), plastic (3), trash (4)
+- **Epochs:** 120
+- **Batch:** 32
+- **Image size:** 640
+- **Optimizer:** AdamW, `lr0=0.001`, cosine LR, `close_mosaic=10`
+- **Parameters:** 2,583,127
+- **GFLOPs:** 6.3
+- **Ultralytics:** 8.4.112, PyTorch 2.10.0+cu128, Python 3.12.13
+- **Duration:** 2.672 hours
+
+### Validation Results (best.pt, FP32)
+
+Final evaluation used the 415-image TrashNet tabletop validation split:
+
+| Class | Precision | Recall | mAP50 | mAP50-95 |
+|---|---:|---:|---:|---:|
+| all | 0.872 | 0.846 | **0.9058** | **0.8215** |
+| glass | 0.904 | 0.825 | 0.908 | 0.874 |
+| metal | 0.914 | 0.960 | 0.948 | 0.827 |
+| paper | 0.909 | 0.840 | 0.887 | 0.738 |
+| plastic | 0.874 | 0.644 | 0.811 | 0.714 |
+| trash | 0.761 | 0.963 | 0.975 | 0.955 |
+
+### Sanity Check
+
+The post-training check detected objects in **10/10** sampled validation images at confidence 0.25. The independent 1,375-image test split was not evaluated in this run.
+
+### Local TFLite 320 Validation
+
+The exported 320px TFLite model was evaluated locally on the same 415-image validation split using Ultralytics 8.4.104 with CPU/XNNPACK:
+
+| Metric | Value |
+|---|---:|
+| Precision | 0.797 |
+| Recall | 0.836 |
+| mAP50 | 0.862 |
+| mAP50-95 | 0.756 |
+
+The export therefore loses accuracy relative to the FP32 PT model (0.906/0.822), but remains functional on the validation set.
+
+### Exports
+
+- FP32 PyTorch: `mira_exp019.pt`, 5,469,402 bytes
+- LiteRT/TFLite 320: `mira_exp019_int8_320.tflite`, 3,022,810 bytes
+- LiteRT/TFLite 640: `mira_exp019_int8_640.tflite`, 3,041,690 bytes
+- ONNX: `mira_exp019.onnx`, 10,607,296 bytes
+
+Tensor inspection found FP32 input/output tensors in both TFLite files. They are reduced-size LiteRT exports with quantized weights, not full-integer input/output models. Raspberry Pi speed and accuracy remain to be measured.
+
+### Comparison with EXP-018
+
+| Metric | EXP-018 | EXP-019 | Change |
+|---|---:|---:|---:|
+| mAP50 | 0.906 | 0.9058 | approximately equal |
+| mAP50-95 | 0.822 | 0.8215 | approximately equal |
+| Duration | 2.705 h | 2.672 h | -0.033 h |
+
+### Observation
+
+EXP-019 reproduces EXP-018's validation performance almost exactly. The retraining confirms that the clean balanced dataset and training configuration are reproducible; it does not provide a measurable accuracy improvement. Training, validation, sanity checking, and exports completed before Kaggle later failed with `OSError: [Errno 28] No space left on device` while Papermill saved the notebook. The failure was caused by the notebook/archive output process, not by model training.

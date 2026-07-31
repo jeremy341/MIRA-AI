@@ -22,6 +22,13 @@ Die vierklassige Klassifikation umfasste Glas, Metall, Papier und Plastik; die s
     \end{tabular}
 \end{table}
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.72\textwidth, keepaspectratio]{figures/stagea-acc-comparison.png}
+    \caption{Vergleich der Validierungsgenauigkeit der vierklassigen Klassifikation (Stage~A). EXP-001 verwendete eine abweichende Datengrundlage und ist deshalb kein kontrollierter Architekturvergleich.}
+    \label{fig:stagea-acc}
+\end{figure}
+
 Beim Export des feinabgestimmten Klassifikators ist zwischen Zahlenformat und Container zu unterscheiden: Das FP32-TFLite-Modell belegt \SI{8.49}{\mebi\byte}, das mit 100 repräsentativen Bildern kalibrierte INT8-TFLite-Modell \SI{2.61}{\mebi\byte}. INT8 ist damit rund \SI{69}{\percent} kleiner als FP32-TFLite. Für INT8 wurde eine Validierungsgenauigkeit von \SI{87.35}{\percent} protokolliert; Laufzeitangaben werden mangels ausreichend dokumentierter, einheitlicher Messumgebung nicht verwendet.
 
 \subsection{Historische Detektionsergebnisse}
@@ -45,7 +52,16 @@ Für die YOLO11n-Reihe EXP-013 bis EXP-017 sind die protokollierten PyTorch-Vali
     \end{tabular}
 \end{table}
 
-EXP-014 erreichte auf seinem Validierungssatz \SI{60.7}{\percent} mAP50 und \SI{50.6}{\percent} mAP50--95. Klassenspezifisch wurden \SI{50.2}{\percent} für Glas, \SI{71.3}{\percent} für Metall, \SI{82.9}{\percent} für Papier, \SI{72.1}{\percent} für Plastik und \SI{26.9}{\percent} für Trash gemessen. Damit war Trash in diesem Lauf die schwächste Klasse. Die quantisierten YOLO-Exporte sind mit etwa \SI{2.90}{\mebi\byte} dokumentiert; ihnen wird hier nicht ohne separate, formatgleiche Evaluation die PyTorch-mAP zugeschrieben.
+EXP-014 erreichte auf seinem Validierungssatz \SI{60.7}{\percent} mAP50 und \SI{50.6}{\percent} mAP50--95. Klassenspezifisch wurden \SI{50.2}{\percent} für Glas, \SI{71.3}{\percent} für Metall, \SI{82.9}{\percent} für Papier, \SI{72.1}{\percent} für Plastik und \SI{26.9}{\percent} für Trash gemessen. Damit war Trash in diesem Lauf die schwächste Klasse.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.78\textwidth, keepaspectratio]{figures/heatmap-4datasets.png}
+    \caption{Klassenspezifische mAP50 der YOLO11n-Experimente EXP-013 bis EXP-016. EXP-016 enthält keine \textit{Trash}-Klasse (N/A). Die Werte stammen aus den jeweiligen Experimentprotokollen und sind nicht auf einem gemeinsamen Testset gemessen.}
+    \label{fig:heatmap-4datasets}
+\end{figure}
+
+Die quantisierten YOLO-Exporte sind mit etwa \SI{2.90}{\mebi\byte} dokumentiert; ihnen wird hier nicht ohne separate, formatgleiche Evaluation die PyTorch-mAP zugeschrieben.
 
 \subsection{Einordnung des Field-Benchmarks}
 Der vorhandene Field-Benchmark prüft auf 805 Bildern lediglich, ob eine Klasse irgendwo im Bild erkannt wurde (\textit{image-level class presence}). Er bewertet weder die Lage noch die Überlappung der Begrenzungsrahmen und ist daher kein Detektions-mAP. Zudem sind interne Gesamtsummen und verwendete Konfidenzschwellen nicht für alle Modellformate konsistent dokumentiert. Eine modellübergreifende Rangfolge sowie FP32--INT8-Schlussfolgerungen aus diesem Benchmark werden deshalb nicht berichtet.

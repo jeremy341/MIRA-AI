@@ -1,15 +1,15 @@
 name: mira_exp017
-display_name: \"EXP-017 (YOLO11n, all 4 sources)\"
+display_name: "EXP-017 (YOLO11n, all 4 sources)"
 model_type: yolo_pt
 task: detect
 input_size: 640
-class_names: [\"glass\", \"metal\", \"paper\", \"plastic\", \"trash\"]
+class_names: ["glass", "metal", "paper", "plastic", "trash"]
 training:
-  dataset: \"TACO + TrashNet + Roboflow + WaRP\"
+  dataset: "TACO + TrashNet + Roboflow + WaRP"
   epochs: 120
   batch_size: 32
   imgsz: 640
-  device: \"Tesla T4\"
+  device: "Tesla T4"
 metrics:
   map50: 0.593
   map50_95: 0.465

@@ -4,7 +4,16 @@ import os
 import sys
 from pathlib import Path
 
-from src.config import DETECTION_DIR, REJECT_THRESHOLD, ROOT_DIR, get_tflite_imgsz, resolve_safe_path
+from src.config import (
+    CAMERA_DEFAULT_CONF,
+    CAMERA_DEFAULT_REJECT,
+    CAMERA_DEFAULT_TARGET_LATENCY_MS,
+    DEFAULT_IMGSZ,
+    DETECTION_DIR,
+    ROOT_DIR,
+    get_tflite_imgsz,
+    resolve_safe_path,
+)
 from src.exceptions import ConfigError
 from src.model_picker import pick_model
 from src.pipeline.models import ModelRegistry
@@ -13,42 +22,77 @@ from src.pipeline.registry import register_command
 AVAILABLE_MODELS = {
     "mira_exp014.pt": {
         "description": "EXP-014 (YOLO11n, +Roboflow)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp014.pt",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp014.pt",
         "category": "detection",
     },
     "mira_exp014_int8.tflite": {
         "description": "EXP-014 INT8 (YOLO11n, +Roboflow)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp014_int8.tflite",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp014_int8.tflite",
         "category": "detection",
     },
     "mira_exp015.pt": {
         "description": "EXP-015 (YOLO11n, +WaRP+TrashNet)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp015.pt",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp015.pt",
         "category": "detection",
     },
     "mira_exp015_int8.tflite": {
         "description": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp015_int8.tflite",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp015_int8.tflite",
         "category": "detection",
     },
     "mira_exp016.pt": {
         "description": "EXP-016 (YOLO11n, +WaRP)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp016.pt",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp016.pt",
         "category": "detection",
     },
     "mira_exp016_int8.tflite": {
         "description": "EXP-016 INT8 (YOLO11n, +WaRP)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp016_int8.tflite",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp016_int8.tflite",
         "category": "detection",
     },
     "mira_exp013.pt": {
         "description": "EXP-013 (YOLO11n, TACO+TrashNet)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp013.pt",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp013.pt",
         "category": "detection",
     },
     "mira_exp013_int8.tflite": {
         "description": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
-        "url": "https://huggingface.co/jeremydarko/MIRA-AI/resolve/main/models/detection/mira_exp013_int8.tflite",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp013_int8.tflite",
+        "category": "detection",
+    },
+    "mira_exp018.pt": {
+        "description": "EXP-018 (YOLO11n, clean balanced dataset)",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018.pt",
+        "category": "detection",
+    },
+    "mira_exp018_int8.tflite": {
+        "description": "EXP-018 INT8 TFLite export",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018_int8.tflite",
+        "category": "detection",
+    },
+    "mira_exp018.onnx": {
+        "description": "EXP-018 ONNX export",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018.onnx",
+        "category": "detection",
+    },
+    "mira_exp019.pt": {
+        "description": "EXP-019 (YOLO11n, clean balanced repeatability run)",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019.pt",
+        "category": "detection",
+    },
+    "mira_exp019_int8_320.tflite": {
+        "description": "EXP-019 INT8 TFLite export at 320px",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019_int8_320.tflite",
+        "category": "detection",
+    },
+    "mira_exp019_int8_640.tflite": {
+        "description": "EXP-019 INT8 TFLite export at 640px",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019_int8_640.tflite",
+        "category": "detection",
+    },
+    "mira_exp019.onnx": {
+        "description": "EXP-019 ONNX export",
+        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019.onnx",
         "category": "detection",
     },
 }
@@ -138,13 +182,29 @@ def _add_live_args(parser):
         choices=["640x360", "1280x720", "1920x1080"],
         help="Camera capture resolution (default: 640x360).",
     )
-    parser.add_argument("--target-latency", type=int, default=50, help="Target latency in ms (default: 50).")
-    parser.add_argument("--conf", type=float, default=0.5, help="Confidence threshold (default: 0.5).")
+    parser.add_argument(
+        "--target-latency",
+        type=int,
+        default=CAMERA_DEFAULT_TARGET_LATENCY_MS,
+        help="Target latency in ms (default: 1000; prevents frame skipping).",
+    )
+    parser.add_argument(
+        "--conf",
+        type=float,
+        default=CAMERA_DEFAULT_CONF,
+        help="Confidence threshold (default: 0.25).",
+    )
+    parser.add_argument(
+        "--imgsz",
+        type=int,
+        default=DEFAULT_IMGSZ,
+        help="Inference image size for PyTorch models (default: 640; fixed for TFLite models).",
+    )
     parser.add_argument(
         "--reject",
         type=float,
-        default=REJECT_THRESHOLD,
-        help="Reject threshold: uncertain detections below this are labeled 'unsicher' (default: 0.55).",
+        default=CAMERA_DEFAULT_REJECT,
+        help="Reject threshold: uncertain detections below this are labeled 'unsicher' (default: 0.25).",
     )
 
 
@@ -173,6 +233,7 @@ def cmd_live(args):
         target_latency_ms=args.target_latency,
         conf_threshold=args.conf,
         reject_threshold=args.reject,
+        imgsz=args.imgsz,
     )
     engine.run()
 
