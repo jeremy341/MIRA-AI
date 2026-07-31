@@ -22,7 +22,7 @@ A computer-vision research project for recycling detection, targeting eventual d
 
 ## Features
 
-- **17 documented historical experiments** — measured results are separated from current plans
+- **Historical and current experiments** — measured results are separated from paused plans
 - **Research Pipeline** — YAML-driven config, plugin CLI registry, dataset registry, model adapters, configurable training
 - **Third-party model support** — drop `.pt`/`.tflite`/`.pth` + optional YAML descriptor in `models/detection/` for instant benchmarking
 - **Dashboard implementation** — FastAPI, WebSocket, and browser UI components; integration verification pending
@@ -69,7 +69,7 @@ pip install -r requirements.txt
 
 > **Note:** Development dependencies (pytest, mypy, ruff) are included in `requirements.txt`. For a production-only install, install only the core packages listed at the top of the file.
 
-> **Fresh-clone note:** datasets and trained model binaries are gitignored. Although `.gitattributes` contains LFS patterns, current HEAD tracks no LFS model objects. The configured Hugging Face model endpoint required authentication when checked on 2026-07-30, so `mira download` is not currently a verified unauthenticated setup path.
+> **Fresh-clone note:** datasets and trained model binaries are gitignored. Model binaries are published separately in the public [Hugging Face repository](https://huggingface.co/Jeremy341/MIRA-AI); the CLI downloads them into the local `models/detection/` directory.
 
 ### Live Detection
 
@@ -145,7 +145,7 @@ The command is retained for development. Do not treat it as a verified demo unti
 | `.\mira config` | Display current project configuration |
 | `.\mira generate kaggle --config <file>` | Generate cloud training scripts (Kaggle, Colab, Docker) |
 | `.\mira wizard` | Interactive training setup wizard |
-| `scripts/visualize_classifier_dataset.py` | Visualize dataset class distribution and sample grids |
+| `scripts/capture_classifier_frames.py` | Capture Stage-A classifier images from a webcam |
 
 </details>
 
@@ -157,9 +157,9 @@ The command is retained for development. Do not treat it as a verified demo unti
 | `--model` | Interactive picker | Model filename (omit for arrow-key picker) |
 | `--camera` | `0` | Camera device index |
 | `--resolution` | `640x360` | Capture resolution: `640x360`, `1280x720`, `1920x1080` |
-| `--conf` | `0.5` | Confidence threshold |
-| `--reject` | `0.55` | Reject threshold (detections below this labeled "unsicher") |
-| `--target-latency` | `50` | Target latency in ms (skips frames if exceeded) |
+| `--conf` | `0.25` | Confidence threshold |
+| `--reject` | `0.25` | Reject threshold (detections below this labeled "unsicher") |
+| `--target-latency` | `1000` | Target latency in ms (prevents automatic frame skipping) |
 
 </details>
 
@@ -216,7 +216,7 @@ Training datasets are not included in Git. The current no-SortWaste build uses:
 `scripts/build_balanced_dataset.py` documents the expected local directories,
 remapping, deterministic TACO split, balancing, and manifest generation. Verify
 the resulting manifest against the counts in
-[`DATASETS_AND_BENCHMARKS.md`](DATASETS_AND_BENCHMARKS.md). The commands below
+[`DATASETS_AND_BENCHMARKS.md`](docs/DATASETS_AND_BENCHMARKS.md). The commands below
 belong to the older EXP-014 through EXP-017 dataset-comparison workflow and do
 not recreate the current balanced dataset:
 
@@ -331,7 +331,7 @@ MIRA includes a modular research pipeline for systematic experimentation. The pi
 ### Adding a Third-Party Model
 
 1. Place the model file (`.pt`, `.tflite`, `.pth`) in `models/detection/`
-2. Create a YAML descriptor (see `models/detection/example_third_party.yaml`):
+2. Create a YAML descriptor in `models/detection/` using the schema below:
    ```yaml
    name: "My Custom Model"
    type: tflite
@@ -362,6 +362,9 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 
 | Model | mAP50 | Params | Size | Notes |
 |---|---|---|---|---|---|
+| `mira_exp019.pt` | **90.6%** | 2.58M | 5.47 MB | **Current recommended** — clean balanced dataset, repeatability run |
+| `mira_exp018.pt` | 90.6% | 2.58M | 5.47 MB | Clean balanced dataset reference run |
+| `mira_exp019_int8_640.tflite` | 86.2% | 2.58M | 2.90 MiB | Local validation result; target-hardware validation pending |
 | `mira_exp014.pt` | **60.7%** | 2.58M | 5.21 MB | Historical FP32 result; 50.6% mAP50-95 |
 | `mira_exp017.pt` | 59.3% | 2.58M | 5.21 MB | YOLO11n + all 4 sources |
 | `mira_exp016.pt` | 58.8% | 2.58M | 5.21 MB | YOLO11n + WaRP only |
@@ -373,7 +376,7 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | `mira_exp014_int8.tflite` | Not measured | 2.58M | 2.90 MiB | INT8 export; size measured, detection mAP pending |
 | `mira_exp017_int8.tflite` | Not measured | 2.58M | 2.90 MiB | INT8 export; size measured, detection mAP pending |
 
-> **Status:** EXP-014 FP32 is the strongest recorded historical detector result. INT8 accuracy and Raspberry Pi suitability require separate evaluation.
+> **Status:** EXP-019 PT is the current best measured detector on the clean balanced validation split. Raspberry Pi suitability still requires target-hardware evaluation.
 
 ---
 
@@ -387,8 +390,6 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | EXP-002 | MobileNetV2 (frozen) | 796 images | 84.28% | 9.25 MB |
 | EXP-003 | MobileNetV2 (fine-tuned) | 796 images | **87.42%** | 23.48 MB |
 | EXP-004 | MobileNetV2 INT8 TFLite | 796 images | 87.42% | **2.61 MB** |
-
-![Stage A Accuracy Comparison](latex/figures/stagea-acc-comparison.png)
 
 ### Detection — 12 Experiments (EXP-005–017, excl. EXP-007)
 
@@ -409,8 +410,6 @@ Ultralytics-compatible models (`.pt`, `.tflite`) work out of the box — the ada
 | **EXP-016** | **YOLO11n** | **mira_warp_only (~3,000 img)** | **58.8%** | **Kaggle T4** |
 | **EXP-017** | **YOLO11n** | **mira_all (9,774 img)** | **59.3%** | **Kaggle T4** |
 
-![Detection mAP Comparison](latex/figures/det-map-comparison.png)
-
 ### 4-Dataset Comparison
 
 To find the optimal training data mix, we trained YOLO11n on 4 dataset combinations:
@@ -424,8 +423,6 @@ To find the optimal training data mix, we trained YOLO11n on 4 dataset combinati
 
 ¹ Raw WaRP contains ~10,000 images across 28 classes; only images with one of the 5 MIRA-mapped classes are kept, yielding ~2,800. Combined with TACO+TrashNet (3,924), the actual training set is ~6,800 images — consistent with EXP-015.
 
-![Per-class mAP50 Heatmap](latex/figures/heatmap-4datasets.png)
-
 > **Key finding:** Roboflow (EXP-014) outperforms WaRP (EXP-015) by +4.7 pp mAP50. Adding all 4 sources (EXP-017) yields 59.3% — lower than EXP-014's 60.7% but higher than any other combination, suggesting quality > quantity: Roboflow's focused dataset beats larger but noisier unions.
 
 ### Field Benchmark — Real-World Validation
@@ -434,15 +431,13 @@ The existing table covers 11 models on the 805-image `mira_v2` validation set, n
 
 (**Preliminary image-level class-presence F1** — see [field_benchmark_results.md](results/field_benchmark_results.md). It is not detection mAP, and the recorded FP32/INT8 threshold policy is inconsistent, so cross-format conclusions are not final.)
 
-![Field Benchmark F1 Comparison](latex/figures/field-benchmark-f1.png)
-
 Full per-class metrics, confusion matrices, and training curves: [`results/experiments_log.md`](results/experiments_log.md)
 
 ---
 
 ## Dataset
 
-The current no-SortWaste build is **6,898 images and 12,832 boxes**: 5,108/415/1,375 train/validation/test images. Exact split and source counts are in [`DATASETS_AND_BENCHMARKS.md`](DATASETS_AND_BENCHMARKS.md) and [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md). This local dataset is gitignored and differs from the historical datasets used for EXP-014 and EXP-017.
+The current no-SortWaste build is **6,898 images and 12,832 boxes**: 5,108/415/1,375 train/validation/test images. Exact split and source counts are in [`DATASETS_AND_BENCHMARKS.md`](docs/DATASETS_AND_BENCHMARKS.md) and [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md). This local dataset is gitignored and differs from the historical datasets used for EXP-014 and EXP-017.
 
 ### Sources
 
@@ -451,10 +446,10 @@ EXP-017, not the composition table for the current no-SortWaste build.
 
 | Dataset | Classes | Images | Format | Use | License |
 |---|---|---|---|---|---|
-| [TACO](http://tacodataset.org/) | 60 | 1,500 | COCO | Base detection data | CC-BY-4.0 |
+| [TACO](https://github.com/pedropro/TACO) | 60 | 1,500 | COCO | Base detection data | CC-BY-4.0 |
 | [TrashNet](https://github.com/garythung/trashnet) | 6 | 2,527 | Classification | Stage A + bbox via SAM | MIT-0 |
-| [Roboflow Trash Detection](https://universe.roboflow.com/robotics-world) | 64 | ~3,300 | YOLO | Multi-class detection | Varies by dataset (see individual dataset pages) |
-| [WaRP](https://github.com/FrankFao/WaRP) | 28 | ~10,000 | YOLO | Glass/plastic detection | Research use only (contact authors) |
+| [Roboflow Trash Detection](https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1/dataset/dataset) | 64 | ~3,300 | YOLO | Multi-class detection | CC BY 4.0 |
+| [WaRP](https://github.com/AIRI-Institute/WaRP) | 28 | ~10,000 | YOLO | Glass/plastic detection | Research use only (contact authors) |
 
 ### Class Schema
 
@@ -467,8 +462,6 @@ All datasets are remapped to 5 unified classes:
 | paper | Paper | — | Cardboard, Paper | Paper bag |
 | plastic | Plastic bottle | Plastic | Plastic, Styrofoam | Plastic bottle |
 | trash | Other | — | Trash, Biodegradable | — |
-
-![Dataset Class Distribution](latex/figures/class-distribution.png)
 
 ### Merge Scripts
 
@@ -573,8 +566,8 @@ All detection models train with YOLO11n using `scripts/train_detector_kaggle.py`
 2. Open the notebook and run with argparse flags:
 
 ```bash
-# Default (Model 1, YOLO11n, 120 epochs)
-py scripts/train_detector_kaggle.py
+# Model 1 (YOLO11n, 120 epochs)
+py scripts/train_detector_kaggle.py --dataset mira_tnr
 
 # Model 2
 py scripts/train_detector_kaggle.py --dataset mira_tnw
@@ -688,14 +681,9 @@ MIRA-AI/
 │   ├── push_to_hub.py              # Hugging Face Hub upload
 │   ├── merge_utils.py              # Shared merge helpers
 │   ├── capture_classifier_frames.py  # Webcam data collection (Stage A)
-│   ├── visualize_classifier_dataset.py  # Dataset distribution viewer
-│   ├── generate_report_plots.py    # LaTeX figure generation
-│   ├── build_raw_dataset.py        # Raw dataset builder
-│   ├── class_mappings.py           # Class name remapping tables
+│   ├── build_balanced_dataset.py   # Reproducible final dataset builder
 │   ├── evaluate.py                 # Standalone evaluation tool
 │   ├── profile.py                  # Performance profiler
-│   ├── sweep.py                    # Hyperparameter sweeper
-│   ├── serve.py                    # Model serving API
 │   └── compare.py                  # Model comparison utility
 │
 ├── models/                         # Local ignored binaries + tracked YAML descriptors
@@ -718,7 +706,6 @@ MIRA-AI/
 │       ├── mira_exp006.pt / .tflite
 │       ├── mira_exp009_int8.tflite
 │       ├── gianlucasposito_yolov8n.pt      # Third-party benchmark
-│       ├── example_third_party.yaml        # Template: drop .pt/.tflite + YAML here
 │       └── ... (binary files are not included in a fresh clone)
 │
 ├── experiments/                    # Training experiment configs (YAML)
@@ -740,19 +727,14 @@ MIRA-AI/
 │   └── mira_all/                   # Model 4: all four combined
 │
 ├── results/                        # Experiment outputs and logs
-│   ├── experiments_log.md          # Full quantitative metrics (17 experiments)
+│   ├── experiments_log.md          # Full quantitative metrics and current runs
 │   ├── field_benchmark_results.md
 │   ├── exp014_yolo11n_tnr/         # Confusion matrices, training curves
 │   ├── exp017_yolo11n_all4/        # All-4-source experiment outputs
 │   └── EXP-*/                     # Per-experiment subdirectories (001–017)
 │
-├── latex/                          # Jugend Forscht report
-│   ├── main.tex                    # LaTeX source
-│   ├── main.pdf                    # Compiled report (22 pages)
-│   ├── figures/                    # 19+ PNG figures
-│   └── references.bib              # Bibliography
 │
-├── tests/                          # Test suite (99 tests, 0 failing)
+├── tests/                          # Automated test suite
 │   ├── test_config.py
 │   ├── test_pipeline.py
 │   ├── test_visualize.py
@@ -762,7 +744,7 @@ MIRA-AI/
 │   ├── test_strategies.py
 │   └── test_validators.py
 │
-├── .github/workflows/ci.yml       # GitHub Actions: Ruff lint + pytest (99 tests)
+├── .github/workflows/ci.yml       # GitHub Actions: Ruff lint + pytest
 ├── .gitattributes                  # Git LFS for model files
 ├── bytetrack.yaml                  # ByteTrack tracker configuration
 ├── pyproject.toml                  # Project metadata + Ruff + pytest config
@@ -771,7 +753,6 @@ MIRA-AI/
 │   ├── mira.bat                    # Windows CLI launcher
 │   └── mira.sh                     # Linux/macOS CLI launcher
 ├── setup/                          # Setup helpers
-├── AGENTS.md                       # Agent instructions
 ├── LICENSE                         # MIT License
 └── README.md
 ```
@@ -780,13 +761,13 @@ MIRA-AI/
 
 ## Known Limitations
 
-- **Crumpled paper** — white crumpled paper is misclassified as plastic with 80–90% confidence. The reject threshold cannot help here (too confident). Needs more training data. Documented in the report discussion.
+- **Crumpled paper** — white crumpled paper is misclassified as plastic with 80–90% confidence. The reject threshold cannot help here (too confident). Needs more training data.
 - **End-on metal cans** — cans facing the camera opening-first cause detection drop-outs due to limited training samples for this orientation.
 - **Overlapping objects** — heavily stacked or occluded items reduce bounding box accuracy, particularly for paper and trash.
 - **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 7.1% mAP50) due to its inherent visual diversity.
 - **No RPi or robot integration benchmark** — target-hardware latency, memory, and end-to-end sorting remain pending.
 - **Dashboard integration unverified** — components and unit tests exist, but no tracked end-to-end camera/model/browser verification artifact exists.
-- **Distillation pending** — EXP-018 through EXP-023 are plans/configs, not measured results.
+- **Paused future training** — high-capacity/distillation EXP-018 through EXP-023 workflows are kept outside this release; measured EXP-018/019 are YOLO11n runs on the clean balanced dataset.
 - **Windows launcher** — `mira.bat` works on Windows CMD/PowerShell. Linux/macOS users use `python -m src` or the provided `mira.sh`.
 
 ---
@@ -802,14 +783,17 @@ All scripts use fixed random seeds for deterministic results:
 ### Dataset Versions
 
 Training datasets are downloaded from specific versions:
-- **TACO:** [GitHub repo](https://github.com/AlessandroSaviolo/TACO) — commit used for conversion
-- **TrashNet:** [Kaggle dataset](https://www.kaggle.com/datasets/techsash/waste-classification-data)
-- **Roboflow:** [Roboflow Universe](https://universe.roboflow.com/robotics-world) — specific export versions linked in experiment logs
-- **WaRP:** [GitHub repo](https://github.com/DTUGreenAmbition/WaRP)
+- **TACO:** [GitHub repo](https://github.com/pedropro/TACO) — source used for conversion
+- **TrashNet:** [GitHub repo](https://github.com/garythung/trashnet) or [Hugging Face dataset](https://huggingface.co/datasets/garythung/trashnet)
+- **Roboflow:** [Roboflow Universe export](https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1/dataset/dataset)
+- **WaRP:** [GitHub repo](https://github.com/AIRI-Institute/WaRP)
+
+The complete canonical source list, including the final Roboflow export URL,
+is maintained in [`docs/DATASET_ORIGINS.md`](docs/DATASET_ORIGINS.md).
 
 ### Model Availability
 
-Trained model binaries are local, gitignored files; a fresh clone includes only the tracked YAML descriptors. The `mira download` command contains Hugging Face URLs and prints a downloaded file's SHA-256, but the repository contains no expected hashes to verify against, and the configured endpoint required authentication when checked on 2026-07-30.
+Trained model binaries are local, gitignored files; a fresh clone includes code and descriptors. Public detector artifacts are available from [Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI), and `mira download` places them under `models/detection/`.
 
 ### Kaggle / Colab Training
 

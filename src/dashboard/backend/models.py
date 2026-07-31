@@ -41,11 +41,11 @@ class ModelConfig(BaseModel):
     """Model inference configuration"""
 
     name: str
-    conf_threshold: float = 0.5
-    reject_threshold: float = 0.55
+    conf_threshold: float = 0.25
+    reject_threshold: float = 0.25
     iou_threshold: float = 0.45
     enable_tracking: bool = True
-    target_latency_ms: int = 50
+    target_latency_ms: int = 1000
 
 
 class SystemMetrics(BaseModel):

@@ -50,6 +50,31 @@ results/**/*.tflite
 # --- Latex (JUFO report, not part of the package) ---
 latex/
 
+# --- Private report/reference files kept locally ---
+Leitfaden_schriftliche_Arbeit.pdf
+assets/architecture.pdf
+assets/architecture.tex
+docs/USER_ACTIONS_BEFORE_JUFO.md
+docs/internal/JuFo_Huerden_und_Fehleranalyse.md
+KAGGLE_TRAINING_GUIDE.md
+TRAINING_PLAN.md
+
+# --- Paused/legacy workflows kept locally, not in the release ---
+scripts/_apply_fixes.py
+scripts/copy_yolo11_figures.py
+scripts/download_and_merge.py
+scripts/generate_report_plots.py
+scripts/mira_molab.py
+experiments/exp018_teacher_yolo11x.yaml
+experiments/exp019_teacher_yolo26x.yaml
+experiments/exp020_distill_yolo26n.yaml
+experiments/exp021_distill_yolo11n.yaml
+experiments/exp022_baseline_yolo26n.yaml
+experiments/exp023_baseline_yolo11n.yaml
+kaggle/notebook_1_teacher_yolo11n.py
+kaggle/notebook_2_baseline_yolo26n.py
+kaggle/notebook_3_distill_yolo26n.py
+
 # --- CLAUDE AI context (private) ---
 CLAUDE/
 memory.md
@@ -96,8 +121,3 @@ results/
 setup/
 dashboard_output/
 dashboard_output_backup/
-check_ultra.py
-run_check.bat
-install
-install_ultra.py
-test_venv.py

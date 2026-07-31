@@ -31,8 +31,8 @@ models/detection/               # trained & third-party model files
 ## Adding a Third-Party Model
 
 1. Place the model file in `models/detection/`
-2. Create a YAML descriptor (see `example_third_party.yaml`)
-3. Run `mira benchmark --models <model_name> --dataset datasets/mira_all`
+2. Create a YAML descriptor with `name`, `model_type`, `model_file`, and `class_names`
+3. Run `mira models` and benchmark the model only when its class schema matches MIRA's five classes
 
 ## Extension Points
 

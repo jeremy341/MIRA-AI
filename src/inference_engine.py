@@ -13,12 +13,13 @@ from ultralytics import YOLO
 
 from .config import (
     BYTE_TRACK_CONFIG_PATH,
+    CAMERA_DEFAULT_CONF,
+    CAMERA_DEFAULT_REJECT,
+    CAMERA_DEFAULT_TARGET_LATENCY_MS,
     CLASS_NAMES,
-    DEFAULT_CONF,
     DEFAULT_IMGSZ,
     DEFAULT_IOU,
     DETECTION_DIR,
-    REJECT_THRESHOLD,
     get_tflite_imgsz,
 )
 from .exceptions import CameraError, ConfigError
@@ -44,15 +45,16 @@ class InferenceEngine:
         camera_index: int = 0,
         cam_width: int = 640,
         cam_height: int = 360,
-        target_latency_ms: int = 50,
+        target_latency_ms: int = CAMERA_DEFAULT_TARGET_LATENCY_MS,
         conf_threshold: float | None = None,
-        reject_threshold: float = REJECT_THRESHOLD,
+        reject_threshold: float = CAMERA_DEFAULT_REJECT,
         imgsz: int | None = None,
         enable_tracking: bool = True,
         iou_threshold: float | None = None,
     ):
+        self._conf_was_explicit = conf_threshold is not None
         if conf_threshold is None:
-            conf_threshold = DEFAULT_CONF
+            conf_threshold = CAMERA_DEFAULT_CONF
         if iou_threshold is None:
             iou_threshold = DEFAULT_IOU
         self.model_name = model_name
@@ -125,20 +127,29 @@ class InferenceEngine:
         self.is_tflite_int8 = self.model_path.suffix == ".tflite" and "int8" in self.model_name.lower()
 
         if self.model_path.suffix == ".tflite":
-            self.img_size = imgsz or get_tflite_imgsz(self.model_path)
+            native_img_size = get_tflite_imgsz(self.model_path)
+            if imgsz is not None and imgsz != native_img_size:
+                logger.warning(
+                    "Ignoring requested TFLite imgsz=%s; model requires fixed input size %s",
+                    imgsz,
+                    native_img_size,
+                )
+            self.img_size = native_img_size
             if self.is_tflite_int8:
-                logger.info(f"TFLite INT8 model: input {self.img_size}x{self.img_size}, auto-setting conf=0.25")
+                logger.info(f"TFLite INT8 model: input {self.img_size}x{self.img_size}")
             else:
                 logger.info(f"TFLite model: input {self.img_size}x{self.img_size}")
         else:
             self.img_size = imgsz or DEFAULT_IMGSZ
             logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
-        if self.is_tflite_int8:
+        if self.is_tflite_int8 and not self._conf_was_explicit:
             # INT8 quantization compresses confidence scores toward 0.5;
             # use 0.25 so low-confidence detections are still visible.
             self.conf_threshold = 0.25
-            logger.info(f"Confidence threshold overridden to {self.conf_threshold} for INT8 model.")
+            logger.info(f"Confidence threshold defaulted to {self.conf_threshold} for INT8 model.")
+        elif self.is_tflite_int8:
+            logger.info(f"Using requested confidence threshold {self.conf_threshold} for INT8 model.")
 
         # TFLite models don't support ByteTrack; disable tracking
         if self.model_path.suffix == ".tflite" and self.enable_tracking:
@@ -254,7 +265,6 @@ class InferenceEngine:
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 verbose=False,
-                quantize=False,
             )
         elif self.enable_tracking:
             return self.model.track(
@@ -265,7 +275,6 @@ class InferenceEngine:
                 persist=True,
                 verbose=False,
                 tracker=str(BYTE_TRACK_CONFIG_PATH),
-                quantize=False,
             )
         else:
             return self.model.predict(
@@ -274,7 +283,6 @@ class InferenceEngine:
                 conf=self.conf_threshold,
                 iou=self.iou_threshold,
                 verbose=False,
-                quantize=False,
             )
 
     def _update_metrics(self, results):

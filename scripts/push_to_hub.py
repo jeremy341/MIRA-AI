@@ -1,8 +1,8 @@
 """Upload trained MIRA models to Hugging Face Hub.
 
 Usage:
-    python scripts/push_to_hub.py --model models/detection/mira_exp014.pt --repo-id jeremy341/mira-ai-models
-    python scripts/push_to_hub.py --model models/detection/mira_exp014.pt --repo-id jeremy341/mira-ai-models --tag exp014
+    python scripts/push_to_hub.py --model models/detection/mira_exp014.pt --repo-id Jeremy341/MIRA-AI
+    python scripts/push_to_hub.py --model models/detection/mira_exp014.pt --repo-id Jeremy341/MIRA-AI --tag exp014
 """
 
 from __future__ import annotations
@@ -21,7 +21,13 @@ def _find_model_variants(model_path: Path) -> dict[str, Path]:
     if model_path.exists():
         variants["pt"] = model_path
 
-    for suffix, key in [(".tflite", "tflite"), ("_int8.tflite", "int8tflite"), (".onnx", "onnx")]:
+    for suffix, key in [
+        (".tflite", "tflite"),
+        ("_int8.tflite", "int8tflite"),
+        ("_int8_320.tflite", "int8tflite_320"),
+        ("_int8_640.tflite", "int8tflite_640"),
+        (".onnx", "onnx"),
+    ]:
         candidate = parent / f"{stem}{suffix}"
         if candidate.exists():
             variants[key] = candidate
@@ -196,10 +202,11 @@ def push_to_hub(
         else:
             filename = f"{tag}.{fmt}"
 
-        print(f"  Uploading {path.name} -> {repo_id}/{filename}")
+        remote_path = f"models/detection/{filename}"
+        print(f"  Uploading {path.name} -> {repo_id}/{remote_path}")
         api.upload_file(
             path_or_fileobj=str(path),
-            path_in_repo=filename,
+            path_in_repo=remote_path,
             repo_id=repo_id,
             repo_type="model",
             token=token,
@@ -224,9 +231,7 @@ def push_to_hub(
 def main():
     parser = argparse.ArgumentParser(description="Upload trained models to Hugging Face Hub")
     parser.add_argument("--model", type=str, required=True, help="Path to .pt model file")
-    parser.add_argument(
-        "--repo-id", type=str, required=True, help="HuggingFace repo ID (e.g. jeremy341/mira-ai-models)"
-    )
+    parser.add_argument("--repo-id", type=str, required=True, help="Hugging Face repo ID (e.g. Jeremy341/MIRA-AI)")
     parser.add_argument("--tag", type=str, default=None, help="Model tag/name (default: experiment name from path)")
     parser.add_argument("--token", type=str, default=None, help="HuggingFace API token (or set HF_TOKEN env var)")
     parser.add_argument("--info", type=str, default=None, help="Extra info to include in model card")

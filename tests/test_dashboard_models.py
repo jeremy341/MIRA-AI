@@ -105,11 +105,11 @@ class TestModelConfig:
     def test_defaults(self):
         cfg = ModelConfig(name="test.pt")
         assert cfg.name == "test.pt"
-        assert cfg.conf_threshold == 0.5
-        assert cfg.reject_threshold == 0.55
+        assert cfg.conf_threshold == 0.25
+        assert cfg.reject_threshold == 0.25
         assert cfg.iou_threshold == 0.45
         assert cfg.enable_tracking is True
-        assert cfg.target_latency_ms == 50
+        assert cfg.target_latency_ms == 1000
 
     def test_custom_values(self):
         cfg = ModelConfig(name="model.tflite", conf_threshold=0.25, enable_tracking=False)
