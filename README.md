@@ -1,5 +1,11 @@
 # MIRA — Machine Intelligence for Recycling Automation
 
+MIRA is a computer-vision research project for recycling automation. It combines YOLO object detection, dataset preparation, model evaluation, model export, webcam inference, and a development dashboard for the five configured classes: glass, metal, paper, plastic, and trash.
+
+This project is being developed for Jugend forscht 2027, with Raspberry Pi deployment and tabletop robot integration as future goals.
+
+> The detailed setup, CLI reference, research workflow, architecture, experiment history, and current status are documented below.
+
 [![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
