@@ -16,13 +16,21 @@ import yaml
 
 
 def _load_experiment_config(config_path: Path) -> dict:
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"Error: invalid YAML in {config_path}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _load_project_config(project_root: Path) -> dict:
-    with open(project_root / "mira.yaml", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(project_root / "mira.yaml", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"Error: invalid YAML in mira.yaml: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _build_training_params(exp: dict, project: dict) -> dict:

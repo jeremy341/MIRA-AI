@@ -67,10 +67,13 @@ class CameraService:
         self.status_message = message
 
     def _notify_status_change(self):
-        callback = self.on_status_change
-        loop = self._loop
+        with self._lock:
+            callback = self.on_status_change
+            loop = self._loop
+            status = self.status
+            message = self.status_message
         if callback and loop:
-            notification = self._run_status_callback(callback, self.status, self.status_message)
+            notification = self._run_status_callback(callback, status, message)
             try:
                 asyncio.run_coroutine_threadsafe(notification, loop)
             except Exception as exc:

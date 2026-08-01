@@ -125,7 +125,8 @@ def build_confusion_matrix(
     for img_path, gt_objects in samples:
         try:
             result = model.predict(str(img_path), conf=conf, iou=0.5)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Prediction failed for %s: %s", img_path.name, exc)
             continue
 
         pred_boxes = [list(d.bbox) for d in result.detections]

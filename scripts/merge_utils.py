@@ -55,7 +55,7 @@ def copy_passthrough(src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_dir):
         tuple: (added, skipped) counts
     """
     if not src_img_dir.exists():
-        return 0
+        return 0, 0
     dst_img_dir.mkdir(parents=True, exist_ok=True)
     dst_lbl_dir.mkdir(parents=True, exist_ok=True)
     added = 0

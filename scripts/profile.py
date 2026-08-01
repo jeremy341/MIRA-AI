@@ -113,6 +113,9 @@ def profile_model(
         print("  No test image provided, generating dummy image...")
         image_path = _generate_dummy_image(imgsz, imgsz)
         print(f"  Dummy image saved to {image_path}")
+        _dummy_generated = True
+    else:
+        _dummy_generated = False
 
     # --- Warmup ---
     print(f"  Warming up ({warmup} iterations)...")
@@ -164,6 +167,11 @@ def profile_model(
         "cuda_available": _CUDA_AVAILABLE,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if _dummy_generated:
+        try:
+            image_path.unlink(missing_ok=True)
+        except OSError:
+            pass
     return results
 
 

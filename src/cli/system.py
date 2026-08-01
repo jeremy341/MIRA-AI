@@ -72,7 +72,7 @@ def cmd_doctor(args):
 
     print(f"\n  {'=' * 60}")
     if config_errors or env_warnings:
-        print("  Status: ISSUES FOUND â€” see details above")
+        print("  Status: ISSUES FOUND — see details above")
     else:
         print("  Status: HEALTHY")
     print()

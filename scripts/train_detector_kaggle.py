@@ -8,6 +8,7 @@ Usage (on Kaggle):
 """
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -44,7 +45,7 @@ def main():
     # ============================================================
     # 2. FIND DATASET
     # ============================================================
-    input_dir = "/kaggle/input"
+    input_dir = os.environ.get("KAGGLE_INPUT_PATH", "/kaggle/input")
     data_root = None
 
     for d in Path(input_dir).iterdir():

@@ -184,13 +184,6 @@ def push_to_hub(
 
     # Upload each variant
     for fmt, path in variants.items():
-        filename = (
-            f"best.{fmt}"
-            if fmt == "pt"
-            else f"best_{fmt.replace('.', '_')}.{fmt.split('.')[-1]}"
-            if "." in fmt
-            else f"best.{fmt}"
-        )
         if fmt == "pt":
             filename = f"{tag}.pt"
         elif fmt == "int8tflite":

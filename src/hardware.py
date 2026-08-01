@@ -239,7 +239,8 @@ class IPCamera(AbstractCamera):
         self._buffer.stop()
         self._thread.join(timeout=5.0)
         try:
-            cast(cv2.VideoCapture, self.cap).release()
+            if self.cap is not None:
+                cast(cv2.VideoCapture, self.cap).release()
         except Exception as exc:
             logger.warning(f"Exception releasing IP camera: {exc}")
 
