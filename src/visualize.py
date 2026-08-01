@@ -3,6 +3,21 @@
 import cv2
 import numpy as np
 
+# Per-class colors (BGR format for OpenCV)
+CLASS_COLORS: dict[str, tuple[int, int, int]] = {
+    "glass": (0, 255, 0),
+    "metal": (255, 165, 0),
+    "paper": (0, 0, 255),
+    "plastic": (255, 255, 0),
+    "trash": (128, 0, 128),
+}
+
+
+def class_id_to_name(class_id: int, class_names: list[str] | None = None) -> str:
+    """Map a class ID to its name. Returns 'class_{id}' if out of range."""
+    names = class_names or []
+    return names[class_id] if class_id < len(names) else f"class_{class_id}"
+
 
 def draw_boxes(
     frame: np.ndarray,
@@ -36,7 +51,7 @@ def draw_boxes(
             continue
         cls_id = int(box.cls[0])
         names = class_names if class_names else results[0].names
-        cls_name = names[cls_id] if cls_id < len(names) else f"class_{cls_id}"
+        cls_name = class_id_to_name(cls_id, names)
 
         x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
 
@@ -47,17 +62,62 @@ def draw_boxes(
             color = (0, 200, 255)
             label = f"unsicher {conf:.2f}"
 
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        thickness = 2
-        text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
-
-        label_y1 = max(0, y1 - 25)
-        label_x2 = min(w, x1 + text_size[0])
-        cv2.rectangle(frame, (x1, label_y1), (label_x2, y1), color, -1)
-        text_y = max(text_size[1], y1 - 5)
-        cv2.putText(frame, label, (x1, text_y), font, font_scale, (0, 0, 0), thickness)
+        _draw_box(frame, x1, y1, x2, y2, color, label)
 
     return frame
+
+
+def draw_detections(
+    frame: np.ndarray,
+    detections: list,
+    class_names: list[str] | None = None,
+) -> np.ndarray:
+    """Draw detections (list of Detection dataclass instances) on a frame.
+
+    Each Detection must have: bbox, class_name, confidence, track_id (optional).
+    Uses per-class colors.
+    """
+    if not detections:
+        return frame
+
+    h, w = frame.shape[:2]
+    for det in detections:
+        x1, y1, x2, y2 = det.bbox
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(w, x2), min(h, y2)
+
+        class_name = det.class_name.value if hasattr(det.class_name, "value") else str(det.class_name)
+        color = CLASS_COLORS.get(class_name, (255, 255, 255))
+
+        label = f"{class_name}: {det.confidence:.2f}"
+        if det.track_id is not None:
+            label = f"[{det.track_id}] {label}"
+
+        _draw_box(frame, x1, y1, x2, y2, color, label)
+
+    return frame
+
+
+def _draw_box(
+    frame: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    color: tuple[int, int, int],
+    label: str,
+):
+    """Draw a single bounding box with label background."""
+    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.5
+    thickness = 1
+    text_size = cv2.getTextSize(label, font, font_scale, thickness)[0]
+
+    label_y1 = max(0, y1 - text_size[1] - 6)
+    label_x2 = min(frame.shape[1], x1 + text_size[0] + 4)
+    cv2.rectangle(frame, (x1, label_y1), (label_x2, y1), color, -1)
+    text_y = max(text_size[1], y1 - 3)
+    cv2.putText(frame, label, (x1 + 2, text_y), font, font_scale, (0, 0, 0), thickness)

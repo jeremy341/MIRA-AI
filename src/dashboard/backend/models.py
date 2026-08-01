@@ -3,7 +3,6 @@ Data models for MIRA Control Center API
 """
 
 from datetime import datetime
-from typing import Any
 from pydantic import BaseModel, Field
 from enum import StrEnum
 
@@ -73,31 +72,9 @@ class Statistics(BaseModel):
     sorting_accuracy: float | None = None  # If robotic arm feedback available
 
 
-class ModelInfo(BaseModel):
-    """Detection model information"""
-
-    name: str
-    label: str
-    path: str
-    model_type: str  # "yolo_pt", "yolo_tflite", "third_party"
-    size_mb: float
-    is_tflite_int8: bool
-    input_size: int
-    recommended: bool = False
-
-
 class SystemStatus(StrEnum):
     IDLE = "idle"
     INITIALIZING = "initializing"
     RUNNING = "running"
     PAUSED = "paused"
     ERROR = "error"
-
-
-class StatusUpdate(BaseModel):
-    """System status update"""
-
-    status: SystemStatus
-    message: str
-    timestamp: datetime = Field(default_factory=datetime.now)
-    details: dict[str, Any] | None = None

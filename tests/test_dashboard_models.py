@@ -14,9 +14,7 @@ from models import (
     CameraConfig,
     Detection,
     ModelConfig,
-    ModelInfo,
     Statistics,
-    StatusUpdate,
     SystemMetrics,
     SystemStatus,
     WasteClass,
@@ -176,33 +174,6 @@ class TestStatistics:
         assert s.sorting_accuracy == 0.95
 
 
-class TestModelInfo:
-    def test_valid_model_info(self):
-        info = ModelInfo(
-            name="model.pt",
-            label="Model Pt",
-            path="/models/model.pt",
-            model_type="yolo_pt",
-            size_mb=12.5,
-            is_tflite_int8=False,
-            input_size=640,
-        )
-        assert info.recommended is False
-
-    def test_recommended_model(self):
-        info = ModelInfo(
-            name="model_int8.tflite",
-            label="Model Int8",
-            path="/models/model_int8.tflite",
-            model_type="yolo_tflite",
-            size_mb=3.2,
-            is_tflite_int8=True,
-            input_size=320,
-            recommended=True,
-        )
-        assert info.recommended is True
-
-
 class TestSystemStatus:
     def test_all_values(self):
         assert SystemStatus.IDLE == "idle"
@@ -213,19 +184,3 @@ class TestSystemStatus:
 
     def test_has_five_states(self):
         assert len(SystemStatus) == 5
-
-
-class TestStatusUpdate:
-    def test_valid_status_update(self):
-        su = StatusUpdate(status=SystemStatus.RUNNING, message="Stream active")
-        assert su.status == SystemStatus.RUNNING
-        assert su.details is None
-        assert isinstance(su.timestamp, datetime)
-
-    def test_with_details(self):
-        su = StatusUpdate(
-            status=SystemStatus.ERROR,
-            message="Camera disconnected",
-            details={"camera_index": 0, "retry_count": 3},
-        )
-        assert su.details == {"camera_index": 0, "retry_count": 3}

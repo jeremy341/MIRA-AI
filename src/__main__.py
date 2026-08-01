@@ -1,4 +1,5 @@
 import sys
+import traceback
 
 from .cli import main
 
@@ -7,8 +8,5 @@ try:
 except KeyboardInterrupt:
     sys.exit(130)
 except Exception:
-    import sys
-    import traceback
-
     traceback.print_exc(file=sys.stderr)
     sys.exit(1)
