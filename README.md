@@ -349,11 +349,10 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## Acknowledgments
 
-- **Claude AI** (Anthropic) — development assistance and code review
 - **Supervising Teacher** — Jugend Forscht project guidance
-- **Sparkassenstiftung** — financial support
 - **Kaggle** — free T4 GPU for model training
 - **Ultralytics** — YOLO framework
+- **OpenCode** — development assistance and code review
 - **TACO Dataset** — Trash Annotations in Context
 - **Roboflow** — community waste detection dataset
 
