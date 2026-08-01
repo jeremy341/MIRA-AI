@@ -162,48 +162,11 @@ class WebSocketHandler:
             return
 
         if detections:
-            # Draw detections on a copy
+            from visualize import draw_detections
             annotated = frame.copy()
-            for det in detections:
-                x1, y1, x2, y2 = det.bbox
-                # Choose color based on class
-                colors = {
-                    "glass": (0, 255, 0),
-                    "metal": (255, 165, 0),
-                    "paper": (0, 0, 255),
-                    "plastic": (255, 255, 0),
-                    "trash": (128, 0, 128),
-                }
-                color = colors.get(det.class_name.value, (255, 255, 255))
-                # Draw bounding box
-                cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-                # Draw label
-                label = f"{det.class_name.value}: {det.confidence:.2f}"
-                if det.track_id is not None:
-                    label = f"[{det.track_id}] {label}"
-                # Calculate text size
-                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-                # Draw background for text
-                cv2.rectangle(
-                    annotated,
-                    (x1, y1 - text_height - 4),
-                    (x1 + text_width, y1),
-                    color,
-                    -1,
-                )
-                # Draw text
-                cv2.putText(
-                    annotated,
-                    label,
-                    (x1, y1 - 2),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 0, 0),
-                    1,
-                )
+            draw_detections(annotated, detections)
             to_store = annotated
         else:
-            # No detections to draw; use original frame (no copy needed)
             to_store = frame
 
         # Store frame for new connections (thread-safe)

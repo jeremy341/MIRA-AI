@@ -78,35 +78,6 @@ def cmd_doctor(args):
     print()
 
 
-@register_command("diagnostics", "Check hardware capabilities and environment")
-def cmd_diagnostics(args):
-    from src.deploy import check_environment, detect_hardware, suggest_model
-
-    info = detect_hardware()
-    print("\n  Hardware Diagnostics")
-    print(f"  {'=' * 50}")
-    print(f"  Platform:     {info.platform} ({info.arch})")
-    print(f"  Python:       {info.python_version.split()[0]}")
-    print(f"  CPU cores:    {info.cpu_count}")
-    print(f"  Memory:       {info.memory_mb} MB")
-    if info.is_raspberry_pi:
-        print(f"  Model:        Raspberry Pi ({info.pi_model})")
-    if info.is_jetson:
-        print("  Model:        NVIDIA Jetson")
-    print(f"  CUDA:         {'Yes (' + info.cuda_version + ')' if info.has_cuda else 'No'}")
-    print(f"  PyTorch:      {'Yes' if info.has_torch else 'No'}")
-    print(f"  TensorFlow:   {'Yes' if info.has_tensorflow else 'No'}")
-    print(f"  TFLite:       {'Yes' if info.has_tflite_runtime else 'No'}")
-    print(f"\n  Suggested model: {suggest_model(info)}")
-
-    warnings = check_environment()
-    if warnings:
-        print("\n  Warnings:")
-        for w in warnings:
-            print(f"    ! {w}")
-    print()
-
-
 def _add_config_args(parser):
     parser.add_argument(
         "--validate", action="store_true", help="Validate the configuration and check referenced paths."

@@ -15,7 +15,6 @@ logger = get_logger(__name__)
 
 SRC_DIR = pathlib.Path(__file__).resolve().parent
 ROOT_DIR = SRC_DIR.parent
-SCRIPT_DIR = SRC_DIR  # backward compatibility — SRC_DIR is preferred
 
 # Load project config
 _CONFIG_PATH = ROOT_DIR / "mira.yaml"
@@ -194,24 +193,9 @@ CAMERA_DEFAULT_CONF: float = 0.25
 CAMERA_DEFAULT_REJECT: float = 0.25
 CAMERA_DEFAULT_TARGET_LATENCY_MS: int = 1000
 
-# Legacy model labels — kept for backward compatibility.
-# New models are discovered dynamically by ModelRegistry.
-# To add a label for a model, create a YAML sidecar file in models/detection/.
-DETECTION_MODEL_LABELS: dict[str, str] = {}
-
-
 def validate_config() -> list[str]:
     """Re-validate the current project configuration and return any errors."""
     return _validate_project_config(PROJECT_CONFIG)
-
-
-def get_detection_models() -> list[str]:
-    """Return sorted list of detection model filenames."""
-    if not DETECTION_DIR.exists():
-        return []
-    return sorted(
-        p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite") and "classifier" not in p.name.lower()
-    )
 
 
 def resolve_safe_path(user_path: str | pathlib.Path, base_dir: pathlib.Path | None = None) -> pathlib.Path:

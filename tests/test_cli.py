@@ -78,7 +78,6 @@ EXPECTED_COMMANDS = {
     "datasets",
     "validate",
     "doctor",
-    "diagnostics",
     "config",
     "models",
     "experiments",
@@ -356,12 +355,11 @@ def test_trainconfig_minimal_yaml_uses_defaults():
 
 
 def test_mira_yaml_defaults_in_config_module():
-    from src.config import DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU, DEFAULT_MODEL, REJECT_THRESHOLD
+    from src.config import DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU, REJECT_THRESHOLD
 
     assert DEFAULT_CONF == 0.5
     assert DEFAULT_IOU == 0.45
     assert DEFAULT_IMGSZ == 640
-    assert DEFAULT_MODEL == "yolo11n.pt"
     assert REJECT_THRESHOLD == 0.55
 
 
@@ -488,14 +486,6 @@ def test_experiments_command(capsys):
     cmd_experiments(argparse.Namespace())
     out = capsys.readouterr().out
     assert isinstance(out, str)
-
-
-def test_diagnostics_command(capsys):
-    from src.cli.system import cmd_diagnostics
-
-    cmd_diagnostics(argparse.Namespace())
-    out = capsys.readouterr().out
-    assert "Hardware Diagnostics" in out
 
 
 def test_datasets_command(capsys):

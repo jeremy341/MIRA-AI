@@ -139,34 +139,6 @@ class DetectionModel(ABC):
         iou: float | None = None,
     ) -> InferenceResult: ...
 
-    def _parse_yolo_results(
-        self, results, latency_ms: float, image: str | Path, class_names: list[str] | None = None
-    ) -> InferenceResult:
-        names = class_names or CLASS_NAMES
-        detections: list[Detection] = []
-        boxes = results[0].boxes
-        if boxes is not None and len(boxes) > 0:
-            xyxy = boxes.xyxy.cpu().tolist()
-            confs = boxes.conf.cpu().tolist()
-            cls_ids = boxes.cls.cpu().tolist()
-            for i in range(len(xyxy)):
-                cid = int(cls_ids[i])
-                bbox = tuple(xyxy[i])
-                detections.append(
-                    Detection(
-                        class_id=cid,
-                        class_name=names[cid] if cid < len(names) else f"class_{cid}",
-                        confidence=float(confs[i]),
-                        bbox=bbox,
-                    )
-                )
-        return InferenceResult(
-            detections=detections,
-            latency_ms=latency_ms,
-            model_name=self.name,
-            image_path=str(image),
-        )
-
     def __repr__(self) -> str:
         state = "loaded" if self._loaded else "not loaded"
         return f"{type(self).__name__}({self.name!r}, {state})"

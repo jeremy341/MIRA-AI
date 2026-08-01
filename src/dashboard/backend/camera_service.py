@@ -329,7 +329,8 @@ class CameraService:
 
     def _class_id_to_name(self, class_id: int) -> str:
         """Map class ID to name"""
-        return CLASS_NAMES[class_id] if class_id < len(CLASS_NAMES) else "unknown"
+        from visualize import class_id_to_name
+        return class_id_to_name(class_id, CLASS_NAMES)
 
     def _update_performance_metrics(self, inference_time: float):
         """Update performance tracking metrics"""
