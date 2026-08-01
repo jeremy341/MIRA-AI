@@ -47,15 +47,11 @@ results/**/*.pt
 results/**/*.onnx
 results/**/*.tflite
 
-# --- Latex (JUFO report, not part of the package) ---
-latex/
+# --- JuFo LaTeX (local build, not tracked) ---
+jufo/latex/
 
 # --- Private report/reference files kept locally ---
 Leitfaden_schriftliche_Arbeit.pdf
-assets/architecture.pdf
-assets/architecture.tex
-docs/USER_ACTIONS_BEFORE_JUFO.md
-docs/internal/JuFo_Huerden_und_Fehleranalyse.md
 KAGGLE_TRAINING_GUIDE.md
 TRAINING_PLAN.md
 
