@@ -20,15 +20,9 @@ __pycache__/
 
 # --- Archives ---
 archive/
-archive (1)/
 
 # --- Datasets (too large for git) ---
 datasets/
-
-# --- YOLO raw detection samples (regenerable) ---
-results/**/train_batch*.jpg
-results/**/val_batch*.jpg
-results/**/labels.jpg
 
 # --- Training outputs ---
 runs/
@@ -50,53 +44,9 @@ results/**/*.tflite
 # --- JuFo LaTeX (local build, not tracked) ---
 jufo/latex/
 
-# --- Private report/reference files kept locally ---
-Leitfaden_schriftliche_Arbeit.pdf
-KAGGLE_TRAINING_GUIDE.md
-TRAINING_PLAN.md
-
-# --- Paused/legacy workflows kept locally, not in the release ---
-scripts/_apply_fixes.py
-scripts/copy_yolo11_figures.py
-scripts/download_and_merge.py
-scripts/generate_report_plots.py
-scripts/mira_molab.py
-experiments/exp018_teacher_yolo11x.yaml
-experiments/exp019_teacher_yolo26x.yaml
-experiments/exp020_distill_yolo26n.yaml
-experiments/exp021_distill_yolo11n.yaml
-experiments/exp022_baseline_yolo26n.yaml
-experiments/exp023_baseline_yolo11n.yaml
-kaggle/notebook_1_teacher_yolo11n.py
-kaggle/notebook_2_baseline_yolo26n.py
-kaggle/notebook_3_distill_yolo26n.py
-
-# --- CLAUDE AI context (private) ---
-CLAUDE/
-memory.md
-
-# --- Dataset images in data/classes (training pictures) ---
-data/classes/**/*.jpg
-data/classes/**/*.jpeg
-data/classes/**/*.png
-
-# --- YOLO raw data ---
-yolo_data/images/
-yolo_data/labels/
-
-# --- Additional raw datasets ---
-wild_data/
-mira_wild_data/
-
-# --- YOLOv8 training runs and detection outputs ---
-runs/
-
 # --- Large archives ---
 *.zip
 *.tar.gz
-
-# --- Freebuff cache ---
-.freebuff/
 
 # --- Secrets / Environment ---
 .env
@@ -112,8 +62,6 @@ results/
 !results/experiments_log.md
 !results/field_benchmark_results.md
 
-# --- Dev / setup files (not for distribution) ---
-.clinerules
-setup/
-dashboard_output/
-dashboard_output_backup/
+# --- CLAUDE AI context (private) ---
+CLAUDE/
+memory.md
