@@ -214,9 +214,7 @@ Training datasets are not included in Git. The current no-SortWaste build uses:
 4. **SAM-labeled TrashNet**
 
 `scripts/build_balanced_dataset.py` documents the expected local directories,
-remapping, deterministic TACO split, balancing, and manifest generation. Verify
-the resulting manifest against the counts in
-[`DATASETS_AND_BENCHMARKS.md`](docs/DATASETS_AND_BENCHMARKS.md). The commands below
+remapping, deterministic TACO split, balancing, and manifest generation. The commands below
 belong to the older EXP-014 through EXP-017 dataset-comparison workflow and do
 not recreate the current balanced dataset:
 
@@ -437,7 +435,7 @@ Full per-class metrics, confusion matrices, and training curves: [`results/exper
 
 ## Dataset
 
-The current no-SortWaste build is **6,898 images and 12,832 boxes**: 5,108/415/1,375 train/validation/test images. Exact split and source counts are in [`DATASETS_AND_BENCHMARKS.md`](docs/DATASETS_AND_BENCHMARKS.md) and [`docs/EVIDENCE_LEDGER.md`](docs/EVIDENCE_LEDGER.md). This local dataset is gitignored and differs from the historical datasets used for EXP-014 and EXP-017.
+The current no-SortWaste build is **6,898 images and 12,832 boxes**: 5,108/415/1,375 train/validation/test images. This local dataset is gitignored and differs from the historical datasets used for EXP-014 and EXP-017.
 
 ### Sources
 
