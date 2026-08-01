@@ -1,6 +1,6 @@
 # MIRA — Machine Intelligence for Recycling Automation
 
-**Jugend forscht 2027 · Gymnasium Broich · Mülheim an der Ruhr**
+**Jugend forscht 2027**
 
 [![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
@@ -282,7 +282,6 @@ Trained model binaries are local, gitignored files. Public detector artifacts ar
   author={Jeremy Darko},
   year={2027},
   howpublished={Jugend forscht 2027},
-  note={Gymnasium Broich, Mülheim an der Ruhr}
 }
 ```
 
