@@ -274,19 +274,6 @@ Trained model binaries are local, gitignored files. Public detector artifacts ar
 
 ---
 
-## Citation
-
-```bibtex
-@misc{mira2027,
-  title={MIRA: Machine Intelligence for Recycling Automation},
-  author={Jeremy Darko},
-  year={2027},
-  howpublished={Jugend forscht 2027},
-}
-```
-
----
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
