@@ -307,7 +307,10 @@ async def control_websocket(websocket: WebSocket):
     except WebSocketDisconnect:
         print("Control WebSocket disconnected")
     except Exception as e:
-        await websocket.send_json({"type": "error", "message": f"Error: {str(e)}"})
+        try:
+            await websocket.send_json({"type": "error", "message": f"Error: {str(e)}"})
+        except Exception:
+            pass
 
 
 # Run the server

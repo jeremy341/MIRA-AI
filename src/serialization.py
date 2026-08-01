@@ -57,6 +57,7 @@ def _atomic_write(path: Path, data: str) -> None:
     """Write data atomically using a temporary file and rename."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = None
     fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:

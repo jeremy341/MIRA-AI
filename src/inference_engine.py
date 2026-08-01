@@ -304,9 +304,9 @@ class InferenceEngine:
 
     def _draw_status(self, frame, results):
         """Draw status overlay on the annotated frame."""
-        speed = getattr(results[0], "speed", None) or {}
+        speed = getattr(results[0], "speed", None) or {} if results else {}
         latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
-        avg_latency = sum(self.latency_history) / len(self.latency_history)
+        avg_latency = sum(self.latency_history) / len(self.latency_history) if self.latency_history else 0
         fps = self._current_fps
 
         status_text = (

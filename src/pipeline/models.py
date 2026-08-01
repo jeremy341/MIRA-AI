@@ -349,6 +349,7 @@ class ThirdPartyAdapter(DetectionModel):
             except Exception as exc:
                 log.warning("Failed to load %s with ultralytics: %s", self.path.name, exc)
                 self._loaded = False
+                self._load_failed = True
                 raise RuntimeError(f"Failed to load model {self.path.name}: {exc}") from exc
         else:
             log.warning(

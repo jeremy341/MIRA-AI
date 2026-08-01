@@ -322,6 +322,9 @@ def balance_training(records: list[Record]) -> tuple[list[Record], dict[int, int
     for record in records:
         totals.update(record.counts)
     target = min(1800, min(totals.get(class_id, 0) for class_id in range(5)))
+    if target == 0:
+        print("Warning: one or more classes have zero samples; cannot balance. Using all records.")
+        target = max(totals.values()) if totals else 0
 
     rng = random.Random(42)
     selected_by_id: dict[int, Record] = {}

@@ -156,7 +156,7 @@ class WebSocketHandler:
             {"type": "status", "status": status.value, "message": message, "timestamp": datetime.now().isoformat()}
         )
 
-    def update_frame(self, frame: np.ndarray, detections: list[Detection] = None):
+    def update_frame(self, frame: np.ndarray, detections: list[Detection] | None = None):
         """Update the current frame with detections drawn"""
         if frame is None:
             return

@@ -16,13 +16,21 @@ import yaml
 
 
 def _load_experiment_config(config_path: Path) -> dict:
-    with open(config_path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"Error: invalid YAML in {config_path}: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _load_project_config(project_root: Path) -> dict:
-    with open(project_root / "mira.yaml", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    try:
+        with open(project_root / "mira.yaml", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except yaml.YAMLError as e:
+        print(f"Error: invalid YAML in mira.yaml: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 def _build_training_params(exp: dict, project: dict) -> dict:
@@ -144,13 +152,13 @@ def generate_colab_notebook(exp: dict, project: dict) -> dict:
                 "DATASET_DIR = Path('/content/dataset')\n"
                 "DATASET_DIR.mkdir(parents=True, exist_ok=True)\n\n"
                 "if DATASET_URL:\n"
-                '    !wget -q -O /tmp/dataset.zip ""\n'
-                "    !unzip -q /tmp/dataset.zip -d \n"
+                "    !wget -q -O /tmp/dataset.zip \"$DATASET_URL\"\n"
+                "    !unzip -q /tmp/dataset.zip -d $DATASET_DIR\n"
                 "else:\n"
                 "    # Option 2: Use a dataset from Google Drive\n"
                 "    DRIVE_ZIP = DRIVE_DIR / 'dataset.zip'  # Upload this file\n"
                 "    if DRIVE_ZIP.exists():\n"
-                '        !unzip -q "" -d \n'
+                "        !unzip -q \"$DRIVE_ZIP\" -d $DATASET_DIR\n"
                 "    else:\n"
                 "        raise FileNotFoundError(\n"
                 "            'No dataset found. Either set DATASET_URL or upload dataset.zip to Google Drive.'\n"

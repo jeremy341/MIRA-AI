@@ -90,12 +90,12 @@ def cmd_train(args):
             config.device = "0"
             if args.batch_size is None:
                 config.batch_size = 32
-            print("  GPU detected â€” device=cuda:0, batch_size=32")
+            print("  GPU detected — device=cuda:0, batch_size=32")
         else:
             config.device = "cpu"
             if args.batch_size is None:
                 config.batch_size = 8
-            print("  CPU only â€” device=cpu, batch_size=8")
+            print("  CPU only — device=cpu, batch_size=8")
 
         if args.model is None:
             from src.pipeline.models import ModelRegistry
@@ -132,7 +132,7 @@ def cmd_train(args):
         sys.exit(2)
 
     if args.dry_run:
-        print("Configuration is valid. Dry run â€” no training started.")
+        print("Configuration is valid. Dry run — no training started.")
         print(f"  model: {config.model}")
         print(f"  dataset: {config.dataset}")
         print(f"  epochs: {config.epochs}")
@@ -184,7 +184,7 @@ def cmd_export(args):
     if args.dry_run:
         print(f"Model found: {model_path}")
         print(f"Formats: {', '.join(args.formats)}")
-        print("Dry run â€” no export performed.")
+        print("Dry run — no export performed.")
         return
 
     pipeline = TrainingPipeline()
