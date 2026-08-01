@@ -1,21 +1,15 @@
 # MIRA — Machine Intelligence for Recycling Automation
 
-MIRA is a computer-vision research project for recycling automation. It combines YOLO object detection, dataset preparation, model evaluation, model export, webcam inference, and a development dashboard for the five configured classes: glass, metal, paper, plastic, and trash.
-
-This project is being developed for Jugend forscht 2027, with Raspberry Pi deployment and tabletop robot integration as future goals.
-
-> The detailed setup, CLI reference, research workflow, architecture, experiment history, and current status are documented below.
+**Jugend forscht 2027 · Gymnasium Broich · Mülheim an der Ruhr**
 
 [![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
-[![Last Commit](https://img.shields.io/github/last-commit/jeremy341/MIRA-AI)](https://github.com/jeremy341/MIRA-AI/commits/main)
 
-A computer-vision research project for recycling detection, targeting eventual deployment on a Raspberry Pi Zero 2W and tabletop sorting robot. Detection models and historical experiments exist; Raspberry Pi benchmarking, robot integration, distillation, and end-to-end dashboard verification are pending.
+MIRA is a computer-vision research project for identifying recyclable materials and preparing them for automated sorting. It combines YOLO object detection, dataset preparation, model evaluation, model export, webcam inference, and a development dashboard for glass, metal, paper, plastic, and trash.
 
-> **Local demo:** `.\mira live` opens the model picker when compatible local model binaries are present.
-> **Dashboard status:** an implementation exists under `src/dashboard/`, but end-to-end camera/model/browser integration has not yet been verified.
+The current focus is a reliable perception pipeline, with Raspberry Pi deployment and tabletop robot integration as future goals.
 
 ---
 
@@ -31,13 +25,10 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-> **Note:** Development dependencies (pytest, mypy, ruff) are included in `requirements.txt`. For a production-only install, install only the core packages listed at the top of the file.
 
-> **Fresh-clone note:** datasets and trained model binaries are gitignored. Model binaries are published separately in the public [Hugging Face repository](https://huggingface.co/Jeremy341/MIRA-AI); the CLI downloads them into the local `models/detection/` directory.
 
 ### Live Detection
 
-> **Platform note:** On Windows, use `.\mira` (PowerShell) or `launchers\mira.bat` (CMD). On Linux/macOS, use `python -m src` or `./launchers/mira.sh`.
 
 ```bash
 .\mira live                                    # Interactive model picker
@@ -53,7 +44,6 @@ pip install -r requirements.txt
 .\mira dashboard --host 0.0.0.0            # Listen on all interfaces
 ```
 
-> **Note:** The dashboard implementation is retained for development. Camera, model loading, streaming, and browser UI have not yet been verified end to end.
 
 ### Research Pipeline
 
@@ -152,34 +142,17 @@ CLI flags override `mira.yaml` defaults:
 
 ## Architecture
 
-```
-Webcam Input
-     │
-     ▼
-┌─────────────────────────────────────────────────────┐
-│  Stage A: Classification (single object per frame)  │
-│  Input (224×224) → MobileNetV2 → Dense(128) →       │
-│  Dropout(0.2) → Softmax(4 classes)                  │
-│  Best: mira_classifier_int8.tflite — 87.42% | 2.61 MB │
-└─────────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────────┐
-│  Stage B: Detection (multiple objects per frame)    │
-│  Input (640×640) → YOLO11n → NMS →              │
-│  Bounding Boxes + Class Labels + ByteTrack IDs      │
-│  Best: mira_exp019.pt — 90.6% mAP50 | 5.47 MB     │
-└─────────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────────────────────────────────────────────┐
-│  Stage C: Robotic Sorting (planned)                 │
-│  USB Serial → ESP32-S3 → 3-DOF Servo Arm →         │
-│  Pick-and-place into sorted bins                    │
-└─────────────────────────────────────────────────────┘
-```
-
-> **Note:** Stage A classifiers were trained on 4 classes (glass, metal, paper, plastic) without the trash class. Stage B detectors operate on all 5 classes including trash. Stage C and target-hardware deployment remain pending.
+~~~mermaid
+flowchart TB
+    A[Camera or image input] --> B[YOLO11n detector]
+    B --> C[Post-processing and confidence thresholds]
+    C --> D[Bounding boxes and class labels]
+    D --> E[ByteTrack object IDs]
+    D --> F[Live overlay and dashboard]
+    C --> G[Model evaluation and export]
+    G --> H[Edge deployment]
+    H -. planned .-> I[ESP32-S3 and sorting arm]
+~~~
 
 ### Confidence Reject System
 
@@ -208,7 +181,6 @@ Webcam Input
 | `mira_exp014.pt` | 60.7% | 5.21 MB | Historical FP32 result on older dataset |
 | `mira_exp006.pt` | 39.4% | 5.94 MB | YOLOv8n multi-dataset, proven in demos |
 
-> **Status:** EXP-019 PT is the current best measured detector on the clean balanced validation split. Raspberry Pi suitability still requires target-hardware evaluation.
 
 <details>
 <summary><strong>Full experiment history (EXP-001 through EXP-019)</strong></summary>
@@ -232,7 +204,6 @@ Webcam Input
 | **EXP-018** | **YOLO11n** | **Clean balanced dataset** | **90.6%** | **Kaggle T4** |
 | **EXP-019** | **YOLO11n** | **Clean balanced (repeatability)** | **90.6%** | **Kaggle T4** |
 
-> EXP-007 was an exploratory attempt and is excluded. Full per-class metrics, confusion matrices, and training curves: [`results/experiments_log.md`](results/experiments_log.md)
 
 </details>
 
@@ -247,7 +218,7 @@ Training datasets are not included in Git. The current build uses:
 | [dmedhi garbage classification](https://huggingface.co/datasets/dmedhi/garbage-image-classification-detection) | ~800 | Classification | — |
 | [TACO](https://github.com/pedropro/TACO) | 1,500 | COCO | CC-BY-4.0 |
 | [TrashNet](https://github.com/garythung/trashnet) | 2,527 | Classification | MIT-0 |
-| [Roboflow Trash Detection](https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1/dataset/dataset) | ~3,300 | YOLO | CC BY 4.0 |
+| [Roboflow Trash Detection](https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1) | ~3,300 | YOLO | CC BY 4.0 |
 
 All datasets are remapped to 5 unified classes: **glass, metal, paper, plastic, trash**.
 
@@ -355,7 +326,6 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ## Acknowledgments
 
-- **Supervising Teacher** — Jugend Forscht project guidance
 - **Kaggle** — free T4 GPU for model training
 - **Ultralytics** — YOLO framework
 - **OpenCode** — development assistance and code review
