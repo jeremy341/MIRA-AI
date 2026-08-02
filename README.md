@@ -187,10 +187,10 @@ flowchart TB
 
 | Exp | Model | Dataset | mAP50 | Platform |
 |---|---|---|---|---|
-| EXP-001 | Custom CNN | 796 images | 61.00% acc | — |
-| EXP-002 | MobileNetV2 (frozen) | 796 images | 84.28% acc | — |
-| EXP-003 | MobileNetV2 (fine-tuned) | 796 images | 87.42% acc | — |
-| EXP-004 | MobileNetV2 INT8 | 796 images | 87.42% acc | — |
+| EXP-001 | Custom CNN | 796 images | 61.00% acc | localy |
+| EXP-002 | MobileNetV2 (frozen) | 796 images | 84.28% acc | localy |
+| EXP-003 | MobileNetV2 (fine-tuned) | 796 images | 87.42% acc | localy |
+| EXP-004 | MobileNetV2 INT8 | 796 images | 87.42% acc | localy |
 | EXP-005 | YOLOv8n | Custom + TrashNet | 82.3% | Colab T4 |
 | EXP-006 | YOLOv8n | Fused Wild + TrashNet | 39.4% | Colab T4 |
 | EXP-008 | YOLOv8n | Pruned Tabletop | 39.6% | Colab T4 |
