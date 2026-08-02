@@ -324,6 +324,4 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 **MIRA** — Machine Intelligence for Recycling Automation
 
-Jugend forscht 2027 · Gymnasium Broich · Mülheim an der Ruhr
-
 </div>
