@@ -7,6 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
 
+**Project website:** [mira-vision.vercel.app](https://mira-vision.vercel.app/)
+
 MIRA is a computer-vision research project for identifying recyclable materials and preparing them for automated sorting. It combines YOLO object detection, dataset preparation, model evaluation, model export, webcam inference, and a development dashboard for glass, metal, paper, plastic, and trash.
 
 The current focus is a reliable perception pipeline, with Raspberry Pi deployment and tabletop robot integration as future goals.
