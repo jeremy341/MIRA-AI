@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="The MIRA research record: 19 experiments across classification, detection, data quality, and edge export.">
+  <meta name="theme-color" content="#ebe8df">
+  <title>MIRA Research | From baseline to EXP-019</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body class="research-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="MIRA home">MIRA</a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="site-nav"><span>Menu</span><span class="menu-lines" aria-hidden="true"></span></button>
+    <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+      <a href="index.html">Overview</a>
+      <a class="active" href="research.html" aria-current="page">Research</a>
+      <a href="docs.html">Docs</a>
+      <a class="nav-github" href="https://github.com/jeremy341/MIRA-AI">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="research-hero shell">
+      <div data-reveal>
+        <p class="eyebrow">Research record</p>
+        <h1>Nineteen experiments. One clear lesson.</h1>
+      </div>
+      <p class="research-intro" data-reveal>Model architecture mattered. Dataset quality mattered more. MIRA progressed from a 61% classifier to a 90.58% mAP50 detector through measured iteration.</p>
+    </section>
+
+    <section class="result-banner">
+      <div class="shell result-banner-grid">
+        <div><span>Best detector</span><strong>EXP-019</strong></div>
+        <div><span>mAP50</span><strong>90.58%</strong></div>
+        <div><span>mAP50-95</span><strong>82.15%</strong></div>
+        <div><span>Precision</span><strong>87.2%</strong></div>
+        <div><span>Recall</span><strong>84.6%</strong></div>
+      </div>
+    </section>
+
+    <section class="section shell research-story">
+      <div class="story-sticky" data-reveal>
+        <h2>From image labels to object locations.</h2>
+        <p>MIRA began as a four-class image classifier. It then moved to five-class object detection so multiple materials could be located in the same frame.</p>
+      </div>
+      <div class="story-steps">
+        <article data-reveal>
+          <span>Stage A</span>
+          <h3>Classification established the baseline.</h3>
+          <p>A custom CNN reached 61.0% validation accuracy. MobileNetV2 transfer learning raised that to 87.42%, which remained unchanged after INT8 export.</p>
+          <dl><div><dt>EXP-001</dt><dd>61.00%</dd></div><div><dt>EXP-002</dt><dd>84.28%</dd></div><div><dt>EXP-003</dt><dd>87.42%</dd></div><div><dt>EXP-004</dt><dd>87.42%</dd></div></dl>
+        </article>
+        <article data-reveal>
+          <span>Stage B</span>
+          <h3>Detection exposed the data problem.</h3>
+          <p>Early YOLO experiments varied from 35.0% to 82.3% mAP50. Mixing more sources did not guarantee better generalization.</p>
+          <dl><div><dt>EXP-005</dt><dd>82.3%</dd></div><div><dt>EXP-011</dt><dd>35.0%</dd></div><div><dt>EXP-014</dt><dd>60.7%</dd></div><div><dt>EXP-017</dt><dd>59.3%</dd></div></dl>
+        </article>
+        <article class="story-breakthrough" data-reveal>
+          <span>Breakthrough</span>
+          <h3>Clean and balanced beat simply larger.</h3>
+          <p>Rebuilding the dataset around controlled tabletop examples produced 90.6% mAP50 in EXP-018. EXP-019 repeated the result.</p>
+          <dl><div><dt>EXP-018</dt><dd>90.60%</dd></div><div><dt>EXP-019</dt><dd>90.58%</dd></div></dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="section figure-section">
+      <div class="shell">
+        <div class="section-heading compact" data-reveal>
+          <h2>The complete result, through EXP-019.</h2>
+          <p>Every chart below is generated from the latest recorded experiment values, with the underlying data available to screen readers.</p>
+        </div>
+        <div class="chart-grid">
+          <figure class="chart-panel chart-wide" data-reveal>
+            <div class="chart-heading">
+              <div><span>Stage B · mAP50</span><h3>Detection experiments</h3></div>
+              <strong>90.58%</strong>
+            </div>
+            <div class="line-chart" data-chart="detectors" role="group" aria-label="Line chart of mAP50 across all Stage B detector experiments"></div>
+            <figcaption><strong>All recorded detector runs.</strong> EXP-018 and EXP-019 reproduce the large gain from the cleaned dataset.</figcaption>
+          </figure>
+          <figure class="chart-panel" data-reveal>
+            <div class="chart-heading">
+              <div><span>Stage A · validation accuracy</span><h3>Classification baseline</h3></div>
+              <strong>87.42%</strong>
+            </div>
+            <div class="line-chart compact-chart" data-chart="classifiers" role="group" aria-label="Line chart of validation accuracy across the four Stage A classification experiments"></div>
+            <figcaption><strong>Transfer learning.</strong> MobileNetV2 created the first major performance gain.</figcaption>
+          </figure>
+          <figure class="chart-panel" data-reveal>
+            <div class="chart-heading">
+              <div><span>EXP-019 · mAP50</span><h3>Per-class results</h3></div>
+              <strong>5 classes</strong>
+            </div>
+            <div class="bar-chart" data-chart="classes" role="group" aria-label="Horizontal bar chart of EXP-019 mAP50 by material class"></div>
+            <figcaption><strong>Tabletop validation.</strong> Plastic is the lowest class at 81.1%; trash is highest at 97.5%.</figcaption>
+          </figure>
+          <figure class="chart-panel chart-wide" data-reveal>
+            <div class="chart-heading">
+              <div><span>EXP-019 · dataset</span><h3>Current split</h3></div>
+              <strong>6,898 images</strong>
+            </div>
+            <div class="split-chart" data-chart="dataset" role="group" aria-label="Stacked chart of EXP-019 train, validation, and test image counts"></div>
+            <figcaption><strong>Clean balanced dataset.</strong> 5,108 train, 415 validation, and 1,375 test images; the independent test split remains unevaluated.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell exp019-section">
+      <div class="exp019-lead" data-reveal>
+        <p class="eyebrow">EXP-019</p>
+        <h2>The current reference model.</h2>
+        <p>YOLO11n trained for 120 epochs on a clean balanced dataset, then exported to PyTorch, ONNX, and quantized TFLite.</p>
+      </div>
+      <div class="spec-clusters" data-reveal>
+        <section>
+          <h3>Dataset</h3>
+          <dl>
+            <div><dt>Train images</dt><dd>5,108</dd></div>
+            <div><dt>Validation images</dt><dd>415</dd></div>
+            <div><dt>Test images</dt><dd>1,375</dd></div>
+            <div><dt>Bounding boxes</dt><dd>12,832</dd></div>
+          </dl>
+        </section>
+        <section>
+          <h3>Model</h3>
+          <dl>
+            <div><dt>Parameters</dt><dd>2,583,127</dd></div>
+            <div><dt>Compute</dt><dd>6.3 GFLOPs</dd></div>
+            <div><dt>Epochs</dt><dd>120</dd></div>
+            <div><dt>Training time</dt><dd>2.672 h</dd></div>
+          </dl>
+        </section>
+        <section>
+          <h3>Exports</h3>
+          <dl>
+            <div><dt>PyTorch</dt><dd>5.47 MB</dd></div>
+            <div><dt>ONNX</dt><dd>10.61 MB</dd></div>
+            <div><dt>TFLite 320</dt><dd>3.02 MB</dd></div>
+            <div><dt>TFLite 640</dt><dd>3.04 MB</dd></div>
+          </dl>
+        </section>
+      </div>
+    </section>
+
+    <section class="section deployment-study">
+      <div class="shell">
+      <div class="section-heading compact" data-reveal>
+        <h2>Accuracy versus portability.</h2>
+        <p>The TFLite export is smaller and intended for edge testing, but target-hardware benchmarking is still pending.</p>
+      </div>
+      <div class="model-compare" data-reveal>
+        <article>
+          <span>Development model</span>
+          <h3>PyTorch .pt</h3>
+          <strong>90.58%</strong>
+          <p>mAP50 at 640 px</p>
+          <ul><li>5.47 MB</li><li>Full Ultralytics workflow</li><li>Recommended desktop reference</li></ul>
+        </article>
+        <div class="compare-gap"><strong>-4.38</strong><span>mAP50 points</span></div>
+        <article>
+          <span>Edge candidate</span>
+          <h3>INT8 TFLite</h3>
+          <strong>86.2%</strong>
+          <p>mAP50 at 320 px</p>
+          <ul><li>3.02 MB</li><li>Quantized weights, FP32 I/O</li><li>Hardware validation pending</li></ul>
+        </article>
+      </div>
+      </div>
+    </section>
+
+    <section class="section shell limitations">
+      <div data-reveal>
+        <h2>A high validation score is not the finish line.</h2>
+      </div>
+      <div class="limitation-list" data-reveal>
+        <article><h3>Crumpled paper</h3><p>White crumpled paper can be classified as plastic with high confidence, so thresholding alone cannot solve the error.</p></article>
+        <article><h3>Can orientation</h3><p>Metal cans facing the camera opening-first can disappear because the training set contains fewer examples of that view.</p></article>
+        <article><h3>Occlusion</h3><p>Stacked or overlapping objects reduce bounding-box quality, particularly for paper and trash.</p></article>
+        <article><h3>Target hardware</h3><p>Raspberry Pi latency, memory use, and complete robotic sorting have not yet been benchmarked.</p></article>
+      </div>
+    </section>
+
+    <section class="closing shell" data-reveal>
+      <div><h2>Every major workflow is exposed through the CLI.</h2></div>
+      <div class="closing-links"><a href="docs.html#research-pipeline"><span>Training pipeline</span><strong>Read the guide</strong></a><a href="docs.html#models"><span>Model formats</span><strong>Compare exports</strong></a><a href="https://github.com/jeremy341/MIRA-AI"><span>Source and tests</span><strong>Inspect on GitHub</strong></a></div>
+    </section>
+  </main>
+
+  <footer class="site-footer shell">
+    <a class="brand footer-brand" href="index.html">MIRA</a>
+    <p>Machine Intelligence for Recycling Automation</p>
+    <p>Open source under the MIT License</p>
+  </footer>
+</body>
+</html>
