@@ -5,6 +5,7 @@
 [![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
 [![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/mira-ai.svg)](https://pypi.org/project/mira-ai/)
 [![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
 
 **Project website:** [mira-vision.vercel.app](https://mira-vision.vercel.app/)
@@ -17,7 +18,23 @@ The current focus is a reliable perception pipeline, with Raspberry Pi deploymen
 
 ## Quick Start
 
-### Installation
+### Install from PyPI (recommended)
+
+```bash
+pip install mira-ai
+```
+
+The CLI installs as the `mira` command and works from any directory. Download a
+trained model, then start live detection:
+
+```bash
+mira download --list                  # See available models
+mira download mira_exp019.pt          # Download the best detector (~5.5 MB)
+mira live --model mira_exp019.pt      # Start webcam detection
+mira dashboard                        # Launch the control dashboard
+```
+
+### Install from source (development)
 
 ```bash
 git clone https://github.com/jeremy341/MIRA-AI.git
@@ -139,6 +156,17 @@ CLI flags override `mira.yaml` defaults:
 .\mira train --epochs 200 --batch-size 16    # Override training defaults
 .\mira live --conf 0.25 --reject 0.60       # Override inference defaults
 ```
+
+### Where MIRA looks for configuration
+
+When installed from PyPI, MIRA resolves its project root in this order:
+
+1. The `MIRA_HOME` environment variable, if set
+2. The nearest directory containing a `mira.yaml` (walking up from the current directory)
+3. The current working directory, using the packaged default configuration
+
+Models, datasets, and results are stored relative to the resolved project root
+(e.g. `mira download` saves into `<root>/models/detection/`).
 
 ---
 

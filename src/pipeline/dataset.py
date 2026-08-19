@@ -27,17 +27,18 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from ..config import ROOT_DIR
 from ..logger import get_logger
 
 logger = get_logger(__name__)
 
 
 def _import_merge_utils():
-    """Lazy-import merge_utils from scripts/ directory."""
+    """Lazy-import merge_utils from the project scripts/ directory."""
     import importlib
     import sys
 
-    scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
+    scripts_dir = str(ROOT_DIR / "scripts")
     saved_path = list(sys.path)
     try:
         if scripts_dir not in sys.path:
@@ -133,7 +134,7 @@ class DatasetRegistry:
 
     def __init__(self, registry_dir: Path | str | None = None):
         if registry_dir is None:
-            registry_dir = Path(__file__).resolve().parent.parent.parent / "datasets" / "registry"
+            registry_dir = ROOT_DIR / "datasets" / "registry"
         self.registry_dir = Path(registry_dir)
         self.sources: dict[str, DatasetSource] = {}
 
