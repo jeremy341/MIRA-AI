@@ -18,6 +18,10 @@ __pycache__/
 .hypothesis/
 *.cache
 
+# --- Build artifacts (python -m build) ---
+build/
+dist/
+
 # --- Archives ---
 archive/
 

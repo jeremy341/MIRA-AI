@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,8 @@ name = "mira-ai"
 dynamic = ["version"]
 description = "Machine Intelligence for Recycling Automation — Jugend Forscht 2027"
 authors = [{name = "Jeremy Darko"}]
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 readme = "README.md"
 keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
 requires-python = ">=3.11"
@@ -56,6 +57,7 @@ version = {attr = "src.version.__version__"}
 include = ["src*"]
 
 [tool.setuptools.package-data]
+"src" = ["assets/*.yaml"]
 "src.dashboard" = ["frontend/**/*"]
 
 [tool.pytest.ini_options]

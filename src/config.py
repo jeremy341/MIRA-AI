@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 from types import MappingProxyType
 from typing import Any
@@ -14,17 +15,60 @@ from .logger import get_logger
 logger = get_logger(__name__)
 
 SRC_DIR = pathlib.Path(__file__).resolve().parent
-ROOT_DIR = SRC_DIR.parent
+ASSETS_DIR = SRC_DIR / "assets"
+
+
+def _discover_project_root() -> pathlib.Path:
+    """Resolve the MIRA project root.
+
+    Priority:
+      1. The ``MIRA_HOME`` environment variable (explicit override).
+      2. The nearest ancestor of the current directory that contains a ``mira.yaml``.
+      3. The current working directory.
+
+    This lets the pip-installed CLI run from any directory while keeping the
+    in-repo behavior when invoked from a clone.
+    """
+    env_home = os.environ.get("MIRA_HOME")
+    if env_home:
+        return pathlib.Path(env_home).expanduser().resolve()
+    cwd = pathlib.Path.cwd()
+    for candidate in [cwd, *cwd.parents]:
+        if (candidate / "mira.yaml").exists():
+            return candidate
+    return cwd
+
+
+ROOT_DIR = _discover_project_root()
+
+
+def _load_project_config(root: pathlib.Path) -> tuple[dict[str, Any], pathlib.Path | None]:
+    """Load the project config, preferring ``<root>/mira.yaml``.
+
+    Falls back to the packaged default config when running from a directory
+    that has no ``mira.yaml`` (e.g. a fresh pip install). Returns
+    ``(data, config_path)`` where ``config_path`` is None for the packaged default.
+    """
+    config_path = root / "mira.yaml"
+    if config_path.exists():
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                return yaml.safe_load(f), config_path
+        except yaml.YAMLError as e:
+            raise ConfigError(f"Invalid YAML in {config_path}: {e}") from None
+
+    default_path = ASSETS_DIR / "mira.yaml"
+    if default_path.exists():
+        with open(default_path, encoding="utf-8") as f:
+            return yaml.safe_load(f), None
+
+    raise ConfigError(
+        f"Config file not found: {config_path}. Run MIRA from a directory containing mira.yaml or set MIRA_HOME."
+    )
+
 
 # Load project config
-_CONFIG_PATH = ROOT_DIR / "mira.yaml"
-try:
-    with open(_CONFIG_PATH, encoding="utf-8") as f:
-        PROJECT_CONFIG = yaml.safe_load(f)
-except FileNotFoundError:
-    raise ConfigError(f"Config file not found: {_CONFIG_PATH}") from None
-except yaml.YAMLError as e:
-    raise ConfigError(f"Invalid YAML in {_CONFIG_PATH}: {e}") from None
+PROJECT_CONFIG, _CONFIG_PATH = _load_project_config(ROOT_DIR)
 
 _PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 
@@ -103,7 +147,11 @@ if _CONFIG_ERRORS:
 MODELS_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("models", "models")
 DETECTION_DIR = MODELS_DIR / "detection"
 DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
+
+# Prefer a project-local bytetrack.yaml, otherwise use the packaged default.
 BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
+if not BYTE_TRACK_CONFIG_PATH.exists():
+    BYTE_TRACK_CONFIG_PATH = ASSETS_DIR / "bytetrack.yaml"
 
 # Class configuration (single source of truth)
 _CLASSES = PROJECT_CONFIG.get("classes", {})
@@ -192,6 +240,7 @@ TFLITE_INT8_CONF: float = 0.25
 CAMERA_DEFAULT_CONF: float = 0.25
 CAMERA_DEFAULT_REJECT: float = 0.25
 CAMERA_DEFAULT_TARGET_LATENCY_MS: int = 1000
+
 
 def validate_config() -> list[str]:
     """Re-validate the current project configuration and return any errors."""
