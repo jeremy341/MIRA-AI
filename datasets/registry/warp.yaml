@@ -1,0 +1,44 @@
+name: "WaRP (Waste Recognition Project)"
+key: warp
+description: "28-class WaRP dataset remapped to MIRA 5-class"
+source_format: yolo
+source_url: "https://github.com/AIRI-Institute/WaRP"
+input_path: datasets/mira_warp
+splits:
+  train: Warp-D/train/images
+  val: Warp-D/test/images  # No val split in WaRP-D; using test as fallback
+class_mapping:
+  # source_class_id: target_class_id
+  # glass
+  1: 0
+  2: 0
+  17: 0
+  18: 0
+  25: 0
+  26: 0
+  27: 0
+  # metal
+  8: 1
+  # paper
+  9: 2
+  10: 2
+  13: 2
+  # plastic
+  0: 3
+  3: 3
+  4: 3
+  5: 3
+  6: 3
+  7: 3
+  11: 3
+  12: 3
+  14: 3
+  15: 3
+  16: 3
+  19: 3
+  20: 3
+  21: 3
+  22: 3
+  23: 3
+  24: 3
+  # Trash: none in this dataset
