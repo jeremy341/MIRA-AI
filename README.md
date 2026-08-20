@@ -2,356 +2,120 @@
 
 **Jugend forscht 2027**
 
-[![Jugend forscht](https://img.shields.io/badge/Jugend_forscht-2027-blue.svg)](https://www.jugend-forscht.de/)
-[![Python 3.11](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/mira-ai.svg)](https://pypi.org/project/mira-ai/)
-[![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
+MIRA is my project for recognizing different types of waste with a camera. The
+long-term idea is to use the detections to sort objects automatically.
 
-**Project website:** [mira-vision.vercel.app](https://mira-vision.vercel.app/)
+Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
 
-MIRA is a computer-vision research project for identifying recyclable materials and preparing them for automated sorting. It combines YOLO object detection, dataset preparation, model evaluation, model export, webcam inference, and a development dashboard for glass, metal, paper, plastic, and trash.
+## Why I chose this problem
 
-The current focus is a reliable perception pipeline, with Raspberry Pi deployment and tabletop robot integration as future goals.
+I wanted to work on a problem that was more challenging than just training a
+model on a fixed image dataset. Sorting waste combines computer vision,
+uncertain predictions, real-time camera input, and eventually hardware. I also
+wanted to build something that I could expand later, for example by connecting
+the system to a robot or a sorting arm.
 
----
+The robot is not finished yet. At the moment, my focus is the part that has to
+work first: reliably recognizing the objects.
 
-## Quick Start
+## What I tried
 
-### Install from PyPI (recommended)
+I did not begin with a YOLO model. I started with a custom CNN to understand
+the basic classification problem. After that I tried MobileNetV2, YOLOv8n, and
+finally YOLO11n for object detection.
 
-```bash
-pip install mira-ai
-```
+I also tested several datasets, including dmedhi, TACO, TrashNet, and a
+Roboflow waste-detection dataset. My first assumption was that adding more
+data would automatically improve the model. That turned out not to be true.
+Some of the larger combinations contained different image styles, labels, and
+object arrangements that made the detector less consistent.
 
-The CLI installs as the `mira` command and works from any directory. Download a
-trained model, then start live detection:
+The most important result of the project so far was that a smaller, cleaner,
+balanced dataset worked better than simply combining everything. After
+removing unsuitable data and choosing the training examples more carefully,
+the later YOLO11n experiments reached about 90.6% mAP50, compared with 60.7%
+in the earlier EXP-014 run. EXP-019 repeated the result closely.
 
-```bash
-mira download --list                  # See available models
-mira download mira_exp019.pt          # Download the best detector (~5.5 MB)
-mira live --model mira_exp019.pt      # Start webcam detection
-mira dashboard                        # Launch the control dashboard
-```
+The detailed experiment history, charts, and limitations are on the
+[project website](https://mira-vision.vercel.app/research.html).
 
-### Install from source (development)
+## What works now
 
-```bash
+- Detection of glass, metal, paper, plastic, and trash
+- Live webcam inference
+- A local development dashboard
+- Dataset merging and YOLO annotation validation
+- Model evaluation, benchmarking, and export to formats such as TFLite
+
+Raspberry Pi testing, a sorting mechanism, and complete robot integration are
+still future work.
+
+## Run MIRA locally
+
+From the repository root:
+
+```powershell
 git clone https://github.com/jeremy341/MIRA-AI.git
 cd MIRA-AI
-python -m venv .venv
-.venv\Scripts\Activate.ps1      # Windows PowerShell
-pip install -r requirements.txt
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
 ```
 
+Download a model and start live detection:
 
-
-### Live Detection
-
-
-```bash
-.\mira live                                    # Interactive model picker
-.\mira live --model mira_exp014.pt             # Direct launch
-.\mira live --model mira_exp014.pt --conf 0.25 --reject 0.55 --resolution 1280x720
+```powershell
+mira download --list
+mira download mira_exp019.pt
+mira live --model mira_exp019.pt
 ```
 
-### Dashboard
+To start the local dashboard:
 
-```bash
-.\mira dashboard                           # Opens at http://127.0.0.1:8000
-.\mira dashboard --port 8080               # Custom port
-.\mira dashboard --host 0.0.0.0            # Listen on all interfaces
+```powershell
+mira dashboard
 ```
 
+It is available at `http://127.0.0.1:8000` by default. More setup and usage
+guides are in the [website documentation](https://mira-vision.vercel.app/docs.html).
 
-### Research Pipeline
+## Research commands
 
-```bash
-.\mira datasets                            # List available dataset sources
-.\mira merge --sources taco_trashnet roboflow --output datasets/mira_tnr
-.\mira train --config experiments/exp014_yolo11n_multidataset.yaml
-.\mira export --model models/detection/mira_exp014.pt --formats tflite_int8
-.\mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite
-.\mira models                               # List discovered models
+The main commands I use while working on the project are:
+
+```powershell
+mira datasets
+mira merge --sources taco_trashnet roboflow --output datasets/mira_tnr
+mira train --config experiments/exp014_yolo11n_multidataset.yaml
+mira eval-yolo --model mira_exp019.pt
+mira benchmark --models mira_exp019.pt mira_exp019_int8_640.tflite
 ```
 
-<details open>
-<summary><strong>All CLI Commands</strong></summary>
+The training datasets are not stored in Git. Their original sources and license
+information are listed in [`docs/DATASET_ORIGINS.md`](docs/DATASET_ORIGINS.md).
 
-| Command | Description |
-|---|---|
-| `.\mira live` | Interactive model picker — arrow keys to choose, Enter to confirm |
-| `.\mira live --model <file>` | Bypass picker — launch directly with a specific model |
-| `.\mira dashboard` | Start the unverified dashboard implementation for development |
-| `.\mira train` | Train a YOLO detection model via the research pipeline |
-| `.\mira train --config <file>` | Train from experiment YAML |
-| `.\mira eval-yolo --model <file>` | Evaluate a YOLO detection model on test set |
-| `.\mira benchmark --models <file1> <file2> ...` | Compare models by accuracy and latency |
-| `.\mira export --model <file> --formats tflite_int8` | Export trained `.pt` to TFLite / ONNX |
-| `.\mira merge --sources taco_trashnet roboflow --output <dir>` | Merge registered datasets into unified YOLO dataset |
-| `.\mira datasets` | List registered dataset sources from `datasets/registry/*.yaml` |
-| `.\mira validate` | Validate a YOLO-format dataset's annotation structure |
-| `.\mira download` | Download pretrained models from Hugging Face Hub |
-| `.\mira models` | List all discovered model files in `models/` |
-| `.\mira experiments` | List all experiment YAML configs in `experiments/` |
-| `.\mira doctor` | Run comprehensive environment and project health check |
-| `.\mira diagnostics` | Check hardware capabilities (GPU, NPU, TPU) |
-| `.\mira config` | Display current project configuration |
-| `.\mira generate kaggle --config <file>` | Generate cloud training scripts (Kaggle, Colab, Docker) |
-| `.\mira wizard` | Interactive training setup wizard |
+## Project structure
 
-</details>
+- `src/` — the CLI, inference pipeline, training code, and dashboard backend
+- `scripts/` — dataset preparation, evaluation, benchmarking, and training helpers
+- `experiments/` — experiment configurations
+- `models/` — model metadata and local model files
+- `tests/` — automated tests
+- `website/` — the public project website
 
-<details>
-<summary><strong>Live Command Flags</strong></summary>
+## Honest limitations
 
-| Flag | Default | Description |
-|---|---|---|
-| `--model` | Interactive picker | Model filename (omit for arrow-key picker) |
-| `--camera` | `0` | Camera device index |
-| `--resolution` | `640x360` | Capture resolution: `640x360`, `1280x720`, `1920x1080` |
-| `--conf` | `0.25` | Confidence threshold |
-| `--reject` | `0.25` | Reject threshold (detections below this labeled "unsicher") |
-| `--target-latency` | `1000` | Target latency in ms (prevents automatic frame skipping) |
+The current system still has problems with crumpled paper, cans viewed from
+the opening, and strongly overlapping objects. The reported results come from
+my available validation and test data; I have not yet completed independent
+Raspberry Pi benchmarks or end-to-end physical sorting tests.
 
-</details>
+## Transparency
 
----
-
-## Installation Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| `ai_edge_litert` import error | Windows-only: install via `pip install ai-edge-litert`. Not needed on Raspberry Pi (use `tflite-runtime`). |
-| CUDA out of memory | Use `--imgsz 320` instead of 640, or close other GPU applications. |
-| Camera not opening (Windows) | Ensure no other app is using the webcam. Try `--camera 1` to switch device index. |
-| `No module named 'ultralytics'` | Run `pip install ultralytics>=8.3.0` |
-
----
-
-## Configuration
-
-MIRA uses `mira.yaml` as the single source of truth for project-wide settings. All scripts, CLI commands, and the pipeline read from this file.
-
-```yaml
-# mira.yaml — key settings
-classes:
-  names: ["glass", "metal", "paper", "plastic", "trash"]
-  count: 5
-
-training:
-  default_model: yolo11n.pt
-  default_epochs: 120
-  default_batch_size: 32
-  default_imgsz: 640
-
-inference:
-  reject_threshold: 0.55
-  default_conf: 0.5
-  default_iou: 0.7
-```
-
-CLI flags override `mira.yaml` defaults:
-```bash
-.\mira train --epochs 200 --batch-size 16    # Override training defaults
-.\mira live --conf 0.25 --reject 0.60       # Override inference defaults
-```
-
-### Where MIRA looks for configuration
-
-When installed from PyPI, MIRA resolves its project root in this order:
-
-1. The `MIRA_HOME` environment variable, if set
-2. The nearest directory containing a `mira.yaml` (walking up from the current directory)
-3. The current working directory, using the packaged default configuration
-
-Models, datasets, and results are stored relative to the resolved project root
-(e.g. `mira download` saves into `<root>/models/detection/`).
-
----
-
-## Architecture
-
-~~~mermaid
-flowchart TB
-    A[Camera or image input] --> B[YOLO11n detector]
-    B --> C[Post-processing and confidence thresholds]
-    C --> D[Bounding boxes and class labels]
-    D --> E[ByteTrack object IDs]
-    D --> F[Live overlay and dashboard]
-    C --> G[Model evaluation and export]
-    G --> H[Edge deployment]
-    H -. planned .-> I[ESP32-S3 and sorting arm]
-~~~
-
-### Confidence Reject System
-
-| Tier | Confidence Range | Visual | Behavior |
-|---|---|---|---|
-| **Rejected** | conf < 0.25 | Not drawn | Ignored entirely |
-| **Uncertain** | 0.25 ≤ conf < reject_threshold | Yellow box, "unsicher" | Shown but not counted in inventory |
-| **Confident** | conf ≥ reject_threshold | Green box, class label | Counted in inventory |
-
----
-
-## Models
-
-### Stage A — Classification
-
-| Model | Val Accuracy | Size | Speed | Notes |
-|---|---|---|---|---|
-| `mira_classifier_int8.tflite` | **87.42%** | **2.61 MB** | **~97 FPS** | Compact INT8 export; target-hardware validation pending |
-
-### Stage B — Detection
-
-| Model | mAP50 | Size | Notes |
-|---|---|---|---|
-| `mira_exp019.pt` | **90.6%** | 5.47 MB | **Current recommended** — clean balanced dataset, repeatability run |
-| `mira_exp019_int8_640.tflite` | 86.2% | 2.90 MiB | INT8 quantized; target-hardware validation pending |
-| `mira_exp014.pt` | 60.7% | 5.21 MB | Historical FP32 result on older dataset |
-| `mira_exp006.pt` | 39.4% | 5.94 MB | YOLOv8n multi-dataset, proven in demos |
-
-
-<details>
-<summary><strong>Full experiment history (EXP-001 through EXP-019)</strong></summary>
-
-| Exp | Model | Dataset | mAP50 | Platform |
-|---|---|---|---|---|
-| EXP-001 | Custom CNN | 796 images | 61.00% acc | localy |
-| EXP-002 | MobileNetV2 (frozen) | 796 images | 84.28% acc | localy |
-| EXP-003 | MobileNetV2 (fine-tuned) | 796 images | 87.42% acc | localy |
-| EXP-004 | MobileNetV2 INT8 | 796 images | 87.42% acc | localy |
-| EXP-005 | YOLOv8n | Custom + TrashNet | 82.3% | Colab T4 |
-| EXP-006 | YOLOv8n | Fused Wild + TrashNet | 39.4% | Colab T4 |
-| EXP-008 | YOLOv8n | Pruned Tabletop | 39.6% | Colab T4 |
-| EXP-009 | YOLOv8n | Pristine TrashNet | 72.8% | Kaggle T4 |
-| EXP-011 | YOLOv8n | TACO only | 35.0% | Kaggle T4 |
-| EXP-013 | YOLO11n | TACO + TrashNet | 55.1% | Kaggle T4 |
-| **EXP-014** | **YOLO11n** | **mira_tnr (6,802 img)** | **60.7%** | **Kaggle T4** |
-| EXP-015 | YOLO11n | mira_tnw | 56.0% | Kaggle T4 |
-| EXP-016 | YOLO11n | mira_warp_only | 58.8% | Kaggle T4 |
-| EXP-017 | YOLO11n | mira_all (9,774 img) | 59.3% | Kaggle T4 |
-| **EXP-018** | **YOLO11n** | **Clean balanced dataset** | **90.6%** | **Kaggle T4** |
-| **EXP-019** | **YOLO11n** | **Clean balanced (repeatability)** | **90.6%** | **Kaggle T4** |
-
-
-</details>
-
----
-
-## Dataset
-
-Training datasets are not included in Git. The current build uses:
-
-| Dataset | Images | Format | License |
-|---|---|---|---|
-| [dmedhi garbage classification](https://huggingface.co/datasets/dmedhi/garbage-image-classification-detection) | ~800 | Classification | — |
-| [TACO](https://github.com/pedropro/TACO) | 1,500 | COCO | CC-BY-4.0 |
-| [TrashNet](https://github.com/garythung/trashnet) | 2,527 | Classification | MIT-0 |
-| [Roboflow Trash Detection](https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1) | ~3,300 | YOLO | CC BY 4.0 |
-
-All datasets are remapped to 5 unified classes: **glass, metal, paper, plastic, trash**.
-
-`scripts/build_balanced_dataset.py` documents the expected local directories, remapping, deterministic TACO split, balancing, and manifest generation. The canonical source list is in [`docs/DATASET_ORIGINS.md`](docs/DATASET_ORIGINS.md).
-
----
-
-## Training on Kaggle
-
-All detection models train with YOLO11n using `scripts/train_detector_kaggle.py` on Kaggle (free T4 GPU).
-
-```bash
-py scripts/train_detector_kaggle.py --dataset mira_tnr
-py scripts/train_detector_kaggle.py --dataset mira_all --epochs 200
-.\mira generate kaggle --config experiments/exp014_yolo11n_multidataset.yaml
-```
-
----
-
-## Hardware Requirements
-
-| Use Case | Minimum | Recommended |
-|---|---|---|
-| Running inference | Any modern CPU | Intel i5 / Ryzen 5 or better |
-| Live detection | USB webcam at 640x360 | Any webcam |
-| Training Stage B (YOLO) | GPU required | Google Colab / Kaggle T4 |
-| Edge deployment target | Raspberry Pi Zero 2W | Raspberry Pi 4 |
-
----
-
-## Known Limitations
-
-- **Crumpled paper** — white crumpled paper is misclassified as plastic with 80–90% confidence. The reject threshold cannot help here (too confident). Needs more training data.
-- **End-on metal cans** — cans facing the camera opening-first cause detection drop-outs due to limited training samples for this orientation.
-- **Overlapping objects** — heavily stacked or occluded items reduce bounding box accuracy, particularly for paper and trash.
-- **Trash class** — the catch-all "trash" class is the weakest performer across all experiments (as low as 7.1% mAP50) due to its inherent visual diversity.
-- **No RPi or robot integration benchmark** — target-hardware latency, memory, and end-to-end sorting remain pending.
-- **Dashboard integration unverified** — components and unit tests exist, but no tracked end-to-end camera/model/browser verification artifact exists.
-
----
-
-## Reproducibility
-
-### Random Seeds
-
-All scripts use fixed random seeds for deterministic results:
-- **TensorFlow/Keras:** `seed=123`
-- **NumPy / Python random:** `seed=42`
-
-### Model Availability
-
-Trained model binaries are local, gitignored files. Public detector artifacts are available from [Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI), and `mira download` places them under `models/detection/`.
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Adding a New CLI Command
-
-Use the plugin registry to add commands without editing existing files:
-
-```python
-# src/cli/my_module.py
-from pipeline.registry import register_command
-
-@register_command("my-command", "Description of what it does")
-def cmd_my_command(args):
-    print("Hello from my command!")
-
-def setup(parser):
-    parser.add_argument("--flag", help="Custom flag")
-```
-
-Then import the module in `src/cli/__init__.py` to activate it.
-
----
+I used AI tools for parts of coding and debugging. The problem choice, dataset
+experiments, model comparisons, and decisions about what worked and failed are
+part of my own project work.
 
 ## License
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
-
----
-
-## Acknowledgments
-
-- **Kaggle** — free T4 GPU for model training
-- **Ultralytics** — YOLO framework
-- **OpenCode** — development assistance and code review
-- **TACO Dataset** — Trash Annotations in Context
-- **Roboflow** — community waste detection dataset
-
----
-
-<div align="center">
-
-**MIRA** — Machine Intelligence for Recycling Automation
-
-</div>
+This project is licensed under the MIT License. See [LICENSE](LICENSE).

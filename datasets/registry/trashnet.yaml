@@ -1,0 +1,18 @@
+name: "TrashNet (SAM-labeled)"
+key: trashnet
+description: "TrashNet with SAM-generated bounding boxes — 5 MIRA classes, YOLO format"
+source_format: yolo
+source_url: "https://github.com/garythung/trashnet"
+input_path: datasets/trashnet_labeled
+splits:
+  train: images/train
+  val: images/val
+class_mapping: null
+stats:
+  total_images: 4500
+  classes:
+    cardboard: 0
+    glass: 1
+    metal: 2
+    paper: 3
+    plastic: 4

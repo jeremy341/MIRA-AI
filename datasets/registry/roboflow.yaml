@@ -1,0 +1,81 @@
+name: "Roboflow Trash Detection"
+key: roboflow
+description: "64-class Roboflow dataset remapped to MIRA 5-class"
+source_format: yolo
+source_url: "https://universe.roboflow.com/jerry-jukbu/trash-detection-1fjjc-uqlv1/dataset/dataset"
+input_path: datasets/roboflow_raw
+splits:
+  train: train/images
+  valid: valid/images
+  test: test/images
+class_mapping:
+  # source_class_id: target_class_id
+  # glass
+  4: 0
+  20: 0
+  21: 0
+  22: 0
+  23: 0
+  # metal
+  0: 1
+  1: 1
+  2: 1
+  12: 1
+  17: 1
+  26: 1
+  27: 1
+  28: 1
+  49: 1
+  51: 1
+  # paper
+  8: 2
+  13: 2
+  14: 2
+  24: 2
+  25: 2
+  29: 2
+  30: 2
+  36: 2
+  37: 2
+  38: 2
+  39: 2
+  40: 2
+  58: 2
+  59: 2
+  63: 2
+  # plastic
+  7: 3
+  9: 3
+  10: 3
+  11: 3
+  15: 3
+  16: 3
+  19: 3
+  31: 3
+  32: 3
+  33: 3
+  34: 3
+  35: 3
+  41: 3
+  42: 3
+  43: 3
+  44: 3
+  45: 3
+  46: 3
+  47: 3
+  48: 3
+  53: 3
+  54: 3
+  55: 3
+  56: 3
+  60: 3
+  # trash
+  3: 4
+  5: 4
+  6: 4
+  18: 4
+  50: 4
+  52: 4
+  57: 4
+  61: 4
+  62: 4

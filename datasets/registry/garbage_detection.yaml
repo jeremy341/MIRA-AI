@@ -1,0 +1,48 @@
+name: "Garbage Detection (Ultralytics Hub)"
+key: garbage_detection
+description: "~36k images, 72k boxes, 11 classes — lighting & background diversity for domain randomization"
+source_format: yolo
+source_url: "https://platform.ultralytics.com"
+input_path: datasets/raw/garbage_detection
+splits:
+  train: train/images
+  val: val/images
+class_mapping:
+  # MIRA: 0=glass, 1=metal, 2=paper, 3=plastic, 4=trash
+  # battery -> trash
+  0: 4
+  # cardboard -> paper
+  1: 2
+  # clothes -> trash
+  2: 4
+  # glass -> glass
+  3: 0
+  # medical -> trash
+  4: 4
+  # metal -> metal
+  5: 1
+  # organic -> trash
+  6: 4
+  # paper -> paper
+  7: 2
+  # plastic -> plastic
+  8: 3
+  # shoes -> trash
+  9: 4
+  # trash -> trash
+  10: 4
+stats:
+  total_images: 36000
+  total_boxes: 72125
+  classes:
+    battery: 0
+    cardboard: 0
+    clothes: 0
+    glass: 0
+    medical: 0
+    metal: 0
+    organic: 0
+    paper: 0
+    plastic: 0
+    shoes: 0
+    trash: 0
