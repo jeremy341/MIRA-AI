@@ -189,22 +189,22 @@
       </div>
       <nav class="navigation" aria-label="Main Navigation">
         <button class="nav-button active" type="button" data-page="dashboard">Dashboard</button>
-        <button class="nav-button" type="button" data-page="analytics">Analytics (Analysen)</button>
-        <button class="nav-button" type="button" data-page="settings">Settings (Einstellungen)</button>
+        <button class="nav-button" type="button" data-page="analytics">Analytics</button>
+        <button class="nav-button" type="button" data-page="settings">Settings</button>
       </nav>
       <div class="topbar-spacer"></div>
       <div class="system-strip">
         <div class="system-item model-info">
-          <span class="system-label">Model (Modell)</span>
+          <span class="system-label">Model</span>
           <span id="modelName">YOLO11</span>
         </div>
         <div class="system-item">
           <span id="connectionDot" class="connection-dot disconnected"></span>
-          <span id="connectionText">WebSocket disconnected (getrennt)</span>
+          <span id="connectionText">WebSocket disconnected</span>
         </div>
         <div class="system-item">
           <span id="headerStreamDot" class="stream-dot"></span>
-          <span id="headerStreamText">READY (BEREIT)</span>
+          <span id="headerStreamText">READY</span>
         </div>
       </div>
     </header>
@@ -214,49 +214,49 @@
           <article class="panel camera-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h1 class="panel-title">Camera & Detection (Kamera & Erkennung)</h1>
-                <span class="panel-kicker" id="cameraStatusLabel">System ready (bereit)</span>
+                <h1 class="panel-title">Camera & Detection</h1>
+                <span class="panel-kicker" id="cameraStatusLabel">System ready</span>
               </div>
               <div class="camera-actions">
                 <span id="liveBadge" class="live-badge">
                   <span class="stream-dot streaming"></span>
                   LIVE
                 </span>
-                <button id="startButton" class="button primary" type="button">Start Stream (Stream starten)</button>
-                <button id="stopButton" class="button stop" type="button" disabled>Stop (Stoppen)</button>
+                <button id="startButton" class="button primary" type="button">Start Stream</button>
+                <button id="stopButton" class="button stop" type="button" disabled>Stop</button>
               </div>
             </header>
             <div id="cameraStage" class="camera-stage">
               <div id="cameraPlaceholder" class="camera-placeholder">
                 <div class="placeholder-content">
                   <div class="camera-symbol" aria-hidden="true"></div>
-                  <p class="placeholder-title">No active camera stream (Kein aktiver Kamerastream)</p>
-                  <p class="placeholder-text">Press "Start Stream" to begin detection ("Stream starten" drücken).</p>
+                  <p class="placeholder-title">No active camera stream</p>
+                  <p class="placeholder-text">Press "Start Stream" to begin detection.</p>
                 </div>
               </div>
-              <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot (Live-Kamerabild des Sortierroboters)" />
+              <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot" />
               <canvas id="detectionCanvas" class="detection-canvas"></canvas>
               <div class="metric-rail" aria-label="Live Metrics (Live-Metriken)">
                 <div class="camera-metric"><span class="camera-metric-label">FPS</span><span id="fpsValue" class="camera-metric-value">—</span></div>
-                <div class="camera-metric"><span class="camera-metric-label">Latency (Latenz)</span><span id="latencyValue" class="camera-metric-value">— ms</span></div>
-                <div class="camera-metric"><span class="camera-metric-label">Objects (Objekte)</span><span id="detectionCountValue" class="camera-metric-value">0</span></div>
-                <div class="camera-metric"><span class="camera-metric-label">Confidence (Konfidenz)</span><span id="liveConfidenceValue" class="camera-metric-value">— %</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">Latency</span><span id="latencyValue" class="camera-metric-value">— ms</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">Objects</span><span id="detectionCountValue" class="camera-metric-value">0</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">Confidence</span><span id="liveConfidenceValue" class="camera-metric-value">— %</span></div>
               </div>
-              <div id="cameraState" class="camera-state">Waiting for stream… (Warte auf Stream…)</div>
+              <div id="cameraState" class="camera-state">Waiting for stream…</div>
             </div>
           </article>
           <article class="panel distribution-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Class Distribution (Klassenverteilung)</h2>
-                <span class="panel-kicker">Current Session (Aktuelle Sitzung)</span>
+                <h2 class="panel-title">Class Distribution</h2>
+                <span class="panel-kicker">Current Session</span>
               </div>
-              <span id="distributionTotal" class="panel-kicker">0 Objects (Objekte)</span>
+              <span id="distributionTotal" class="panel-kicker">0 Objects</span>
             </header>
             <div class="distribution-content">
               <div class="chart-wrap">
                 <canvas id="distributionChart"></canvas>
-                <div id="distributionEmpty" class="chart-empty visible">No detections yet (Noch keine Erkennungen)</div>
+                <div id="distributionEmpty" class="chart-empty visible">No detections yet</div>
               </div>
               <div id="classLegend" class="class-legend"></div>
             </div>
@@ -264,13 +264,13 @@
           <article class="panel recent-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Recent Detections (Letzte Erkennungen)</h2>
-                <span class="panel-kicker">Newest first (Neueste zuerst)</span>
+                <h2 class="panel-title">Recent Detections</h2>
+              <span class="panel-kicker">Newest first</span>
               </div>
-              <span id="recentCount" class="panel-kicker">0 Entries (Einträge)</span>
+              <span id="recentCount" class="panel-kicker">0 Entries</span>
             </header>
             <div id="recentList" class="recent-list">
-              <div class="empty-state">No detections yet (Noch keine Erkennungen).<br />Waiting for model data (Warte auf Daten vom Modell).</div>
+              <div class="empty-state">No detections yet.<br />Waiting for model data.</div>
             </div>
           </article>
         </div>
@@ -280,77 +280,77 @@
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Detected Objects (Erkannte Objekte)</span>
+                <span class="summary-label">Detected Objects</span>
               <span id="summaryTotal" class="summary-value">0</span>
             </div>
           </article>
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Session Duration (Sitzungsdauer)</span>
+              <span class="summary-label">Session Duration</span>
               <span id="summaryDuration" class="summary-value mono">00:00</span>
             </div>
           </article>
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Most Common Class (Häufigste Klasse)</span>
+                <span class="summary-label">Most Common Class</span>
               <span id="summaryTopClass" class="summary-value">—</span>
             </div>
           </article>
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
-              <span class="summary-label">Avg. Confidence (Ø Konfidenz)</span>
+                <span class="summary-label">Avg. Confidence</span>
               <span id="summaryConfidence" class="summary-value">— <span class="summary-unit">%</span></span>
             </div>
           </article>
           <article class="panel trend-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Detection Trend (Erkennungstrend)</h2>
-                <span class="panel-kicker">Cumulative over time (Kumulativ über Zeit)</span>
+                <h2 class="panel-title">Detection Trend</h2>
+                <span class="panel-kicker">Cumulative over time</span>
               </div>
-              <span class="panel-kicker">5 Classes (Klassen)</span>
+              <span class="panel-kicker">5 Classes</span>
             </header>
             <div class="chart-body">
               <canvas id="trendChart"></canvas>
-              <div id="trendEmpty" class="chart-empty visible">No trend data yet (Noch keine Verlaufsdaten)</div>
+              <div id="trendEmpty" class="chart-empty visible">No trend data yet</div>
             </div>
           </article>
           <article class="panel breakdown-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Class Breakdown (Klassenübersicht)</h2>
+                <h2 class="panel-title">Class Breakdown</h2>
                 <span class="panel-kicker">By count (Nach Anzahl)</span>
               </div>
             </header>
             <div class="chart-body">
               <canvas id="breakdownChart"></canvas>
-              <div id="breakdownEmpty" class="chart-empty visible">No class data yet (Noch keine Klassendaten)</div>
+              <div id="breakdownEmpty" class="chart-empty visible">No class data yet</div>
             </div>
           </article>
           <article class="panel performance-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
                 <h2 class="panel-title">Performance & System (Leistung & System)</h2>
-                <span class="panel-kicker">Live metrics over time (Live-Metriken über Zeit)</span>
+                <span class="panel-kicker">Live metrics over time</span>
               </div>
             </header>
             <div class="performance-body">
               <div class="chart-wrap">
                 <canvas id="perfChart"></canvas>
-                <div id="perfEmpty" class="performance-chart-empty visible">Waiting for stream data (Warte auf Streamdaten)</div>
+                <div id="perfEmpty" class="performance-chart-empty visible">Waiting for stream data</div>
               </div>
               <div class="chart-wrap">
                 <canvas id="sysChart"></canvas>
-                <div id="sysEmpty" class="performance-chart-empty visible">Waiting for stream data (Warte auf Streamdaten)</div>
+                <div id="sysEmpty" class="performance-chart-empty visible">Waiting for stream data</div>
               </div>
             </div>
           </article>
         </div>
       </section>
-      <section id="settingsPage" class="page" aria-label="Settings (Einstellungen)">
+      <section id="settingsPage" class="page" aria-label="Settings">
         <div class="settings-page-wrap">
           <div class="settings-layout">
 
@@ -361,7 +361,7 @@
                   <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3l-4 4-4-4"/><circle cx="12" cy="13" r="3"/></svg>
                 </span>
                 <div class="settings-card-title-wrap">
-                  <h2 class="settings-card-title">Camera Settings (Kamera-Einstellungen)</h2>
+                  <h2 class="settings-card-title">Camera Settings</h2>
                   <span class="settings-card-sub">Hardware &amp; Stream</span>
                 </div>
               </header>
@@ -373,7 +373,7 @@
 
                   <div class="settings-field">
                     <div>
-                      <span class="field-label">Camera Index (Kamera-Index)</span>
+                      <span class="field-label">Camera Index</span>
                       <span class="field-hint">0 = built-in, 1+ = external USB cameras</span>
                     </div>
                     <input type="number" id="cameraIndex" class="field-input" min="0" max="10" value="0" required />
@@ -450,7 +450,7 @@
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M18.66 5.34l-1.41 1.41"/></svg>
                 </span>
                 <div class="settings-card-title-wrap">
-                  <h2 class="settings-card-title">Model Settings (Modell-Einstellungen)</h2>
+                  <h2 class="settings-card-title">Model Settings</h2>
                   <span class="settings-card-sub">AI Inference (KI-Inferenz)</span>
                 </div>
               </header>
@@ -458,11 +458,11 @@
               <form id="modelSettingsForm">
                 <div class="settings-card-body">
 
-                  <div class="settings-divider">Model (Modell)</div>
+                  <div class="settings-divider">Model</div>
 
                   <div class="settings-field settings-field-full">
                     <div>
-                      <span class="field-label">Detection Model (Erkennungsmodell)</span>
+                      <span class="field-label">Detection Model</span>
                       <span class="field-hint">YOLO model to use for waste classification &mdash; &#9733; = recommended for device</span>
                     </div>
                     <select id="modelSelect" class="field-select" style="margin-top: 10px;">
@@ -474,7 +474,7 @@
 
                   <div class="settings-field settings-field-full">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                      <span class="field-label">Confidence Threshold (Konfidenzschwellenwert)</span>
+                      <span class="field-label">Confidence Threshold</span>
                     </div>
                     <span class="field-hint">Minimum score for a detection to be accepted</span>
                     <div class="slider-wrap" style="margin-top: 10px;">
@@ -485,7 +485,7 @@
 
                   <div class="settings-field settings-field-full">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                      <span class="field-label">Reject Threshold &mdash; Trash Filter (Müll-Filter)</span>
+                      <span class="field-label">Reject Threshold &mdash; Trash Filter</span>
                     </div>
                     <span class="field-hint">Scores below this are discarded as trash/noise</span>
                     <div class="slider-wrap" style="margin-top: 10px;">
@@ -520,7 +520,7 @@
 
                   <div class="settings-field">
                     <div>
-                      <span class="field-label">Target Latency in ms (Ziel-Latenz)</span>
+                      <span class="field-label">Target Latency in ms</span>
                       <span class="field-hint">Pipeline tries to stay within this frame budget</span>
                     </div>
                     <input type="number" id="modelLatency" class="field-input" min="5" max="500" value="50" required />
@@ -556,7 +556,7 @@
         metal: "Metal (Metall)",
         paper: "Paper (Papier)",
         plastic: "Plastic (Kunststoff)",
-        trash: "Trash (Restmüll)"
+        trash: "Trash"
       };
       const CLASS_COLORS = {
         glass: "#2d8c8c",
@@ -706,7 +706,7 @@
             x: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 5 } },
             y: { grid: { display: false } }
           },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${context.raw} Objects (Objekte)` } } }
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${context.raw} Objects` } } }
         }
       });
       const perfChart = new Chart(document.getElementById("perfChart"), {
@@ -798,7 +798,7 @@
       function showToast(message, type = "success") {
         const toast = document.createElement("div");
         toast.className = `toast ${type}`;
-        toast.innerHTML = `<span class="toast-bar"></span><span class="toast-message"></span><button class="toast-close" type="button" aria-label="Close notification (Benachrichtigung schließen)">×</button>`;
+        toast.innerHTML = `<span class="toast-bar"></span><span class="toast-message"></span><button class="toast-close" type="button" aria-label="Close notification">×</button>`;
         toast.querySelector(".toast-message").textContent = message;
         toast.querySelector(".toast-close").addEventListener("click", () => toast.remove());
         elements.toastRegion.appendChild(toast);
@@ -822,7 +822,7 @@
         elements.connectionDot.classList.toggle("disconnected", !connected);
         if (state.videoConnected && state.controlConnected) elements.connectionText.textContent = "WebSocket connected (verbunden)";
         else if (connected) elements.connectionText.textContent = "Partially connected (Teilweise verbunden)";
-        else elements.connectionText.textContent = "WebSocket disconnected (getrennt)";
+        else elements.connectionText.textContent = "WebSocket disconnected";
         
         const statusEl = document.getElementById("telemetryStatus");
         if (statusEl) {
@@ -842,9 +842,9 @@
         elements.stopButton.disabled = !streaming || state.busy;
         elements.liveBadge.classList.toggle("visible", streaming);
         elements.headerStreamDot.classList.toggle("streaming", streaming);
-        elements.headerStreamText.textContent = streaming ? "LIVE" : "READY (BEREIT)";
-        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming active (aktiv)" : "System ready (bereit)");
-        elements.cameraState.textContent = message || (streaming ? "Waiting for camera frame… (Warte auf Kameraframe…)" : "Waiting for stream… (Warte auf Stream…)");
+        elements.headerStreamText.textContent = streaming ? "LIVE" : "READY";
+        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming active" : "System ready");
+        elements.cameraState.textContent = message || (streaming ? "Waiting for camera frame…" : "Waiting for stream…");
         if (!streaming) {
           state.frameLoaded = false;
           state.latestDetections = [];
@@ -864,8 +864,8 @@
         state.busy = busy;
         elements.startButton.disabled = busy || state.streaming;
         elements.stopButton.disabled = busy || !state.streaming;
-        elements.startButton.textContent = busy && !state.streaming ? "Starting… (Starte…)" : "Start Stream (Stream starten)";
-        elements.stopButton.textContent = busy && state.streaming ? "Stopping… (Stoppe…)" : "Stop (Stoppen)";
+        elements.startButton.textContent = busy && !state.streaming ? "Starting…" : "Start Stream";
+        elements.stopButton.textContent = busy && state.streaming ? "Stopping…" : "Stop";
       }
       function sendControl(payload) {
         if (!controlSocket || controlSocket.readyState !== WebSocket.OPEN) return false;
@@ -957,10 +957,10 @@
         const errorState = ["error", "failed"].includes(lower);
         const initializing = ["initializing", "loading"].includes(lower);
         const paused = ["paused"].includes(lower);
-        if (running) setStreaming(true, message || "Streaming active (aktiv)");
-        if (idle) setStreaming(false, message || "System ready (bereit)");
-        elements.cameraStatusLabel.textContent = message || (running ? "Streaming active (aktiv)" : "System ready (bereit)");
-        elements.cameraState.textContent = message || (running ? "Waiting for camera frame… (Warte auf Kameraframe…)" : "Waiting for stream… (Warte auf Stream…)");
+        if (running) setStreaming(true, message || "Streaming active");
+        if (idle) setStreaming(false, message || "System ready");
+        elements.cameraStatusLabel.textContent = message || (running ? "Streaming active" : "System ready");
+        elements.cameraState.textContent = message || (running ? "Waiting for camera frame…" : "Waiting for stream…");
         if (errorState) {
           showToast(message || "System error (Systemfehler)", "error");
           if (state.streaming) setStreaming(false, message || "System error (Systemfehler)");
@@ -1031,7 +1031,7 @@
         breakdownChart.data.datasets[0].data = sorted.map(item => item.count);
         breakdownChart.data.datasets[0].backgroundColor = sorted.map(item => CLASS_COLORS[item.name]);
         breakdownChart.update("none");
-        elements.distributionTotal.textContent = `${total} ${total === 1 ? "Object (Objekt)" : "Objects (Objekte)"}`;
+        elements.distributionTotal.textContent = `${total} ${total === 1 ? "Object" : "Objects"}`;
         elements.distributionEmpty.classList.toggle("visible", total === 0);
         elements.trendEmpty.classList.toggle("visible", state.trendLabels.length === 0);
         elements.breakdownEmpty.classList.toggle("visible", total === 0);
@@ -1048,9 +1048,9 @@
       }
       function renderRecent() {
         const items = state.history.slice(0, 12);
-        elements.recentCount.textContent = `${state.history.length} Entries (Einträge)`;
+        elements.recentCount.textContent = `${state.history.length} Entries`;
         if (!items.length) {
-          elements.recentList.innerHTML = '<div class="empty-state">No detections yet (Noch keine Erkennungen).<br />Waiting for model data (Warte auf Daten vom Modell).</div>';
+          elements.recentList.innerHTML = '<div class="empty-state">No detections yet.<br />Waiting for model data.</div>';
           return;
         }
         elements.recentList.innerHTML = items.map(detection => `
@@ -1164,7 +1164,7 @@
         resetSessionStats();
         setBusy(true);
         fetchJSON("/api/stream/start", { method: "POST" })
-          .then(data => { showToast(data.message || "Stream started (gestartet)", "success"); handleStatus("running", "Stream started (gestartet)"); })
+          .then(data => { showToast(data.message || "Stream started", "success"); handleStatus("running", "Stream started"); })
           .catch(() => {})
           .finally(() => setBusy(false));
       }
@@ -1172,7 +1172,7 @@
         if (!state.streaming || state.busy) return;
         setBusy(true);
         fetchJSON("/api/stream/stop", { method: "POST" })
-          .then(data => { showToast(data.message || "Stream stopped (gestoppt)", "success"); handleStatus("stopped", "Stream stopped (gestoppt)"); })
+          .then(data => { showToast(data.message || "Stream stopped", "success"); handleStatus("stopped", "Stream stopped"); })
           .catch(() => {})
           .finally(() => setBusy(false));
       }
@@ -1272,10 +1272,10 @@
           const sent = sendControl({ command: "set_camera_config", params: config });
           if (!sent) {
             fetchJSON("/api/camera/initialize", { method: "POST", body: JSON.stringify(config) })
-              .then(data => { showToast(data.message || "Camera configured (Kamera konfiguriert)", "success"); })
+              .then(data => { showToast(data.message || "Camera configured", "success"); })
               .catch(() => {});
           } else {
-            showToast("Camera config submitted (Kamera-Konfiguration übermittelt)", "success");
+            showToast("Camera config submitted", "success");
           }
         });
       }
@@ -1295,10 +1295,10 @@
           const sent = sendControl({ command: "load_model", params: config });
           if (!sent) {
             fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(config) })
-              .then(data => { showToast(data.message || "Model loaded (Modell geladen)", "success"); })
+              .then(data => { showToast(data.message || "Model loaded", "success"); })
               .catch(() => {});
           } else {
-            showToast("Model config submitted (Modell-Konfiguration übermittelt)", "success");
+            showToast("Model config submitted", "success");
           }
         });
       }
