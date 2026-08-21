@@ -56,14 +56,13 @@ still future work.
 
 ## Run MIRA locally
 
-From the repository root:
+### Install from PyPI
 
 ```powershell
-git clone https://github.com/jeremy341/MIRA-AI.git
-cd MIRA-AI
 py -3 -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install -e .
+python -m pip install --upgrade pip
+python -m pip install mira-ai
 ```
 
 Download a model and start live detection:
@@ -72,6 +71,18 @@ Download a model and start live detection:
 mira download --list
 mira download mira_exp019.pt
 mira live --model mira_exp019.pt
+```
+
+### Install from source
+
+For development, clone the repository and install it in editable mode:
+
+```powershell
+git clone https://github.com/jeremy341/MIRA-AI.git
+cd MIRA-AI
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
 ```
 
 To start the local dashboard:
