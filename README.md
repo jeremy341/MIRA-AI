@@ -9,6 +9,8 @@ Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
 
 Model files: [Hugging Face — Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
 
+PyPI release: [mira-ai](https://pypi.org/project/mira-ai/)
+
 ## Why I chose this problem
 
 I wanted to work on a problem that was more challenging than just training a
