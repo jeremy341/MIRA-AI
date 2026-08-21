@@ -22,7 +22,6 @@
     <nav id="site-nav" class="site-nav" aria-label="Main navigation">
       <a class="active" href="index.html" aria-current="page">Overview</a>
       <a href="research.html">Research</a>
-      <a href="journey.html">Journey</a>
       <a href="docs.html">Docs</a>
       <a class="nav-github" href="https://github.com/jeremy341/MIRA-AI">GitHub <span aria-hidden="true">↗</span></a>
     </nav>
@@ -54,43 +53,32 @@
     <section class="proof-strip" aria-label="Project highlights">
       <div class="shell proof-grid">
         <div><strong>90.58%</strong><span>EXP-019 mAP50</span></div>
-        <div><strong>2.58M</strong><span>model parameters</span></div>
         <div><strong>5</strong><span>material classes</span></div>
-        <div><strong>308</strong><span>automated tests</span></div>
-        <div><strong>PT + TFLite</strong><span>included exports</span></div>
+        <div><strong>19</strong><span>recorded experiments</span></div>
       </div>
     </section>
 
     <section class="section shell flow-section">
       <div class="section-heading" data-reveal>
-        <h2>From camera frame to sorting decision.</h2>
-        <p>The current system handles perception end to end. Physical sorting remains the next engineering milestone.</p>
+        <h2>What the current system can do.</h2>
+        <p>I can capture a frame, detect the materials, inspect the confidence, and review the result in one local workflow.</p>
       </div>
       <ol class="process" data-reveal>
         <li>
-          <span class="process-number">01</span>
           <h3>Capture</h3>
           <p>USB and IP cameras feed a thread-safe frame buffer with reconnect and freeze detection.</p>
         </li>
         <li>
-          <span class="process-number">02</span>
           <h3>Detect</h3>
           <p>YOLO or TFLite models locate glass, metal, paper, plastic, and trash.</p>
         </li>
         <li>
-          <span class="process-number">03</span>
           <h3>Decide</h3>
           <p>Confidence and reject thresholds separate confident detections from uncertain ones.</p>
         </li>
         <li>
-          <span class="process-number">04</span>
-          <h3>Observe</h3>
+          <h3>Inspect</h3>
           <p>The dashboard reports detections, class counts, latency, FPS, CPU, and memory.</p>
-        </li>
-        <li class="process-future">
-          <span class="process-number">Next</span>
-          <h3>Sort</h3>
-          <p>Raspberry Pi validation and actuator integration are planned, not presented as finished.</p>
         </li>
       </ol>
     </section>
@@ -98,8 +86,8 @@
     <section class="section capabilities-section">
       <div class="shell">
         <div class="section-heading compact" data-reveal>
-          <h2>More than a model file.</h2>
-          <p>MIRA is a research toolkit for building, testing, comparing, and running recycling detectors.</p>
+          <h2>I built the parts around the model too.</h2>
+          <p>MIRA includes the tools I needed to prepare data, compare runs, test a camera stream, and inspect the result.</p>
         </div>
         <div class="capability-grid">
           <article class="capability capability-wide" data-reveal>
@@ -119,27 +107,21 @@
             <h3>Deterministic dataset tools.</h3>
             <p>Merge registered sources, remap labels, validate YOLO annotations, generate manifests, and reproduce splits.</p>
           </article>
-          <article class="capability capability-deployment" data-reveal>
-            <span class="capability-kicker">Deployment</span>
-            <h3>One model, two practical formats.</h3>
-            <div class="format-pair"><span>.pt</span><span>.tflite</span></div>
-            <p>Use PyTorch for development and an INT8-quantized TFLite export for edge testing.</p>
-          </article>
         </div>
       </div>
     </section>
 
     <section class="section shell evidence-section">
       <div class="evidence-copy" data-reveal>
-        <h2>The largest gain came from better data.</h2>
-        <p>EXP-018 and EXP-019 reached 90.6% mAP50 after rebuilding the detector around a clean, balanced tabletop dataset. Architecture alone did not produce the breakthrough.</p>
+        <h2>The data changed the result more than the model did.</h2>
+        <p>EXP-018 and EXP-019 reached about 90.6% mAP50 after I removed inconsistent examples and rebuilt the detector around a cleaner dataset.</p>
         <dl class="metric-list">
           <div><dt>mAP50-95</dt><dd>82.15%</dd></div>
           <div><dt>Precision</dt><dd>87.2%</dd></div>
           <div><dt>Recall</dt><dd>84.6%</dd></div>
           <div><dt>Training time</dt><dd>2.67 h</dd></div>
         </dl>
-        <a class="text-link" href="research.html">Read the complete experiment story <span aria-hidden="true">→</span></a>
+        <a class="text-link" href="research.html">See the experiment record <span aria-hidden="true">→</span></a>
       </div>
       <figure class="research-figure chart-panel" data-reveal>
         <div class="chart-heading">
@@ -153,7 +135,7 @@
 
     <section class="section shell honesty-section">
       <div class="honesty-title" data-reveal>
-        <h2>Built, measured, and honest about what comes next.</h2>
+        <h2>Here is what works, and what still needs testing.</h2>
       </div>
       <div class="honesty-columns" data-reveal>
         <article>
@@ -180,7 +162,7 @@
 
     <section class="closing shell" data-reveal>
       <div>
-        <h2>Inspect the evidence or run the system.</h2>
+        <h2>Start with the results or the code.</h2>
       </div>
       <div class="closing-links">
         <a href="research.html"><span>Research record</span><strong>19 experiments</strong></a>

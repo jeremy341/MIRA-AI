@@ -5,58 +5,53 @@
 MIRA is my project for recognizing different types of waste with a camera. The
 long-term idea is to use the detections to sort objects automatically.
 
-Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
-
-Model files: [Hugging Face — Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
-
-PyPI release: [mira-ai](https://pypi.org/project/mira-ai/)
+- Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
+- Model files: [Hugging Face — Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
+- Python package: [mira-ai on PyPI](https://pypi.org/project/mira-ai/)
 
 ## Why I chose this problem
 
-I wanted to work on a problem that was more challenging than just training a
-model on a fixed image dataset. Sorting waste combines computer vision,
-uncertain predictions, real-time camera input, and eventually hardware. I also
-wanted to build something that I could expand later, for example by connecting
-the system to a robot or a sorting arm.
+I wanted to work on a problem that was more challenging than training a model
+on a fixed image dataset. Sorting waste combines computer vision, uncertain
+predictions, real-time camera input, and eventually hardware. I also wanted to
+build something that I could expand later, for example by connecting the
+system to a robot or sorting arm.
 
-The robot is not finished yet. At the moment, my focus is the part that has to
-work first: reliably recognizing the objects.
+The robot is not finished yet. My current focus is the part that has to work
+first: reliably recognizing the objects.
 
 ## What I tried
 
-I did not begin with a YOLO model. I started with a custom CNN to understand
-the basic classification problem. After that I tried MobileNetV2, YOLOv8n, and
-finally YOLO11n for object detection.
+I did not begin with YOLO. I started with a custom CNN to understand the basic
+classification problem. I then tried MobileNetV2, YOLOv8n, and finally YOLO11n
+for object detection.
 
-I also tested several datasets, including dmedhi, TACO, TrashNet, and a
-Roboflow waste-detection dataset. My first assumption was that adding more
-data would automatically improve the model. That turned out not to be true.
-Some of the larger combinations contained different image styles, labels, and
-object arrangements that made the detector less consistent.
+I tested several datasets, including dmedhi, TACO, TrashNet, and Roboflow
+waste-detection data. I initially assumed that adding more data would
+automatically improve the model, but that was not true. Some larger dataset
+combinations contained inconsistent image styles, labels, and object
+arrangements.
 
-The most important result of the project so far was that a smaller, cleaner,
-balanced dataset worked better than simply combining everything. After
-removing unsuitable data and choosing the training examples more carefully,
-the later YOLO11n experiments reached about 90.6% mAP50, compared with 60.7%
-in the earlier EXP-014 run. EXP-019 repeated the result closely.
+The most important result was that a smaller, cleaner, balanced dataset worked
+better than simply combining everything. The earlier EXP-014 run reached
+60.7% mAP50, while the later clean-dataset YOLO11n experiments reached about
+90.6% mAP50. EXP-019 repeated the result closely.
 
-The detailed experiment history, charts, and limitations are on the
+The full experiment history and charts are available on the
 [project website](https://mira-vision.vercel.app/research.html).
 
-## What works now
+## Current capabilities
 
-- Detection of glass, metal, paper, plastic, and trash
-- Live webcam inference
-- A local development dashboard
-- Dataset merging and YOLO annotation validation
-- Model evaluation, benchmarking, and export to formats such as TFLite
+- Detects glass, metal, paper, plastic, and trash
+- Runs live webcam inference
+- Includes a local development dashboard
+- Provides dataset and evaluation tools
+- Exports models to formats such as ONNX and TFLite
 
-Raspberry Pi testing, a sorting mechanism, and complete robot integration are
-still future work.
+The current limitations and detailed documentation are covered on the
+[website](https://mira-vision.vercel.app/).
 
-## Run MIRA locally
-
-### Install from PyPI
+## Install from PyPI
 
 ```powershell
 py -3 -m venv .venv
@@ -65,17 +60,22 @@ python -m pip install --upgrade pip
 python -m pip install mira-ai
 ```
 
-Download a model and start live detection:
+Download a trained model and start live detection:
 
 ```powershell
-mira download --list
 mira download mira_exp019.pt
 mira live --model mira_exp019.pt
 ```
 
-### Install from source
+To start the local dashboard:
 
-For development, clone the repository and install it in editable mode:
+```powershell
+mira dashboard
+```
+
+## Development installation
+
+For working on the source code instead of using the PyPI release:
 
 ```powershell
 git clone https://github.com/jeremy341/MIRA-AI.git
@@ -85,45 +85,15 @@ py -3 -m venv .venv
 pip install -e .
 ```
 
-To start the local dashboard:
+## Data and limitations
 
-```powershell
-mira dashboard
-```
-
-It is available at `http://127.0.0.1:8000` by default. More setup and usage
-guides are in the [website documentation](https://mira-vision.vercel.app/docs.html).
-
-## Research commands
-
-The main commands I use while working on the project are:
-
-```powershell
-mira datasets
-mira merge --sources taco_trashnet roboflow --output datasets/mira_tnr
-mira train --config experiments/exp014_yolo11n_multidataset.yaml
-mira eval-yolo --model mira_exp019.pt
-mira benchmark --models mira_exp019.pt mira_exp019_int8_640.tflite
-```
-
-The training datasets are not stored in Git. Their original sources and license
+The training datasets are not stored in Git. Their sources and license
 information are listed in [`docs/DATASET_ORIGINS.md`](docs/DATASET_ORIGINS.md).
 
-## Project structure
-
-- `src/` — the CLI, inference pipeline, training code, and dashboard backend
-- `scripts/` — dataset preparation, evaluation, benchmarking, and training helpers
-- `experiments/` — experiment configurations
-- `models/` — model metadata and local model files
-- `tests/` — automated tests
-- `website/` — the public project website
-
-## Honest limitations
-
-The current system still has problems with crumpled paper, cans viewed from
-the opening, and strongly overlapping objects. The reported results come from
-my available validation and test data; I have not yet completed independent
-Raspberry Pi benchmarks or end-to-end physical sorting tests.
+The models can struggle with crumpled paper, cans viewed from the opening,
+overlapping objects, and unusual image conditions. The reported metrics come
+from the project’s recorded evaluation setup and are not a guarantee of
+real-world sorting performance.
 
 ## Transparency
 
