@@ -15,11 +15,18 @@ if (menuButton && siteNav) {
   });
 }
 
-const revealItems = document.querySelectorAll("[data-reveal]");
+const revealItems = [...document.querySelectorAll("[data-reveal]")];
+const motionTargets = revealItems.filter((item) =>
+  item.closest(".hero, .research-hero, .evidence-section")
+);
+motionTargets.forEach((item) => item.classList.add("motion-target"));
+revealItems.forEach((item) => {
+  if (!motionTargets.includes(item)) item.classList.add("is-visible");
+});
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 if (reducedMotion || !("IntersectionObserver" in window)) {
-  revealItems.forEach((item) => item.classList.add("is-visible"));
+  motionTargets.forEach((item) => item.classList.add("is-visible"));
 } else {
   const revealObserver = new IntersectionObserver(
     (entries, observer) => {
@@ -33,7 +40,7 @@ if (reducedMotion || !("IntersectionObserver" in window)) {
     { rootMargin: "0px 0px -8%", threshold: 0.08 },
   );
 
-  revealItems.forEach((item) => revealObserver.observe(item));
+  motionTargets.forEach((item) => revealObserver.observe(item));
 }
 
 document.querySelectorAll(".copy-button").forEach((button) => {
@@ -109,6 +116,7 @@ if (docSections.length > 1) {
 
     if (index > 0) {
       const previous = document.createElement("a");
+      previous.className = "previous";
       previous.href = "#" + docSections[index - 1].id;
       previous.textContent = "← Previous";
       sectionNav.append(previous);
@@ -116,6 +124,7 @@ if (docSections.length > 1) {
 
     if (index < docSections.length - 1) {
       const next = document.createElement("a");
+      next.className = "next";
       next.href = "#" + docSections[index + 1].id;
       next.textContent = "Next →";
       sectionNav.append(next);
@@ -262,7 +271,7 @@ function renderLineChart(element, data) {
     label.setAttribute("text-anchor", "middle");
     label.setAttribute("fill", "#69736d");
     label.setAttribute("font-family", "IBM Plex Mono, monospace");
-    label.setAttribute("font-size", data.values.length > 8 ? "8" : "10");
+    label.setAttribute("font-size", data.values.length > 8 ? "10" : "11");
     label.textContent = labelText.replace("EXP-", "");
     svg.append(point, label);
   });
