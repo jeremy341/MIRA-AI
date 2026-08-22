@@ -17,7 +17,6 @@ from src.logger import (
 )
 
 
-# ── _JsonFormatter tests ─────────────────────────────────────────────
 
 
 def _make_record(level=logging.INFO, msg="test message", exc_info=None):
@@ -67,7 +66,6 @@ def test_json_formatter_includes_exception():
     assert "ValueError" in data["exception"]
 
 
-# ── _TextFormatter tests ─────────────────────────────────────────────
 
 
 def test_text_formatter_format():
@@ -79,7 +77,6 @@ def test_text_formatter_format():
     assert "test.logger" in output
 
 
-# ── _make_handler tests ───────────────────────────────────────────────
 
 
 def test_make_handler_returns_stream_handler():
@@ -113,7 +110,6 @@ def test_make_handler_json_format_when_env_set():
             logger_module._DEFAULT_FORMAT = original_format
 
 
-# ── get_logger tests ─────────────────────────────────────────────────
 
 
 def test_get_logger_returns_logger():
@@ -155,7 +151,6 @@ def test_get_logger_invalid_level_falls_back_to_info():
     assert log.level == logging.INFO
 
 
-# ── _add_file_handler tests ──────────────────────────────────────────
 
 
 def test_add_file_handler_creates_log_file(tmp_path):

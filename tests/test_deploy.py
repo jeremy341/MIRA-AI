@@ -19,7 +19,6 @@ from src.deploy import (
 )
 
 
-# ── HardwareInfo tests ───────────────────────────────────────────────
 
 
 def test_hardware_info_defaults():
@@ -31,7 +30,6 @@ def test_hardware_info_defaults():
     assert info.memory_mb >= 0
 
 
-# ── detect_hardware tests ────────────────────────────────────────────
 
 
 def test_detect_hardware_returns_info():
@@ -73,7 +71,6 @@ def test_detect_cuda_no_cuda():
         assert version == ""
 
 
-# ── suggest_model tests ──────────────────────────────────────────────
 
 
 def test_suggest_model_raspberry_pi():
@@ -104,7 +101,6 @@ def test_suggest_model_none_calls_detect():
         mock_detect.assert_called_once()
 
 
-# ── check_environment tests ──────────────────────────────────────────
 
 
 def test_check_environment_no_opencv():
@@ -130,7 +126,6 @@ def test_check_environment_healthy():
         assert warnings == []
 
 
-# ── _module_available tests ──────────────────────────────────────────
 
 
 def test_module_available_existing():
@@ -141,7 +136,6 @@ def test_module_available_missing():
     assert not _module_available("nonexistent_module_12345")
 
 
-# ── Platform detection tests ─────────────────────────────────────────
 
 
 def test_detect_raspberry_pi_true():
@@ -170,7 +164,6 @@ def test_detect_jetson_false():
             assert not _detect_jetson()
 
 
-# ── _safe_cpu_count tests ────────────────────────────────────────────
 
 
 def test_safe_cpu_count_returns_positive():

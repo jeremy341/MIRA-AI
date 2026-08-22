@@ -16,7 +16,6 @@ from src.hardware import (
 )
 
 
-# ── _FrameBuffer tests ───────────────────────────────────────────────
 
 
 def test_frame_buffer_update_and_get():
@@ -59,7 +58,6 @@ def test_frame_buffer_stop():
     assert not buf.running
 
 
-# ── USBCamera tests ──────────────────────────────────────────────────
 
 
 def test_usbcamera_init_success():
@@ -117,7 +115,6 @@ def test_usbcamera_context_manager():
             assert isinstance(cam, USBCamera)
 
 
-# ── IPCamera tests ───────────────────────────────────────────────────
 
 
 def test_ipcamera_init_success():
@@ -149,7 +146,6 @@ def test_ipcamera_reconnection():
         cam.release()
 
 
-# ── AbstractCamera interface tests ───────────────────────────────────
 
 
 def test_abstract_camera_constants():

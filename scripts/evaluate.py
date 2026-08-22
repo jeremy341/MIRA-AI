@@ -1,4 +1,4 @@
-# Comprehensive model evaluation script for MIRA detection models
+"""Evaluate a detection model and write summary plots."""
 
 from __future__ import annotations
 
@@ -31,7 +31,6 @@ from pipeline.models import DetectionModel, ModelRegistry
 
 logger = logging.getLogger("evaluate")
 
-# Plotting style shared by the evaluation outputs.
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Arial", "Helvetica"]
 plt.rcParams["axes.edgecolor"] = "#cccccc"
@@ -44,7 +43,6 @@ plt.rcParams["grid.linewidth"] = 0.5
 PALETTE = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
 
-# CLI
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Evaluate a MIRA detection model on a YOLO validation set",
@@ -76,7 +74,6 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-# Auto-discover default dataset
 def discover_default_dataset() -> Path | None:
     """Return the first dataset YAML found in datasets/ with a val split."""
     for yaml_path in sorted((ROOT_DIR / "datasets").rglob("dataset.yaml")):
@@ -86,7 +83,6 @@ def discover_default_dataset() -> Path | None:
     return None
 
 
-# Confusion matrix
 def _iou(box_a: list[float], box_b: list[float]) -> float:
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
@@ -173,7 +169,6 @@ def plot_confusion_matrix(matrix: np.ndarray, output_dir: Path) -> None:
     logger.info("Confusion matrix saved to %s", path)
 
 
-# Per-class PR curve
 def compute_per_class_ap(
     model: DetectionModel,
     samples: list[tuple[Path, list[dict]]],
@@ -294,7 +289,6 @@ def plot_pr_curves(
     return per_class_ap
 
 
-# Per-class metrics bar chart
 def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) -> None:
     """Bar chart of per-class precision, recall, F1."""
     names = list(per_class.keys())
@@ -325,7 +319,6 @@ def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) 
     logger.info("Class metrics chart saved to %s", path)
 
 
-# Main
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -335,7 +328,6 @@ def main() -> None:
 
     args = parse_args()
 
-    # Resolve model path
     model_path = DETECTION_DIR / args.model
     if not model_path.exists():
         logger.error("Model not found: %s", model_path)
@@ -343,7 +335,6 @@ def main() -> None:
         logger.info("Available models: %s", available)
         sys.exit(1)
 
-    # Resolve dataset
     if args.data:
         data_path = Path(args.data)
         if not data_path.is_absolute():
@@ -355,7 +346,6 @@ def main() -> None:
             sys.exit(1)
     logger.info("Dataset: %s", data_path)
 
-    # Output directory
     if args.output:
         output_dir = Path(args.output)
         if not output_dir.is_absolute():
@@ -367,19 +357,16 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     logger.info("Output dir: %s", output_dir)
 
-    # Load model
     logger.info("Loading model %s ...", args.model)
     registry = ModelRegistry()
     registry.discover()
     model = registry.load_model(args.model)
     logger.info("Model loaded: %s", model.name)
 
-    # Load validation samples
     logger.info("Loading validation dataset ...")
     samples, evaluated_on_train = load_yolo_dataset(data_path)
     logger.info("Loaded %d images", len(samples))
 
-    # Run benchmark via ModelBenchmark
     logger.info("Running benchmark (conf=%.2f) ...", args.conf)
     benchmark = ModelBenchmark(models=[model], dataset=data_path, conf=args.conf)
     benchmark.samples = samples
@@ -390,7 +377,6 @@ def main() -> None:
 
     result = results[0]
 
-    # Generate charts
     logger.info("Generating confusion matrix ...")
     matrix = build_confusion_matrix(model, samples, args.conf)
     plot_confusion_matrix(matrix, output_dir)
@@ -401,7 +387,6 @@ def main() -> None:
     logger.info("Generating per-class metrics chart ...")
     plot_class_metrics(result.per_class, output_dir)
 
-    # Print summary
     print("\n" + "=" * 60)
     print(f"  Model:    {result.model_name}")
     print(f"  Images:   {result.total_images}")
@@ -418,7 +403,6 @@ def main() -> None:
         print(f"    {cls_name:<10s}  P={m.precision:.3f}  R={m.recall:.3f}  F1={m.f1:.3f}  AP={ap:.3f}")
     print("=" * 60 + "\n")
 
-    # Save JSON results
     export_data = result.to_dict()
     export_data["per_class_ap"] = per_class_ap
     export_data["confusion_matrix"] = matrix.tolist()
@@ -433,7 +417,6 @@ def main() -> None:
         json.dump(export_data, f, indent=2)
     logger.info("Metrics saved to %s", json_path)
 
-    # Also save a comparison table
     table_path = output_dir / "comparison_table.txt"
     with open(table_path, "w", encoding="utf-8") as f:
         f.write(ModelBenchmark.comparison_table(results))

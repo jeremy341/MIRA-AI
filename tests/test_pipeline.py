@@ -15,7 +15,6 @@ if _src_dir not in sys.path:
     sys.path.insert(0, _src_dir)
 
 
-# ── Config tests ─────────────────────────────────────────────────────
 
 
 def test_mira_yaml_exists():
@@ -46,7 +45,6 @@ def test_project_config_returns_dict():
     assert "inference" in cfg
 
 
-# ── Registry tests ───────────────────────────────────────────────────
 
 
 def test_register_command():
@@ -64,7 +62,6 @@ def test_register_command():
         _COMMANDS.pop("test_cmd_pytest", None)
 
 
-# ── Dataset Registry tests ──────────────────────────────────────────
 
 
 def test_discover_loads_yaml_files():
@@ -118,7 +115,6 @@ def test_yaml_descriptors_valid():
         assert "source_format" in data, f"{yf.name} missing 'source_format'"
 
 
-# ── Model Registry tests ────────────────────────────────────────────
 
 
 def test_discover_finds_models():
@@ -150,7 +146,6 @@ def test_third_party_adapter():
         assert adapter.model_type == "third_party"
 
 
-# ── Benchmark tests ─────────────────────────────────────────────────
 
 
 def test_per_class_metrics():
@@ -208,7 +203,6 @@ def test_comparison_table():
     assert "model_b" in table
 
 
-# ── TrainConfig tests ───────────────────────────────────────────────
 
 
 def test_default_config():

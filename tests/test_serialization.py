@@ -26,7 +26,6 @@ from src.serialization import (
 )
 
 
-# ── _MiraEncoder tests ────────────────────────────────────────────────
 
 
 def test_encoder_handles_path():
@@ -66,7 +65,6 @@ def test_encoder_falls_back_to_super():
         encoder.default(object())
 
 
-# ── _dataclass_to_dict tests ──────────────────────────────────────────
 
 
 def test_dataclass_to_dict_simple():
@@ -116,7 +114,6 @@ def test_dataclass_to_dict_passthrough_primitive():
     assert _dataclass_to_dict("hello") == "hello"
 
 
-# ── _atomic_write tests ───────────────────────────────────────────────
 
 
 def test_atomic_write_creates_file(tmp_path):
@@ -145,7 +142,6 @@ def test_atomic_write_no_temp_files_left(tmp_path):
     assert len(temp_files) == 0
 
 
-# ── _backup_if_exists tests ───────────────────────────────────────────
 
 
 def test_backup_creates_bak_file(tmp_path):
@@ -163,7 +159,6 @@ def test_backup_skips_if_not_exists(tmp_path):
     assert not target.with_suffix(".txt.bak").exists()
 
 
-# ── serialize_result tests ────────────────────────────────────────────
 
 
 def test_serialize_result_dict_to_json(tmp_path):
@@ -222,7 +217,6 @@ def test_serialize_result_backups_existing(tmp_path):
     assert new["v"] == 2
 
 
-# ── serialize_config tests ───────────────────────────────────────────
 
 
 def test_serialize_config_to_yaml(tmp_path):
@@ -241,7 +235,6 @@ def test_serialize_config_to_yaml(tmp_path):
     assert "__serialized_at__" in loaded
 
 
-# ── ExperimentRecord tests ───────────────────────────────────────────
 
 
 def test_experiment_record_defaults():
@@ -276,7 +269,6 @@ def test_experiment_metadata_explicit_git_sha():
     assert record.uncommitted_changes is True
 
 
-# ── _detect_git_sha tests ────────────────────────────────────────────
 
 
 def test_detect_git_sha_via_subprocess():
@@ -294,7 +286,6 @@ def test_detect_git_sha_subprocess_fails_returns_none():
             assert sha is None
 
 
-# ── _has_uncommitted_changes tests ───────────────────────────────────
 
 
 def test_has_uncommitted_changes_true():

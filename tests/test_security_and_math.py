@@ -11,7 +11,6 @@ def _approx(a, b, abs_tol=1e-6):
     assert math.isclose(float(a), float(b), abs_tol=abs_tol), f"{a} != {b} (tol={abs_tol})"
 
 
-# resolve_safe_path  (src/config.py)
 
 
 class TestResolveSafePath:
@@ -79,7 +78,6 @@ class TestResolveSafePath:
             resolve_safe_path("/etc", base_dir=tmp_path)
 
 
-# compute_iou  (src/pipeline/benchmark.py)
 
 
 class TestComputeIoU:
@@ -131,7 +129,6 @@ class TestComputeIoU:
         _approx(compute_iou(a, b), 0.0)
 
 
-# compute_map  (src/pipeline/benchmark.py)
 
 
 class TestComputeMap:
@@ -229,7 +226,6 @@ class TestComputeMap:
         assert 0.0 <= ap <= 1.0 + 1e-9
 
 
-# setup_camera_properties  (src/config.py)
 
 
 class TestSetupCameraProperties:
@@ -287,7 +283,6 @@ class TestSetupCameraProperties:
                 setup_camera_properties(cap, 640, 480)
 
 
-# Hardware detection (deploy module)
 
 
 @pytest.mark.skipif(not hasattr(pytest, "skip"), reason="Requires PyTorch installation")
@@ -304,7 +299,6 @@ class TestHardwareDetection:
         assert info.python_version is not None
 
 
-# DatasetSummary (validators module)
 
 
 class TestDatasetSummary:

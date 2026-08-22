@@ -18,7 +18,6 @@ def cmd_doctor(args):
     print(f"\n  MIRA Doctor v{__version__}")
     print(f"  {'=' * 60}")
 
-    # Config validation
     print("\n  [1/5] Configuration")
     config_errors = validate_config()
     if config_errors:
@@ -28,7 +27,6 @@ def cmd_doctor(args):
     else:
         print("    [OK] mira.yaml is valid")
 
-    # Hardware
     print("\n  [2/5] Hardware")
     info = detect_hardware()
     print(f"    Platform: {info.platform} ({info.arch})")
@@ -40,7 +38,6 @@ def cmd_doctor(args):
         print("    [!] No CUDA detected")
     print(f"    Suggested model: {suggest_model(info)}")
 
-    # Environment
     print("\n  [3/5] Environment")
     env_warnings = check_environment()
     if env_warnings:
@@ -49,7 +46,6 @@ def cmd_doctor(args):
     else:
         print("    [OK] All required libraries available")
 
-    # Models
     print("\n  [4/5] Models")
     registry = ModelRegistry()
     count = registry.discover()
@@ -58,7 +54,6 @@ def cmd_doctor(args):
     else:
         print("    [!] No models found in models/detection/")
 
-    # Datasets
     print("\n  [5/5] Datasets")
     ds_registry = DatasetRegistry()
     ds_count = ds_registry.discover()

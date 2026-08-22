@@ -133,8 +133,6 @@ class WebSocketHandler:
             async for message in websocket.iter_text():
                 if message == "ping":
                     await websocket.send_text("pong")
-                elif message.startswith("config:"):
-                    await self._handle_config(websocket, message[7:])
 
         except WebSocketDisconnect:
             logger.info("Video WebSocket disconnected")
@@ -201,7 +199,6 @@ class WebSocketHandler:
 
         frame_data = base64.b64encode(buffer).decode("utf-8")
 
-        # Create message
         message = {
             "type": "frame",
             "frame_id": frame_id,
@@ -239,25 +236,3 @@ class WebSocketHandler:
                 "timestamp": datetime.now().isoformat(),
             }
         )
-
-    async def _handle_config(self, websocket, config_json: str):
-        """Handle configuration updates from client"""
-        try:
-            import json
-
-            config = json.loads(config_json)
-
-            # Update camera configuration
-            if "camera" in config:
-                # Apply configuration changes...
-                pass
-
-            # Update model configuration
-            if "model" in config:
-                # Apply configuration changes...
-                pass
-
-            await websocket.send_json({"type": "config_updated", "message": "Configuration updated successfully"})
-
-        except Exception as e:
-            await websocket.send_json({"type": "error", "message": f"Configuration error: {str(e)}"})
