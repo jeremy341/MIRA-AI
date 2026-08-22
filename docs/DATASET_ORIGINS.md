@@ -1,7 +1,8 @@
 # Dataset Origins
 
-The local dataset artifacts are disposable. These canonical sources are kept so
-the datasets can be downloaded again when needed.
+All dataset origins for people to download them from their original sources. The final balanced dataset is built from these sources, and the license information is included in the table below. 
+The dataset is not included in this repository.
+
 
 ## Final Balanced Dataset Sources
 
@@ -20,9 +21,8 @@ https://huggingface.co/datasets/garythung/trashnet
 ## Excluded Source
 
 WaRP was used in earlier experiments but is excluded from the final balanced
-dataset:
+dataset becaue it made the results worse:
 
 https://github.com/AIRI-Institute/WaRP
 
-The WaRP repository describes its data as research-use-only. Check the current
-upstream terms before redistributing a new derivative dataset.
+also make sure to check out all the TOS as WaRP is research only and not for commercial use.

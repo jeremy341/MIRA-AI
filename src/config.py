@@ -153,7 +153,7 @@ BYTE_TRACK_CONFIG_PATH = ROOT_DIR / "bytetrack.yaml"
 if not BYTE_TRACK_CONFIG_PATH.exists():
     BYTE_TRACK_CONFIG_PATH = ASSETS_DIR / "bytetrack.yaml"
 
-# Class configuration (single source of truth)
+# Class names used by training and inference.
 _CLASSES = PROJECT_CONFIG.get("classes", {})
 CLASS_NAMES: list[str] = _CLASSES.get("names", ["glass", "metal", "paper", "plastic", "trash"])
 NUM_CLASSES: int = _CLASSES.get("count", len(CLASS_NAMES))

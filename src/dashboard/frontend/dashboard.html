@@ -8,175 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-  <style>
-    :root { --bg:#ebe8df; --surface:#f8f6ef; --surface-2:#efede5; --ink:#18231e; --muted:#69736d; --line:#c7c8bf; --line-dark:#9da39d; --green:#285c45; --green-dark:#193c2e; --accent:#e76f3c; --danger:#c53d36; --warning:#d99125; --success:#2f7a51; --glass:#2d8c8c; --metal:#6e7185; --paper:#d19a2c; --plastic:#d85c48; --trash:#4c4a43; }
-    * { box-sizing: border-box; }
-    html, body { width:100%; height:100%; margin:0; overflow:hidden; background:var(--bg); color:var(--ink); font-family:"Space Grotesk", sans-serif; }
-    button, input, select { font: inherit; }
-    button { color: inherit; }
-    .app { width:100%; height:100%; display:grid; grid-template-rows:56px minmax(0,1fr); }
-    .topbar { display:grid; grid-template-columns:auto auto minmax(0,1fr) auto; align-items:center; gap:22px; padding:0 18px; background:var(--ink); color:#f7f3e8; border-bottom:4px solid var(--accent); min-width:0; }
-    .brand { display:flex; align-items:center; gap:11px; white-space:nowrap; }
-    .brand-copy { line-height:1; }
-    .brand-name { display:block; font-size:18px; font-weight:700; letter-spacing:0.12em; }
-    .brand-subtitle { display:block; margin-top:4px; color:#b7c0ba; font:500 9px/1 "IBM Plex Mono", monospace; letter-spacing:0.14em; text-transform:uppercase; }
-    .navigation { height:100%; display:flex; align-items:stretch; }
-    .nav-button { position:relative; border:0; background:transparent; color:#aeb8b1; padding:0 15px; cursor:pointer; font-size:13px; font-weight:600; }
-    .nav-button::after { content:""; position:absolute; left:15px; right:15px; bottom:0; height:3px; background:transparent; }
-    .nav-button.active { color:#fff; }
-    .nav-button.active::after { background:var(--accent); }
-    .nav-button:hover { color:#fff; }
-    .topbar-spacer { min-width:0; }
-    .system-strip { display:flex; align-items:center; gap:16px; min-width:0; font:500 11px/1 "IBM Plex Mono", monospace; color:#c9d0cb; white-space:nowrap; }
-    .system-item { display:flex; align-items:center; gap:7px; }
-    .system-label { color:#7f8d84; text-transform:uppercase; letter-spacing:0.08em; }
-    .connection-dot, .stream-dot { width:8px; height:8px; border-radius:50%; flex:none; background:#7b827d; }
-    .connection-dot.connected { background:#58b87c; }
-    .connection-dot.disconnected { background:var(--danger); }
-    .stream-dot.streaming { background:#eb4d44; animation:livePulse 1.4s ease-in-out infinite; }
-    @keyframes livePulse { 0%,100% { opacity:1; } 50% { opacity:0.38; } }
-    .workspace { min-height:0; position:relative; }
-    .page { display:none; width:100%; height:100%; min-height:0; padding:12px; }
-    .page.active { display:block; }
-    .dashboard-grid { height:100%; display:grid; grid-template-columns:minmax(0,1.72fr) minmax(340px,0.78fr); grid-template-rows:minmax(0,0.86fr) minmax(0,1.14fr); gap:12px; }
-    .analytics-grid { height:100%; min-height:0; display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); grid-template-rows:76px 242px minmax(0,1fr); gap:12px; }
-    .panel { min-width:0; min-height:0; overflow:hidden; background:var(--surface); border:1px solid var(--line-dark); border-radius:5px; }
-    .camera-panel { grid-row:1/3; display:grid; grid-template-rows:47px minmax(0,1fr); }
-    .distribution-panel, .recent-panel, .trend-panel, .breakdown-panel { display:grid; grid-template-rows:43px minmax(0,1fr); }
-    .panel-header { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 13px; background:var(--surface-2); border-bottom:1px solid var(--line); }
-    .panel-title-wrap { min-width:0; display:flex; align-items:baseline; gap:9px; }
-    .panel-title { margin:0; font-size:13px; font-weight:700; letter-spacing:0.035em; }
-    .panel-kicker { color:var(--muted); font:500 9px/1 "IBM Plex Mono", monospace; text-transform:uppercase; letter-spacing:0.08em; white-space:nowrap; }
-    .camera-actions { display:flex; align-items:center; gap:8px; }
-    .live-badge { display:none; align-items:center; gap:6px; padding:5px 8px; border:1px solid #d4554d; color:#a82b27; background:#f7dfd9; font:600 10px/1 "IBM Plex Mono", monospace; letter-spacing:0.1em; }
-    .live-badge.visible { display:flex; }
-    .button { min-height:29px; border:1px solid var(--line-dark); border-radius:3px; background:var(--surface); padding:0 11px; cursor:pointer; font-size:11px; font-weight:700; letter-spacing:0.02em; }
-    .button:hover:not(:disabled) { background:#e6e4dc; }
-    .button:disabled { opacity:0.45; cursor:not-allowed; }
-    .button.primary { border-color:var(--green-dark); background:var(--green); color:#fff; }
-    .button.primary:hover:not(:disabled) { background:var(--green-dark); }
-    .button.stop { border-color:#af4b44; color:#a5322c; background:#fff3ef; }
-    .button.danger { border-color:#bd5a50; color:#a5322c; background:transparent; }
-    .camera-stage { position:relative; min-height:0; overflow:hidden; background:#111713; }
-    .camera-image { display:none; width:100%; height:100%; object-fit:contain; position:relative; z-index:1; }
-    .camera-image.visible { display:block; }
-    .detection-canvas { position:absolute; inset:0; z-index:2; width:100%; height:100%; pointer-events:none; }
-    .camera-placeholder { position:absolute; inset:0; z-index:0; display:flex; align-items:center; justify-content:center; color:#aab3ac; background:linear-gradient(#1b241e 1px, transparent 1px), linear-gradient(90deg, #1b241e 1px, transparent 1px), #111713; background-size:38px 38px; }
-    .placeholder-content { text-align:center; padding:20px; }
-    .camera-symbol { width:60px; height:42px; position:relative; margin:0 auto 16px; border:2px solid #6c786f; }
-    .camera-symbol::before { content:""; position:absolute; width:19px; height:19px; border:2px solid #6c786f; border-radius:50%; left:18px; top:9px; }
-    .camera-symbol::after { content:""; position:absolute; width:17px; height:9px; border:2px solid #6c786f; border-bottom:0; top:-11px; left:8px; }
-    .placeholder-title { margin:0 0 7px; color:#e1e5e1; font-size:15px; font-weight:600; }
-    .placeholder-text { margin:0; color:#7f8b82; font:500 11px/1.5 "IBM Plex Mono", monospace; }
-    .metric-rail { position:absolute; top:12px; left:12px; z-index:4; display:grid; grid-template-columns:repeat(4,auto); border:1px solid #58645c; background:rgba(17,23,19,0.91); color:#fff; }
-    .camera-metric { min-width:83px; padding:8px 10px; border-right:1px solid #455047; }
-    .camera-metric:last-child { border-right:0; }
-    .camera-metric-label { display:block; color:#8d9b91; font:500 8px/1 "IBM Plex Mono", monospace; letter-spacing:0.08em; text-transform:uppercase; }
-    .camera-metric-value { display:block; margin-top:5px; font:600 13px/1 "IBM Plex Mono", monospace; }
-    .camera-state { position:absolute; right:12px; bottom:12px; z-index:4; max-width:calc(100% - 24px); padding:7px 9px; border-left:3px solid var(--accent); background:rgba(17,23,19,0.91); color:#cbd2cd; font:500 10px/1.3 "IBM Plex Mono", monospace; }
-    .distribution-content { min-height:0; display:grid; grid-template-columns:minmax(130px,1fr) minmax(130px,0.86fr); align-items:center; gap:4px; padding:8px 12px; }
-    .chart-wrap { position:relative; min-width:0; min-height:0; width:100%; height:100%; }
-    .chart-empty { position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:2; color:var(--muted); font:500 11px/1.4 "IBM Plex Mono", monospace; text-align:center; pointer-events:none; padding:15px; }
-    .chart-empty.visible { display:flex; }
-    .class-legend { display:grid; gap:7px; min-width:0; }
-    .legend-item { display:grid; grid-template-columns:9px minmax(0,1fr) auto; align-items:center; gap:7px; min-width:0; font-size:11px; }
-    .legend-swatch { width:9px; height:9px; }
-    .legend-name { min-width:0; overflow:hidden; text-overflow:ellipsis; text-transform:capitalize; }
-    .legend-count { font:600 11px/1 "IBM Plex Mono", monospace; }
-    .recent-list { min-height:0; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line-dark) transparent; }
-    .recent-row { display:grid; grid-template-columns:10px minmax(0,1fr) 64px 74px; gap:9px; align-items:center; min-height:38px; padding:7px 12px; border-bottom:1px solid #deddd6; font-size:11px; }
-    .recent-row:last-child { border-bottom:0; }
-    .class-marker { width:8px; height:8px; }
-    .class-name { min-width:0; font-weight:600; text-transform:capitalize; overflow:hidden; text-overflow:ellipsis; }
-    .confidence { font:600 10px/1 "IBM Plex Mono", monospace; text-align:right; }
-    .timestamp { color:var(--muted); font:500 9px/1 "IBM Plex Mono", monospace; text-align:right; white-space:nowrap; }
-    .empty-state { width:100%; height:100%; min-height:90px; display:flex; align-items:center; justify-content:center; padding:18px; color:var(--muted); font:500 11px/1.5 "IBM Plex Mono", monospace; text-align:center; }
-    .summary-card { grid-column:span 3; min-width:0; display:grid; grid-template-columns:5px minmax(0,1fr); background:var(--surface); border:1px solid var(--line-dark); border-radius:4px; overflow:hidden; }
-    .summary-accent { background:var(--green); }
-    .summary-card:nth-child(2) .summary-accent { background:var(--metal); }
-    .summary-card:nth-child(3) .summary-accent { background:var(--paper); }
-    .summary-card:nth-child(4) .summary-accent { background:var(--accent); }
-    .summary-content { min-width:0; display:flex; flex-direction:column; justify-content:center; padding:8px 14px; }
-    .summary-label { color:var(--muted); font:500 9px/1 "IBM Plex Mono", monospace; letter-spacing:0.08em; text-transform:uppercase; }
-    .summary-value { min-width:0; margin-top:7px; font-size:21px; font-weight:700; line-height:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .summary-unit { color:var(--muted); font:500 10px/1 "IBM Plex Mono", monospace; }
-    .trend-panel { grid-column:span 8; }
-    .breakdown-panel { grid-column:span 4; }
-    .performance-panel { grid-column:1 / -1; }
-    .performance-body { min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:0; }
-    .performance-body .chart-wrap { position:relative; min-width:0; min-height:0; width:100%; height:100%; }
-    .performance-body .chart-wrap:first-child { border-right:1px solid var(--line); }
-    .performance-chart-empty { position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:2; color:var(--muted); font:500 11px/1.4 "IBM Plex Mono", monospace; text-align:center; pointer-events:none; padding:15px; }
-    .performance-chart-empty.visible { display:flex; }
-    .chart-body { position:relative; min-height:0; padding:10px 13px 9px; }
-    .toast-region { position:fixed; right:15px; bottom:15px; z-index:50; display:grid; gap:8px; width:min(340px, calc(100vw - 30px)); pointer-events:none; }
-    .toast { display:grid; grid-template-columns:5px minmax(0,1fr) auto; align-items:center; min-height:48px; background:#19231e; color:#f7f5ed; border:1px solid #465149; animation:toastIn 0.18s ease-out; pointer-events:auto; }
-    .toast-bar { align-self:stretch; background:var(--success); }
-    .toast.error .toast-bar { background:var(--danger); }
-    .toast.warning .toast-bar { background:var(--warning); }
-    .toast-message { padding:10px 12px; font-size:12px; line-height:1.35; }
-    .toast-close { align-self:stretch; border:0; border-left:1px solid #465149; background:transparent; color:#aeb8b1; padding:0 12px; cursor:pointer; }
-    @keyframes toastIn { from { transform:translateX(12px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-    .settings-page-wrap { height:100%; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line-dark) transparent; padding:20px; }
-    .settings-layout { display:grid; grid-template-columns:1fr 1fr; gap:20px; height:100%; }
-    .settings-card { background:var(--surface); border:1px solid var(--line-dark); border-radius:6px; overflow:hidden; display:flex; flex-direction:column; }
-    .settings-card-header { display:flex; align-items:center; gap:14px; padding:18px 22px; background:var(--surface-2); border-bottom:1px solid var(--line); flex-shrink:0; }
-    .settings-card-icon { display:flex; align-items:center; justify-content:center; width:38px; height:38px; background:var(--green); border-radius:5px; flex-shrink:0; }
-    .settings-card-icon svg { width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-    .settings-card-title-wrap { min-width:0; }
-    .settings-card-title { margin:0; font-size:15px; font-weight:700; letter-spacing:0.03em; color:var(--ink); }
-    .settings-card-sub { display:block; margin-top:3px; font:500 10px/1 "IBM Plex Mono", monospace; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); }
-    .settings-card-body { padding:8px 0; flex:1; overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--line-dark) transparent; }
-    .settings-field { display:grid; grid-template-columns:1fr auto; align-items:center; gap:16px; padding:14px 22px; border-bottom:1px solid var(--line); transition:background 0.12s ease; }
-    .settings-field:last-child { border-bottom:0; }
-    .settings-field:hover { background:var(--surface-2); }
-    .settings-field-full { grid-template-columns:1fr; }
-    .field-label { font-size:13px; font-weight:600; color:var(--ink); line-height:1.2; }
-    .field-hint { display:block; margin-top:4px; font:400 11px/1.4 "IBM Plex Mono", monospace; color:var(--muted); }
-    .settings-divider { display:flex; align-items:center; gap:10px; padding:12px 22px 6px; font:600 9px/1 "IBM Plex Mono", monospace; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted); }
-    .settings-divider::after { content:""; flex:1; height:1px; background:var(--line); }
-    .field-input { width:90px; height:34px; padding:0 10px; background:var(--bg); border:1px solid var(--line-dark); border-radius:3px; color:var(--ink); font:600 13px/1 "IBM Plex Mono", monospace; text-align:right; transition:border-color 0.15s ease, box-shadow 0.15s ease; }
-    .field-input:focus { outline:none; border-color:var(--green); box-shadow:0 0 0 3px rgba(40,92,69,0.15); }
-    .field-input:user-invalid { border-color:var(--danger); box-shadow:0 0 0 3px rgba(197,61,54,0.15); }
-    .seg-group { display:flex; border:1px solid var(--line-dark); border-radius:3px; overflow:hidden; }
-    .seg-group input[type="radio"] { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
-    .seg-group label { flex:1; text-align:center; padding:7px 12px; font:600 11px/1.2 "IBM Plex Mono", monospace; cursor:pointer; background:var(--bg); border-right:1px solid var(--line-dark); color:var(--muted); transition:background 0.12s ease, color 0.12s ease; user-select:none; }
-    .seg-group label:last-of-type { border-right:0; }
-    .seg-group input[type="radio"]:checked + label { background:var(--green); color:#fff; }
-    .seg-group label:hover { background:var(--surface-2); }
-    .seg-group input[type="radio"]:checked + label:hover { background:var(--green); }
-    .toggle-wrap { position:relative; display:inline-flex; align-items:center; flex-shrink:0; }
-    .toggle-input { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
-    .toggle-track { display:block; width:46px; height:24px; background:var(--line-dark); border-radius:24px; cursor:pointer; position:relative; transition:background 0.2s ease; }
-    .toggle-track::after { content:""; position:absolute; top:4px; left:4px; width:16px; height:16px; background:#fff; border-radius:50%; transition:transform 0.2s ease; box-shadow:0 1px 3px rgba(0,0,0,0.25); }
-    .toggle-input:checked ~ .toggle-track { background:var(--green); }
-    .toggle-input:checked ~ .toggle-track::after { transform:translateX(22px); }
-    .toggle-input:focus-visible ~ .toggle-track { outline:2px solid var(--green); outline-offset:2px; }
-    .slider-wrap { display:flex; align-items:center; gap:12px; width:100%; }
-    .field-slider { flex:1; height:5px; appearance:none; -webkit-appearance:none; background:var(--line-dark); border-radius:4px; cursor:pointer; accent-color:var(--green); outline:none; }
-    .field-slider:focus-visible { box-shadow:0 0 0 3px rgba(40,92,69,0.2); border-radius:4px; }
-    .field-slider::-webkit-slider-thumb { appearance:none; -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--green); border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,0.3); transition:transform 0.15s ease; }
-    .field-slider::-webkit-slider-thumb:hover { transform:scale(1.15); }
-    .slider-val { font:700 12px/1 "IBM Plex Mono", monospace; color:var(--ink); min-width:42px; text-align:right; background:var(--bg); border:1px solid var(--line-dark); border-radius:3px; padding:4px 7px; }
-    .field-select { width:100%; height:36px; padding:0 30px 0 12px; background:var(--bg); border:1px solid var(--line-dark); border-radius:3px; color:var(--ink); font:600 13px/1 "IBM Plex Mono", monospace; appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2369736d' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; cursor:pointer; transition:border-color 0.15s ease, box-shadow 0.15s ease; }
-    .field-select:focus { outline:none; border-color:var(--green); box-shadow:0 0 0 3px rgba(40,92,69,0.15); }
-    .settings-footer { display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:16px 22px; border-top:1px solid var(--line); background:var(--surface-2); flex-shrink:0; }
-    .settings-btn { display:flex; align-items:center; justify-content:center; gap:8px; height:38px; border:1px solid var(--line-dark); border-radius:4px; background:var(--surface); color:var(--ink); font:600 12px/1 "Space Grotesk", sans-serif; letter-spacing:0.03em; cursor:pointer; transition:background 0.12s ease, border-color 0.12s ease, transform 0.1s ease; }
-    .settings-btn:hover:not(:disabled) { background:var(--surface-2); border-color:var(--line-dark); }
-    .settings-btn:active:not(:disabled) { transform:scale(0.98); }
-    .settings-btn.primary { background:var(--green); border-color:var(--green-dark); color:#fff; }
-    .settings-btn.primary:hover:not(:disabled) { background:var(--green-dark); }
-    .settings-btn svg { width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
-    .settings-btn:disabled { opacity:0.45; cursor:not-allowed; }
-    @media (max-width:900px) {
-      .settings-layout { grid-template-columns:1fr; }
-      .system-item.model-info { display:none; }
-      .dashboard-grid { grid-template-columns:minmax(0,1.4fr) minmax(290px,0.8fr); }
-      .metric-rail { grid-template-columns:repeat(2,auto); }
-      .camera-metric:nth-child(2) { border-right:0; }
-      .camera-metric:nth-child(-n + 2) { border-bottom:1px solid #455047; }
-    }
-  </style>
+  <link rel="stylesheet" href="dashboard.css">
 </head>
 <body>
   <div class="app">
@@ -222,7 +54,7 @@
                   <span class="stream-dot streaming"></span>
                   LIVE
                 </span>
-                <button id="startButton" class="button primary" type="button">Start Stream</button>
+                <button id="startButton" class="button primary" type="button" disabled>Start Stream</button>
                 <button id="stopButton" class="button stop" type="button" disabled>Stop</button>
               </div>
             </header>
@@ -231,12 +63,12 @@
                 <div class="placeholder-content">
                   <div class="camera-symbol" aria-hidden="true"></div>
                   <p class="placeholder-title">No active camera stream</p>
-                  <p class="placeholder-text">Press "Start Stream" to begin detection.</p>
+                  <p class="placeholder-text">Preparing the camera and model…</p>
                 </div>
               </div>
               <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot" />
               <canvas id="detectionCanvas" class="detection-canvas"></canvas>
-              <div class="metric-rail" aria-label="Live Metrics (Live-Metriken)">
+              <div class="metric-rail" aria-label="Live metrics">
                 <div class="camera-metric"><span class="camera-metric-label">FPS</span><span id="fpsValue" class="camera-metric-value">—</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Latency</span><span id="latencyValue" class="camera-metric-value">— ms</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Objects</span><span id="detectionCountValue" class="camera-metric-value">0</span></div>
@@ -322,7 +154,7 @@
             <header class="panel-header">
               <div class="panel-title-wrap">
                 <h2 class="panel-title">Class Breakdown</h2>
-                <span class="panel-kicker">By count (Nach Anzahl)</span>
+                <span class="panel-kicker">By count</span>
               </div>
             </header>
             <div class="chart-body">
@@ -333,7 +165,7 @@
           <article class="panel performance-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h2 class="panel-title">Performance & System (Leistung & System)</h2>
+                <h2 class="panel-title">Performance &amp; system</h2>
                 <span class="panel-kicker">Live metrics over time</span>
               </div>
             </header>
@@ -354,7 +186,6 @@
         <div class="settings-page-wrap">
           <div class="settings-layout">
 
-            <!-- ── Camera Settings Card ── -->
             <article class="settings-card">
               <header class="settings-card-header">
                 <span class="settings-card-icon" aria-hidden="true">
@@ -379,7 +210,7 @@
                     <input type="number" id="cameraIndex" class="field-input" min="0" max="10" value="0" required />
                   </div>
 
-                  <div class="settings-divider">Resolution (Aufl&#246;sung)</div>
+                  <div class="settings-divider">Resolution</div>
 
                   <div class="settings-field settings-field-full">
                     <div>
@@ -404,11 +235,11 @@
                     <input type="number" id="cameraFps" class="field-input" min="1" max="60" value="30" required />
                   </div>
 
-                  <div class="settings-divider">Optics (Optik)</div>
+                  <div class="settings-divider">Optics</div>
 
                   <div class="settings-field">
                     <div>
-                      <span class="field-label">Autofocus (Autofokus)</span>
+                      <span class="field-label">Autofocus</span>
                       <span class="field-hint">Let the camera continuously auto-focus</span>
                     </div>
                     <label class="toggle-wrap" aria-label="Enable Autofocus">
@@ -419,7 +250,7 @@
 
                   <div class="settings-field">
                     <div>
-                      <span class="field-label">Auto Exposure (Belichtungsautomatik)</span>
+                      <span class="field-label">Auto exposure</span>
                       <span class="field-hint">Automatic brightness &amp; exposure control</span>
                     </div>
                     <label class="toggle-wrap" aria-label="Enable Auto Exposure">
@@ -437,13 +268,12 @@
                   </button>
                   <button type="submit" class="settings-btn primary">
                     <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-                    Apply (Anwenden)
+                    Apply
                   </button>
                 </footer>
               </form>
             </article>
 
-            <!-- ── Model Settings Card ── -->
             <article class="settings-card">
               <header class="settings-card-header">
                 <span class="settings-card-icon" style="background: var(--accent);" aria-hidden="true">
@@ -451,7 +281,7 @@
                 </span>
                 <div class="settings-card-title-wrap">
                   <h2 class="settings-card-title">Model Settings</h2>
-                  <span class="settings-card-sub">AI Inference (KI-Inferenz)</span>
+                  <span class="settings-card-sub">AI inference</span>
                 </div>
               </header>
 
@@ -466,11 +296,11 @@
                       <span class="field-hint">YOLO model to use for waste classification &mdash; &#9733; = recommended for device</span>
                     </div>
                     <select id="modelSelect" class="field-select" style="margin-top: 10px;">
-                      <option value="yolov11n.pt">YOLO11n.pt (Standard)</option>
+                      <option value="yolov11n.pt">YOLO11n.pt</option>
                     </select>
                   </div>
 
-                  <div class="settings-divider">Detection Thresholds (Schwellenwerte)</div>
+                  <div class="settings-divider">Detection thresholds</div>
 
                   <div class="settings-field settings-field-full">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
@@ -496,7 +326,7 @@
 
                   <div class="settings-field settings-field-full">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                      <span class="field-label">IOU Threshold (IOU-Schwellenwert)</span>
+                      <span class="field-label">IOU threshold</span>
                     </div>
                     <span class="field-hint">Non-max suppression overlap threshold for duplicate removal</span>
                     <div class="slider-wrap" style="margin-top: 10px;">
@@ -509,7 +339,7 @@
 
                   <div class="settings-field">
                     <div>
-                      <span class="field-label">Object Tracking (Objekt-Tracking)</span>
+                      <span class="field-label">Object tracking</span>
                       <span class="field-hint">Assign persistent IDs across frames using ByteTrack</span>
                     </div>
                     <label class="toggle-wrap" aria-label="Enable Object Tracking">
@@ -535,7 +365,7 @@
                   </button>
                   <button type="submit" class="settings-btn primary">
                     <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-                    Apply (Laden)
+                    Apply
                   </button>
                 </footer>
               </form>
@@ -547,769 +377,6 @@
     </main>
   </div>
   <div id="toastRegion" class="toast-region" aria-live="polite"></div>
-  <script>
-    (() => {
-      "use strict";
-      const CLASSES = ["glass", "metal", "paper", "plastic", "trash"];
-      const CLASS_LABELS = {
-        glass: "Glass (Glas)",
-        metal: "Metal (Metall)",
-        paper: "Paper (Papier)",
-        plastic: "Plastic (Kunststoff)",
-        trash: "Trash"
-      };
-      const CLASS_COLORS = {
-        glass: "#2d8c8c",
-        metal: "#6e7185",
-        paper: "#d19a2c",
-        plastic: "#d85c48",
-        trash: "#4c4a43"
-      };
-      const state = {
-        streaming: false,
-        busy: false,
-        videoConnected: false,
-        controlConnected: false,
-        latestDetections: [],
-        history: [],
-        classCounts: Object.fromEntries(CLASSES.map(name => [name, 0])),
-        totalDetections: 0,
-        confidenceSum: 0,
-        confidenceSamples: 0,
-        backendAverageConfidence: null,
-        fps: null,
-        latency: null,
-        sessionStartedAt: null,
-        accumulatedSessionMs: 0,
-        trendLabels: [],
-        trendValues: Object.fromEntries(CLASSES.map(name => [name, []])),
-        chartUpdatePending: false,
-        lastChartUpdate: 0,
-        frameLoaded: false,
-        perfLabels: [],
-        fpsHistory: [],
-        latencyHistory: [],
-        cpuHistory: [],
-        memHistory: []
-      };
-      let videoSocket = null;
-      let controlSocket = null;
-      let videoReconnectTimer = null;
-      let controlReconnectTimer = null;
-      let pingTimer = null;
-      let boxClearTimer = null;
-      const elements = {
-        navButtons: document.querySelectorAll(".nav-button"),
-        pages: document.querySelectorAll(".page"),
-        modelName: document.getElementById("modelName"),
-        connectionDot: document.getElementById("connectionDot"),
-        connectionText: document.getElementById("connectionText"),
-        headerStreamDot: document.getElementById("headerStreamDot"),
-        headerStreamText: document.getElementById("headerStreamText"),
-        cameraStatusLabel: document.getElementById("cameraStatusLabel"),
-        liveBadge: document.getElementById("liveBadge"),
-        startButton: document.getElementById("startButton"),
-        stopButton: document.getElementById("stopButton"),
-        cameraStage: document.getElementById("cameraStage"),
-        cameraImage: document.getElementById("cameraImage"),
-        cameraPlaceholder: document.getElementById("cameraPlaceholder"),
-        detectionCanvas: document.getElementById("detectionCanvas"),
-        fpsValue: document.getElementById("fpsValue"),
-        latencyValue: document.getElementById("latencyValue"),
-        detectionCountValue: document.getElementById("detectionCountValue"),
-        liveConfidenceValue: document.getElementById("liveConfidenceValue"),
-        cameraState: document.getElementById("cameraState"),
-        distributionTotal: document.getElementById("distributionTotal"),
-        distributionEmpty: document.getElementById("distributionEmpty"),
-        classLegend: document.getElementById("classLegend"),
-        recentList: document.getElementById("recentList"),
-        recentCount: document.getElementById("recentCount"),
-        summaryTotal: document.getElementById("summaryTotal"),
-        summaryDuration: document.getElementById("summaryDuration"),
-        summaryTopClass: document.getElementById("summaryTopClass"),
-        summaryConfidence: document.getElementById("summaryConfidence"),
-        trendEmpty: document.getElementById("trendEmpty"),
-        breakdownEmpty: document.getElementById("breakdownEmpty"),
-        perfEmpty: document.getElementById("perfEmpty"),
-        sysEmpty: document.getElementById("sysEmpty"),
-        toastRegion: document.getElementById("toastRegion")
-      };
-      Chart.defaults.font.family = '"IBM Plex Mono", monospace';
-      Chart.defaults.font.size = 9;
-      Chart.defaults.color = "#667069";
-      Chart.defaults.animation.duration = 0;
-      Chart.defaults.borderColor = "#d7d7d0";
-      const distributionChart = new Chart(document.getElementById("distributionChart"), {
-        type: "doughnut",
-        data: {
-          labels: CLASSES.map(name => CLASS_LABELS[name]),
-          datasets: [{
-            data: CLASSES.map(() => 0),
-            backgroundColor: CLASSES.map(name => CLASS_COLORS[name]),
-            borderColor: "#f8f6ef",
-            borderWidth: 3,
-            hoverOffset: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: "66%",
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: context => ` ${context.label}: ${context.raw}` } }
-          }
-        }
-      });
-      const trendChart = new Chart(document.getElementById("trendChart"), {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: CLASSES.map(name => ({
-            label: CLASS_LABELS[name],
-            data: [],
-            borderColor: CLASS_COLORS[name],
-            backgroundColor: CLASS_COLORS[name],
-            pointRadius: 0,
-            pointHoverRadius: 3,
-            borderWidth: 2,
-            tension: 0.18
-          }))
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
-            y: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 6 } }
-          },
-          plugins: { legend: { position: "top", align: "start", labels: { boxWidth: 10, boxHeight: 3, padding: 13, usePointStyle: false } } }
-        }
-      });
-      const breakdownChart = new Chart(document.getElementById("breakdownChart"), {
-        type: "bar",
-        data: {
-          labels: CLASSES.map(name => CLASS_LABELS[name]),
-          datasets: [{
-            data: CLASSES.map(() => 0),
-            backgroundColor: CLASSES.map(name => CLASS_COLORS[name]),
-            borderWidth: 0,
-            barThickness: 15
-          }]
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: { beginAtZero: true, ticks: { precision: 0, maxTicksLimit: 5 } },
-            y: { grid: { display: false } }
-          },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: context => ` ${context.raw} Objects` } } }
-        }
-      });
-      const perfChart = new Chart(document.getElementById("perfChart"), {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            { label: "FPS", data: [], borderColor: "#58b87c", backgroundColor: "#58b87c", yAxisID: "y", pointRadius: 0, pointHoverRadius: 3, borderWidth: 2, tension: 0.18 },
-            { label: "Latency (ms)", data: [], borderColor: "#e76f3c", backgroundColor: "#e76f3c", yAxisID: "y1", pointRadius: 0, pointHoverRadius: 3, borderWidth: 2, tension: 0.18 }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0 } },
-            y: { type: "linear", display: true, position: "left", beginAtZero: true, title: { display: true, text: "FPS", font: { size: 8, family: "'IBM Plex Mono', monospace" } }, ticks: { precision: 0, maxTicksLimit: 5 } },
-            y1: { type: "linear", display: true, position: "right", beginAtZero: true, grid: { drawOnChartArea: false }, title: { display: true, text: "ms", font: { size: 8, family: "'IBM Plex Mono', monospace" } }, ticks: { precision: 0, maxTicksLimit: 5 } }
-          },
-          plugins: { legend: { position: "top", align: "start", labels: { boxWidth: 10, boxHeight: 3, padding: 10, usePointStyle: false, font: { size: 8 } } } }
-        }
-      });
-      const sysChart = new Chart(document.getElementById("sysChart"), {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            { label: "CPU %", data: [], borderColor: "#6e7185", backgroundColor: "#6e7185", yAxisID: "y", pointRadius: 0, pointHoverRadius: 3, borderWidth: 2, tension: 0.18 },
-            { label: "Memory %", data: [], borderColor: "#d19a2c", backgroundColor: "#d19a2c", yAxisID: "y1", pointRadius: 0, pointHoverRadius: 3, borderWidth: 2, tension: 0.18 }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: "index", intersect: false },
-          scales: {
-            x: { grid: { display: false }, ticks: { maxTicksLimit: 6, maxRotation: 0 } },
-            y: { type: "linear", display: true, position: "left", min: 0, max: 100, title: { display: true, text: "CPU %", font: { size: 8, family: "'IBM Plex Mono', monospace" } }, ticks: { precision: 0, maxTicksLimit: 5 } },
-            y1: { type: "linear", display: true, position: "right", min: 0, max: 100, grid: { drawOnChartArea: false }, title: { display: true, text: "Memory %", font: { size: 8, family: "'IBM Plex Mono', monospace" } }, ticks: { precision: 0, maxTicksLimit: 5 } }
-          },
-          plugins: { legend: { position: "top", align: "start", labels: { boxWidth: 10, boxHeight: 3, padding: 10, usePointStyle: false, font: { size: 8 } } } }
-        }
-      });
-      function websocketURL(path) {
-        const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-        return `${protocol}//${location.host}${path}`;
-      }
-      function normalizeClass(value) {
-        const name = String(value || "trash").toLowerCase();
-        return CLASSES.includes(name) ? name : "trash";
-      }
-      function normalizeConfidence(value) {
-        const number = Number(value);
-        if (!Number.isFinite(number)) return 0;
-        return Math.max(0, Math.min(1, number));
-      }
-      function normalizeDetection(item) {
-        return {
-          className: normalizeClass(item.class_name ?? item.class),
-          confidence: normalizeConfidence(item.confidence),
-          trackId: item.track_id ?? "—",
-          timestamp: item.timestamp || new Date().toISOString(),
-          bbox: Array.isArray(item.bbox) ? item.bbox : null
-        };
-      }
-      function formatTime(timestamp, withDate = false) {
-        const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) return "—";
-        const options = withDate
-          ? { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }
-          : { hour: "2-digit", minute: "2-digit", second: "2-digit" };
-        return new Intl.DateTimeFormat("de-DE", options).format(date);
-      }
-      function formatDuration(milliseconds) {
-        const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        if (hours > 0) {
-          return [hours, minutes, seconds].map(v => String(v).padStart(2, "0")).join(":");
-        }
-        return [minutes, seconds].map(v => String(v).padStart(2, "0")).join(":");
-      }
-      function currentSessionMs() {
-        const activeMs = state.streaming && state.sessionStartedAt ? Date.now() - state.sessionStartedAt : 0;
-        return state.accumulatedSessionMs + activeMs;
-      }
-      function showToast(message, type = "success") {
-        const toast = document.createElement("div");
-        toast.className = `toast ${type}`;
-        toast.innerHTML = `<span class="toast-bar"></span><span class="toast-message"></span><button class="toast-close" type="button" aria-label="Close notification">×</button>`;
-        toast.querySelector(".toast-message").textContent = message;
-        toast.querySelector(".toast-close").addEventListener("click", () => toast.remove());
-        elements.toastRegion.appendChild(toast);
-        window.setTimeout(() => { if (toast.isConnected) toast.remove(); }, 4500);
-      }
-      async function fetchJSON(url, options = {}, silent = false) {
-        try {
-          const response = await fetch(url, { headers: { "Content-Type": "application/json", ...(options.headers || {}) }, ...options });
-          let data = {};
-          try { data = await response.json(); } catch (_) { data = {}; }
-          if (!response.ok) throw new Error(data.message || data.detail?.message || data.detail || `HTTP ${response.status}`);
-          return data;
-        } catch (error) {
-          if (!silent) showToast(`API Error (API-Fehler): ${error.message}`, "error");
-          throw error;
-        }
-      }
-      function updateConnectionUI() {
-        const connected = state.videoConnected || state.controlConnected;
-        elements.connectionDot.classList.toggle("connected", connected);
-        elements.connectionDot.classList.toggle("disconnected", !connected);
-        if (state.videoConnected && state.controlConnected) elements.connectionText.textContent = "WebSocket connected (verbunden)";
-        else if (connected) elements.connectionText.textContent = "Partially connected (Teilweise verbunden)";
-        else elements.connectionText.textContent = "WebSocket disconnected";
-        
-        const statusEl = document.getElementById("telemetryStatus");
-        if (statusEl) {
-          statusEl.textContent = connected ? "MONITORING ACTIVE" : "DISCONNECTED";
-          statusEl.style.color = connected ? "var(--green)" : "var(--danger)";
-        }
-      }
-      function setStreaming(streaming, message = "") {
-        if (state.streaming === streaming) {
-          if (message) { elements.cameraStatusLabel.textContent = message; elements.cameraState.textContent = message; }
-          return;
-        }
-        if (streaming) state.sessionStartedAt = Date.now();
-        else if (state.sessionStartedAt) { state.accumulatedSessionMs += Date.now() - state.sessionStartedAt; state.sessionStartedAt = null; }
-        state.streaming = streaming;
-        elements.startButton.disabled = streaming || state.busy;
-        elements.stopButton.disabled = !streaming || state.busy;
-        elements.liveBadge.classList.toggle("visible", streaming);
-        elements.headerStreamDot.classList.toggle("streaming", streaming);
-        elements.headerStreamText.textContent = streaming ? "LIVE" : "READY";
-        elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming active" : "System ready");
-        elements.cameraState.textContent = message || (streaming ? "Waiting for camera frame…" : "Waiting for stream…");
-        if (!streaming) {
-          state.frameLoaded = false;
-          state.latestDetections = [];
-          elements.cameraImage.classList.remove("visible");
-          elements.cameraPlaceholder.style.display = "flex";
-          elements.detectionCountValue.textContent = "0";
-          elements.liveConfidenceValue.textContent = "— %";
-          elements.fpsValue.textContent = "—";
-          elements.latencyValue.textContent = "— ms";
-          clearBoundingBoxes();
-          updateCharts();
-          renderRecent();
-          renderSummary();
-        }
-      }
-      function setBusy(busy) {
-        state.busy = busy;
-        elements.startButton.disabled = busy || state.streaming;
-        elements.stopButton.disabled = busy || !state.streaming;
-        elements.startButton.textContent = busy && !state.streaming ? "Starting…" : "Start Stream";
-        elements.stopButton.textContent = busy && state.streaming ? "Stopping…" : "Stop";
-      }
-      function sendControl(payload) {
-        if (!controlSocket || controlSocket.readyState !== WebSocket.OPEN) return false;
-        try { controlSocket.send(JSON.stringify(payload)); return true; }
-        catch (error) { showToast(`Control channel error (Steuerkanal): ${error.message}`, "error"); return false; }
-      }
-      function connectVideoSocket() {
-        clearTimeout(videoReconnectTimer);
-        try { videoSocket = new WebSocket(websocketURL("/ws/video")); }
-        catch (error) { state.videoConnected = false; updateConnectionUI(); videoReconnectTimer = setTimeout(connectVideoSocket, 3000); return; }
-        videoSocket.addEventListener("open", () => {
-          state.videoConnected = true;
-          updateConnectionUI();
-          clearInterval(pingTimer);
-          pingTimer = setInterval(() => { if (videoSocket && videoSocket.readyState === WebSocket.OPEN) { try { videoSocket.send("ping"); } catch (_) {} } }, 15000);
-        });
-        videoSocket.addEventListener("message", event => {
-          if (event.data === "pong") return;
-          let payload;
-          try { payload = JSON.parse(event.data); } catch (_) { return; }
-          handleVideoMessage(payload);
-        });
-        videoSocket.addEventListener("error", () => { state.videoConnected = false; updateConnectionUI(); });
-        videoSocket.addEventListener("close", () => { state.videoConnected = false; updateConnectionUI(); clearInterval(pingTimer); videoReconnectTimer = setTimeout(connectVideoSocket, 3000); });
-      }
-      function connectControlSocket() {
-        clearTimeout(controlReconnectTimer);
-        try { controlSocket = new WebSocket(websocketURL("/ws/control")); }
-        catch (error) { state.controlConnected = false; updateConnectionUI(); controlReconnectTimer = setTimeout(connectControlSocket, 3000); return; }
-        controlSocket.addEventListener("open", () => {
-          state.controlConnected = true;
-          updateConnectionUI();
-          sendControl({ command: "get_status" });
-          sendControl({ command: "get_statistics", params: { period: 60 } });
-        });
-        controlSocket.addEventListener("message", event => {
-          let payload;
-          try { payload = JSON.parse(event.data); } catch (_) { return; }
-          handleControlMessage(payload);
-        });
-        controlSocket.addEventListener("error", () => { state.controlConnected = false; updateConnectionUI(); });
-        controlSocket.addEventListener("close", () => { state.controlConnected = false; updateConnectionUI(); controlReconnectTimer = setTimeout(connectControlSocket, 3000); });
-      }
-      function handleVideoMessage(payload) {
-        switch (payload.type) {
-          case "frame":
-            if (typeof payload.frame === "string") {
-              elements.cameraImage.src = payload.frame.startsWith("data:") ? payload.frame : `data:image/jpeg;base64,${payload.frame}`;
-            }
-            break;
-          case "detections":
-            processDetections(Array.isArray(payload.detections) ? payload.detections : []);
-            break;
-          case "metrics":
-            state.fps = Number(payload.fps);
-            state.latency = Number(payload.inference_latency_ms);
-            elements.fpsValue.textContent = Number.isFinite(state.fps) ? state.fps.toFixed(1) : "—";
-            elements.latencyValue.textContent = Number.isFinite(state.latency) ? `${state.latency.toFixed(1)} ms` : "— ms";
-            const now = formatTime(new Date().toISOString());
-            state.perfLabels.push(now);
-            state.fpsHistory.push(Number.isFinite(state.fps) ? state.fps : 0);
-            state.latencyHistory.push(Number.isFinite(state.latency) ? state.latency : 0);
-            state.cpuHistory.push(Number.isFinite(payload.cpu_percent) ? payload.cpu_percent : 0);
-            state.memHistory.push(Number.isFinite(payload.memory_percent) ? payload.memory_percent : 0);
-            if (state.perfLabels.length > 60) {
-              state.perfLabels.shift();
-              state.fpsHistory.shift();
-              state.latencyHistory.shift();
-              state.cpuHistory.shift();
-              state.memHistory.shift();
-            }
-            updatePerfCharts();
-            break;
-          case "status":
-            handleStatus(payload.status, payload.message);
-            break;
-        }
-      }
-      function handleControlMessage(payload) {
-        if (payload.type === "status") { handleStatus(payload.status, payload.message); return; }
-        if (payload.type === "statistics" && payload.statistics) { applyStatistics(payload.statistics); return; }
-        if (payload.type === "error") { showToast(payload.message || "Unknown control error (Unbekannter Steuerungsfehler)", "error"); return; }
-        if (payload.type === "response" && payload.success === false) { showToast(payload.message || "Command failed (Befehl fehlgeschlagen)", "error"); }
-      }
-      function handleStatus(status, message) {
-        const lower = String(status || "").toLowerCase();
-        const running = ["running", "streaming", "active"].includes(lower);
-        const idle = ["idle", "stopped", "ready"].includes(lower);
-        const errorState = ["error", "failed"].includes(lower);
-        const initializing = ["initializing", "loading"].includes(lower);
-        const paused = ["paused"].includes(lower);
-        if (running) setStreaming(true, message || "Streaming active");
-        if (idle) setStreaming(false, message || "System ready");
-        elements.cameraStatusLabel.textContent = message || (running ? "Streaming active" : "System ready");
-        elements.cameraState.textContent = message || (running ? "Waiting for camera frame…" : "Waiting for stream…");
-        if (errorState) {
-          showToast(message || "System error (Systemfehler)", "error");
-          if (state.streaming) setStreaming(false, message || "System error (Systemfehler)");
-        }
-        if (initializing) {
-          elements.cameraStatusLabel.textContent = message || "Initializing (Initialisiere)";
-          elements.cameraState.textContent = message || "Initializing… (Initialisiere…)";
-        }
-      }
-      function processDetections(items) {
-        const detections = items.map(normalizeDetection);
-        state.latestDetections = detections;
-        elements.detectionCountValue.textContent = String(detections.length);
-        if (detections.length) {
-          const average = detections.reduce((sum, item) => sum + item.confidence, 0) / detections.length;
-          elements.liveConfidenceValue.textContent = `${Math.round(average * 100)} %`;
-        } else {
-          elements.liveConfidenceValue.textContent = "— %";
-        }
-        if (!detections.length) { drawBoundingBoxes([]); return; }
-        detections.forEach(detection => {
-          state.history.unshift(detection);
-          state.history = state.history.slice(0, 50);
-          state.classCounts[detection.className] += 1;
-          state.totalDetections += 1;
-          state.confidenceSum += detection.confidence;
-          state.confidenceSamples += 1;
-        });
-        recordTrendPoint();
-        renderRecent();
-        renderSummary();
-        scheduleChartUpdate();
-        drawBoundingBoxes(detections);
-        clearTimeout(boxClearTimer);
-        boxClearTimer = setTimeout(() => drawBoundingBoxes([]), 700);
-      }
-      function recordTrendPoint() {
-        const time = formatTime(new Date().toISOString());
-        const lastLabel = state.trendLabels[state.trendLabels.length - 1];
-        if (lastLabel === time) {
-          CLASSES.forEach(name => { state.trendValues[name][state.trendValues[name].length - 1] = state.classCounts[name]; });
-          return;
-        }
-        state.trendLabels.push(time);
-        CLASSES.forEach(name => { state.trendValues[name].push(state.classCounts[name]); });
-        if (state.trendLabels.length > 36) {
-          state.trendLabels.shift();
-          CLASSES.forEach(name => state.trendValues[name].shift());
-        }
-      }
-      function scheduleChartUpdate() {
-        if (state.chartUpdatePending) return;
-        const elapsed = performance.now() - state.lastChartUpdate;
-        const delay = Math.max(0, 250 - elapsed);
-        state.chartUpdatePending = true;
-        setTimeout(() => { state.chartUpdatePending = false; state.lastChartUpdate = performance.now(); updateCharts(); }, delay);
-      }
-      function updateCharts() {
-        const values = CLASSES.map(name => state.classCounts[name]);
-        const total = values.reduce((sum, value) => sum + value, 0);
-        distributionChart.data.datasets[0].data = values;
-        distributionChart.update("none");
-        trendChart.data.labels = [...state.trendLabels];
-        trendChart.data.datasets.forEach((dataset, index) => { dataset.data = [...state.trendValues[CLASSES[index]]]; });
-        trendChart.update("none");
-        const sorted = CLASSES.map(name => ({ name, count: state.classCounts[name] })).sort((a, b) => b.count - a.count);
-        breakdownChart.data.labels = sorted.map(item => CLASS_LABELS[item.name]);
-        breakdownChart.data.datasets[0].data = sorted.map(item => item.count);
-        breakdownChart.data.datasets[0].backgroundColor = sorted.map(item => CLASS_COLORS[item.name]);
-        breakdownChart.update("none");
-        elements.distributionTotal.textContent = `${total} ${total === 1 ? "Object" : "Objects"}`;
-        elements.distributionEmpty.classList.toggle("visible", total === 0);
-        elements.trendEmpty.classList.toggle("visible", state.trendLabels.length === 0);
-        elements.breakdownEmpty.classList.toggle("visible", total === 0);
-        renderLegend();
-      }
-      function renderLegend() {
-        elements.classLegend.innerHTML = CLASSES.map(name => `
-          <div class="legend-item">
-            <span class="legend-swatch" style="background:${CLASS_COLORS[name]}"></span>
-            <span class="legend-name">${CLASS_LABELS[name]}</span>
-            <span class="legend-count">${state.classCounts[name]}</span>
-          </div>
-        `).join("");
-      }
-      function renderRecent() {
-        const items = state.history.slice(0, 12);
-        elements.recentCount.textContent = `${state.history.length} Entries`;
-        if (!items.length) {
-          elements.recentList.innerHTML = '<div class="empty-state">No detections yet.<br />Waiting for model data.</div>';
-          return;
-        }
-        elements.recentList.innerHTML = items.map(detection => `
-          <div class="recent-row">
-            <span class="class-marker" style="background:${CLASS_COLORS[detection.className]}"></span>
-            <span class="class-name">${CLASS_LABELS[detection.className]}</span>
-            <span class="confidence">${Math.round(detection.confidence * 100)} %</span>
-            <span class="timestamp">${formatTime(detection.timestamp)}</span>
-          </div>
-        `).join("");
-      }
-      function updatePerfCharts() {
-        const labels = [...state.perfLabels];
-        const hasData = labels.length > 0;
-        elements.perfEmpty.classList.toggle("visible", !hasData);
-        elements.sysEmpty.classList.toggle("visible", !hasData);
-        perfChart.data.labels = labels;
-        perfChart.data.datasets[0].data = [...state.fpsHistory];
-        perfChart.data.datasets[1].data = [...state.latencyHistory];
-        perfChart.update("none");
-        sysChart.data.labels = labels;
-        sysChart.data.datasets[0].data = [...state.cpuHistory];
-        sysChart.data.datasets[1].data = [...state.memHistory];
-        sysChart.update("none");
-      }
-      function renderSummary() {
-        elements.summaryTotal.textContent = String(state.totalDetections);
-        elements.summaryDuration.textContent = formatDuration(currentSessionMs());
-        if (state.totalDetections > 0) {
-          const topClass = Object.entries(state.classCounts).sort((a, b) => b[1] - a[1])[0];
-          elements.summaryTopClass.textContent = topClass[1] > 0 ? CLASS_LABELS[topClass[0]] : "—";
-          const avgConfidence = state.confidenceSamples > 0 ? Math.round((state.confidenceSum / state.confidenceSamples) * 100) : 0;
-          elements.summaryConfidence.innerHTML = state.confidenceSamples > 0
-            ? `${avgConfidence} <span class="summary-unit">%</span>`
-            : `— <span class="summary-unit">%</span>`;
-        } else {
-          elements.summaryTopClass.textContent = "—";
-          elements.summaryConfidence.innerHTML = `— <span class="summary-unit">%</span>`;
-        }
-      }
-      function applyStatistics(statistics) {
-        if (statistics.total_detections !== undefined) state.totalDetections = Number(statistics.total_detections) || 0;
-        if (statistics.average_confidence !== undefined) state.backendAverageConfidence = Number(statistics.average_confidence) || null;
-        if (statistics.class_counts && typeof statistics.class_counts === "object") {
-          CLASSES.forEach(name => { if (statistics.class_counts[name] !== undefined) state.classCounts[name] = Number(statistics.class_counts[name]) || 0; });
-        }
-        renderSummary();
-        scheduleChartUpdate();
-      }
-      function drawBoundingBoxes(detections) {
-        const canvas = elements.detectionCanvas;
-        const stage = elements.cameraStage;
-        const ctx = canvas.getContext("2d");
-        canvas.width = stage.clientWidth;
-        canvas.height = stage.clientHeight;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        if (!detections.length || !state.frameLoaded) return;
-        const img = elements.cameraImage;
-        const imgRect = img.getBoundingClientRect();
-        const stageRect = stage.getBoundingClientRect();
-        const offsetX = imgRect.left - stageRect.left;
-        const offsetY = imgRect.top - stageRect.top;
-        const scaleX = imgRect.width / (img.naturalWidth || imgRect.width);
-        const scaleY = imgRect.height / (img.naturalHeight || imgRect.height);
-        detections.forEach(detection => {
-          if (!detection.bbox || detection.bbox.length < 4) return;
-          const [x1, y1, x2, y2] = detection.bbox;
-          const sx = offsetX + x1 * scaleX;
-          const sy = offsetY + y1 * scaleY;
-          const sw = (x2 - x1) * scaleX;
-          const sh = (y2 - y1) * scaleY;
-          const color = CLASS_COLORS[detection.className] || "#ffffff";
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(sx, sy, sw, sh);
-          const label = `${CLASS_LABELS[detection.className]} ${Math.round(detection.confidence * 100)}%`;
-          ctx.font = "600 10px 'IBM Plex Mono', monospace";
-          const textWidth = ctx.measureText(label).width;
-          const labelHeight = 18;
-          const labelY = Math.max(0, sy - labelHeight);
-          const textY = labelY + 13;
-          ctx.fillStyle = color;
-          ctx.fillRect(sx, labelY, textWidth + 10, labelHeight);
-          ctx.fillStyle = "#ffffff";
-          ctx.fillText(label, sx + 5, textY);
-        });
-      }
-      function clearBoundingBoxes() {
-        const canvas = elements.detectionCanvas;
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      function resetSessionStats() {
-        state.history = [];
-        state.classCounts = Object.fromEntries(CLASSES.map(name => [name, 0]));
-        state.totalDetections = 0;
-        state.confidenceSum = 0;
-        state.confidenceSamples = 0;
-        state.trendLabels = [];
-        state.trendValues = Object.fromEntries(CLASSES.map(name => [name, []]));
-        state.accumulatedSessionMs = 0;
-        state.sessionStartedAt = null;
-        state.perfLabels = [];
-        state.fpsHistory = [];
-        state.latencyHistory = [];
-        state.cpuHistory = [];
-        state.memHistory = [];
-      }
-      function startStream() {
-        if (state.streaming || state.busy) return;
-        resetSessionStats();
-        setBusy(true);
-        fetchJSON("/api/stream/start", { method: "POST" })
-          .then(data => { showToast(data.message || "Stream started", "success"); handleStatus("running", "Stream started"); })
-          .catch(() => {})
-          .finally(() => setBusy(false));
-      }
-      function stopStream() {
-        if (!state.streaming || state.busy) return;
-        setBusy(true);
-        fetchJSON("/api/stream/stop", { method: "POST" })
-          .then(data => { showToast(data.message || "Stream stopped", "success"); handleStatus("stopped", "Stream stopped"); })
-          .catch(() => {})
-          .finally(() => setBusy(false));
-      }
-      function switchPage(pageName) {
-        elements.navButtons.forEach(button => { button.classList.toggle("active", button.dataset.page === pageName); });
-        elements.pages.forEach(page => { page.classList.toggle("active", page.id === `${pageName}Page`); });
-      }
-      elements.navButtons.forEach(button => { button.addEventListener("click", () => switchPage(button.dataset.page)); });
-      elements.startButton.addEventListener("click", startStream);
-      elements.stopButton.addEventListener("click", stopStream);
-      let sessionTimer = null;
-      function startSessionTimer() {
-        if (sessionTimer) return;
-        sessionTimer = setInterval(() => { if (state.streaming) { elements.summaryDuration.textContent = formatDuration(currentSessionMs()); } }, 1000);
-      }
-      elements.cameraImage.addEventListener("load", () => {
-        state.frameLoaded = true;
-        elements.cameraImage.classList.add("visible");
-        elements.cameraPlaceholder.style.display = "none";
-        if (state.latestDetections.length) { drawBoundingBoxes(state.latestDetections); }
-      });
-      // Settings — sliders
-      const sliders = [
-        { slider: document.getElementById("modelConf"), label: document.getElementById("modelConfVal") },
-        { slider: document.getElementById("modelReject"), label: document.getElementById("modelRejectVal") },
-        { slider: document.getElementById("modelIou"), label: document.getElementById("modelIouVal") }
-      ];
-      sliders.forEach(({ slider, label }) => {
-        if (slider && label) {
-          const update = () => { label.textContent = Number(slider.value).toFixed(2); };
-          slider.addEventListener("input", update);
-          update();
-        }
-      });
-
-      // Settings — reset buttons restore defaults
-      const cameraResetDefaults = { index: 0, fps: 30, res: "640x360", autofocus: false, autoExposure: true };
-      const modelResetDefaults  = { conf: 0.5, reject: 0.55, iou: 0.45, tracking: true, latency: 50 };
-
-      document.getElementById("cameraSettingsForm")?.addEventListener("reset", () => {
-        setTimeout(() => {
-          document.getElementById("cameraIndex").value = cameraResetDefaults.index;
-          document.getElementById("cameraFps").value = cameraResetDefaults.fps;
-          const radio = document.querySelector(`input[name="cameraRes"][value="${cameraResetDefaults.res}"]`);
-          if (radio) radio.checked = true;
-          document.getElementById("cameraAutofocus").checked = cameraResetDefaults.autofocus;
-          document.getElementById("cameraAutoExposure").checked = cameraResetDefaults.autoExposure;
-        }, 0);
-      });
-
-      document.getElementById("modelSettingsForm")?.addEventListener("reset", () => {
-        setTimeout(() => {
-          const mc = document.getElementById("modelConf");
-          const mr = document.getElementById("modelReject");
-          const mi = document.getElementById("modelIou");
-          if (mc) { mc.value = modelResetDefaults.conf; document.getElementById("modelConfVal").textContent = modelResetDefaults.conf.toFixed(2); }
-          if (mr) { mr.value = modelResetDefaults.reject; document.getElementById("modelRejectVal").textContent = modelResetDefaults.reject.toFixed(2); }
-          if (mi) { mi.value = modelResetDefaults.iou; document.getElementById("modelIouVal").textContent = modelResetDefaults.iou.toFixed(2); }
-          const tracking = document.getElementById("modelTracking");
-          if (tracking) tracking.checked = modelResetDefaults.tracking;
-          const latency = document.getElementById("modelLatency");
-          if (latency) latency.value = modelResetDefaults.latency;
-        }, 0);
-      });
-
-
-      function loadModelOptions() {
-        const select = document.getElementById("modelSelect");
-        if (!select) return;
-        fetchJSON("/api/models", {}, true)
-          .then(data => {
-            if (data.models && Array.isArray(data.models) && data.models.length > 0) {
-              select.innerHTML = data.models.map(model => `
-                <option value="${model.name}" ${model.recommended ? 'selected' : ''}>
-                  ${model.label} (${model.size_mb} MB) ${model.recommended ? '\u2605 Recommended (Empfohlen)' : ''}
-                </option>
-              `).join("");
-            }
-          })
-          .catch(() => {});
-      }
-
-      const cameraForm = document.getElementById("cameraSettingsForm");
-      if (cameraForm) {
-        cameraForm.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const resVal = document.querySelector('input[name="cameraRes"]:checked')?.value || "640x360";
-          const resolution = resVal.split("x");
-          const config = {
-            index: parseInt(document.getElementById("cameraIndex").value, 10),
-            width: parseInt(resolution[0], 10),
-            height: parseInt(resolution[1], 10),
-            fps: parseInt(document.getElementById("cameraFps").value, 10),
-            autofocus: document.getElementById("cameraAutofocus").checked,
-            auto_exposure: document.getElementById("cameraAutoExposure").checked
-          };
-          const sent = sendControl({ command: "set_camera_config", params: config });
-          if (!sent) {
-            fetchJSON("/api/camera/initialize", { method: "POST", body: JSON.stringify(config) })
-              .then(data => { showToast(data.message || "Camera configured", "success"); })
-              .catch(() => {});
-          } else {
-            showToast("Camera config submitted", "success");
-          }
-        });
-      }
-
-      const modelForm = document.getElementById("modelSettingsForm");
-      if (modelForm) {
-        modelForm.addEventListener("submit", (e) => {
-          e.preventDefault();
-          const config = {
-            name: document.getElementById("modelSelect").value,
-            conf_threshold: parseFloat(document.getElementById("modelConf").value),
-            reject_threshold: parseFloat(document.getElementById("modelReject").value),
-            iou_threshold: parseFloat(document.getElementById("modelIou").value),
-            enable_tracking: document.getElementById("modelTracking").checked,
-            target_latency_ms: parseInt(document.getElementById("modelLatency").value, 10)
-          };
-          const sent = sendControl({ command: "load_model", params: config });
-          if (!sent) {
-            fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(config) })
-              .then(data => { showToast(data.message || "Model loaded", "success"); })
-              .catch(() => {});
-          } else {
-            showToast("Model config submitted", "success");
-          }
-        });
-      }
-
-      loadModelOptions();
-      renderRecent();
-      renderSummary();
-      startSessionTimer();
-      connectVideoSocket();
-      connectControlSocket();
-    })();
-  </script>
+  <script src="dashboard.js"></script>
 </body>
 </html>

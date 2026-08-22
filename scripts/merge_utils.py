@@ -1,8 +1,5 @@
-"""Shared utilities for MIRA dataset merging.
+# Shared utilities for MIRA dataset merging.
 
-Provides generic remapping, stats printing, and YAML writing used by
-merge_dataset.py and the individual merge_dataset_model*.py wrappers.
-"""
 
 import sys
 import shutil

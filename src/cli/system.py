@@ -7,9 +7,9 @@ from src.version import __version__
 from src.pipeline.registry import register_command
 
 
-@register_command("doctor", "Run comprehensive environment and project health check")
+@register_command("doctor", "Check the project environment and configuration")
 def cmd_doctor(args):
-    """Run a comprehensive health check of the MIRA environment."""
+    """Check configuration, hardware, dependencies, models, and datasets."""
     from src.config import validate_config
     from src.deploy import check_environment, detect_hardware, suggest_model
     from src.pipeline.dataset import DatasetRegistry

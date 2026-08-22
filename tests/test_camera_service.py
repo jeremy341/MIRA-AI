@@ -55,7 +55,6 @@ async def test_start_streaming_processes_a_frame_without_runtime_state_errors():
 @pytest.mark.asyncio
 async def test_status_callback_failure_does_not_change_camera_initialization_result():
     camera = MagicMock()
-    camera.isOpened.return_value = True
     service = CameraService(loop=asyncio.get_running_loop())
 
     def broken_callback(_status, _message):
@@ -63,10 +62,7 @@ async def test_status_callback_failure_does_not_change_camera_initialization_res
 
     service.on_status_change = broken_callback
 
-    with (
-        patch("camera_service.cv2.VideoCapture", return_value=camera),
-        patch("camera_service.setup_camera_properties"),
-    ):
+    with patch("camera_service.USBCamera", return_value=camera):
         result = await service.initialize_camera(CameraConfig())
 
     assert result is True
@@ -78,7 +74,6 @@ async def test_status_callback_is_scheduled_without_waiting_for_completion():
     callback_started = asyncio.Event()
     allow_callback_to_finish = asyncio.Event()
     camera = MagicMock()
-    camera.isOpened.return_value = True
     service = CameraService(loop=asyncio.get_running_loop())
 
     async def slow_callback(_status, _message):
@@ -87,15 +82,23 @@ async def test_status_callback_is_scheduled_without_waiting_for_completion():
 
     service.on_status_change = slow_callback
 
-    with (
-        patch("camera_service.cv2.VideoCapture", return_value=camera),
-        patch("camera_service.setup_camera_properties"),
-    ):
+    with patch("camera_service.USBCamera", return_value=camera):
         result = await asyncio.wait_for(service.initialize_camera(CameraConfig()), timeout=0.5)
 
     assert result is True
     await asyncio.wait_for(callback_started.wait(), timeout=0.5)
     allow_callback_to_finish.set()
+
+
+@pytest.mark.asyncio
+async def test_failed_camera_initialization_releases_the_capture():
+    service = CameraService()
+
+    with patch("camera_service.USBCamera", side_effect=RuntimeError("camera unavailable")):
+        result = await service.initialize_camera(CameraConfig())
+
+    assert result is False
+    assert service.status == SystemStatus.ERROR
 
 
 @pytest.mark.asyncio
@@ -118,7 +121,7 @@ async def test_stop_waits_for_streaming_read_before_releasing_camera():
     assert await service.start_streaming() is True
     assert await asyncio.to_thread(read_started.wait, 1)
 
-    stop_task = asyncio.create_task(service.stop())
+    stop_task = asyncio.create_task(service.shutdown())
     await asyncio.sleep(0.05)
     camera.release.assert_not_called()
 
@@ -149,7 +152,7 @@ async def test_stop_is_bounded_when_camera_read_does_not_return(caplog):
     assert await asyncio.to_thread(read_started.wait, 1)
     streaming_thread = service._streaming_thread
 
-    stop_task = asyncio.create_task(service.stop())
+    stop_task = asyncio.create_task(service.shutdown())
     try:
         await asyncio.sleep(0.2)
         assert stop_task.done()

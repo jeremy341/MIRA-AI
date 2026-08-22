@@ -53,20 +53,22 @@ class TestOnDetections:
         assert handler.latest_detections == [det]
 
     @pytest.mark.asyncio
-    async def test_queues_message_without_loop(self, handler):
+    async def test_stores_latest_detections_without_separate_frame_event(self, handler):
         det = Detection(class_name=WasteClass.METAL, confidence=0.8, bbox=[5, 5, 20, 20], track_id=1)
         await handler._on_detections([det])
-        msg = handler._broadcast_queue.get_nowait()
-        assert msg["type"] == "detections"
-        assert msg["count"] == 1
-        assert msg["detections"][0]["class"] == "metal"
-        assert msg["detections"][0]["track_id"] == 1
+        assert handler.latest_detections == [det]
+        assert handler._broadcast_queue.empty()
 
     @pytest.mark.asyncio
-    async def test_serializes_timestamp(self, handler):
+    async def test_detections_are_attached_to_frame_events(self, handler):
         det = Detection(class_name=WasteClass.PAPER, confidence=0.7, bbox=[0, 0, 5, 5])
-        await handler._on_detections([det])
+        frame = np.zeros((8, 8, 3), dtype=np.uint8)
+        with patch("cv2.imencode", return_value=(True, np.array([1, 2, 3], dtype=np.uint8))):
+            handler.update_frame(frame, [det])
         msg = handler._broadcast_queue.get_nowait()
+        assert msg["type"] == "frame"
+        assert msg["frame_id"] == 1
+        assert msg["detections"][0]["class"] == "paper"
         ts = msg["detections"][0]["timestamp"]
         datetime.fromisoformat(ts)  # Should not raise
 
@@ -137,7 +139,7 @@ class TestUpdateFrame:
     def test_updates_frame_buffer(self, handler):
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
         handler.update_frame(frame)
-        assert handler.frame_buffer is frame
+        assert np.array_equal(handler.frame_buffer, frame)
 
     def test_ignores_none_frame(self, handler):
         handler.update_frame(None)
@@ -152,6 +154,18 @@ class TestUpdateFrame:
         assert msg["type"] == "frame"
         assert "frame" in msg
         assert "timestamp" in msg
+        assert msg["detections"] == []
+
+    @patch("cv2.imencode")
+    def test_frame_queue_is_bounded(self, mock_imencode, handler):
+        mock_imencode.return_value = (True, np.array([1, 2, 3], dtype=np.uint8))
+        frame = np.zeros((8, 8, 3), dtype=np.uint8)
+
+        for _ in range(handler._broadcast_queue.maxsize + 10):
+            handler.update_frame(frame)
+
+        assert handler._broadcast_queue.qsize() == handler._broadcast_queue.maxsize
+        assert all(item["type"] == "frame" for item in list(handler._broadcast_queue._queue))
 
 
 class TestSendFrame:

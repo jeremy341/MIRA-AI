@@ -2,6 +2,11 @@ const menuButton = document.querySelector(".menu-button");
 const siteNav = document.querySelector(".site-nav");
 
 if (menuButton && siteNav) {
+  const closeMenu = () => {
+    siteNav.classList.remove("is-open");
+    menuButton.setAttribute("aria-expanded", "false");
+  };
+
   menuButton.addEventListener("click", () => {
     const isOpen = siteNav.classList.toggle("is-open");
     menuButton.setAttribute("aria-expanded", String(isOpen));
@@ -9,8 +14,14 @@ if (menuButton && siteNav) {
 
   siteNav.addEventListener("click", (event) => {
     if (event.target.closest("a")) {
-      siteNav.classList.remove("is-open");
-      menuButton.setAttribute("aria-expanded", "false");
+      closeMenu();
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && siteNav.classList.contains("is-open")) {
+      closeMenu();
+      menuButton.focus();
     }
   });
 }
@@ -109,6 +120,7 @@ if (docSections.length && docsLinks.length && "IntersectionObserver" in window) 
 }
 
 if (docSections.length > 1) {
+  // Keep section navigation next to the section it describes on long pages.
   docSections.forEach((section, index) => {
     const sectionNav = document.createElement("nav");
     sectionNav.className = "doc-section-nav";

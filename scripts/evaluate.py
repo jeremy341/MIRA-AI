@@ -1,10 +1,4 @@
-"""Comprehensive model evaluation script for MIRA detection models.
-
-Usage:
-    python scripts/evaluate.py --model mira_exp014.pt
-    python scripts/evaluate.py --model mira_exp013.pt --data datasets/roboflow_raw/dataset.yaml
-    python scripts/evaluate.py --model mira_exp014.pt --conf 0.3 --output results/eval_exp014/
-"""
+# Comprehensive model evaluation script for MIRA detection models
 
 from __future__ import annotations
 
@@ -37,9 +31,7 @@ from pipeline.models import DetectionModel, ModelRegistry
 
 logger = logging.getLogger("evaluate")
 
-# ---------------------------------------------------------------------------
 # Plotting style shared by the evaluation outputs.
-# ---------------------------------------------------------------------------
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "Arial", "Helvetica"]
 plt.rcParams["axes.edgecolor"] = "#cccccc"
@@ -52,9 +44,7 @@ plt.rcParams["grid.linewidth"] = 0.5
 PALETTE = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
 
 
-# ---------------------------------------------------------------------------
 # CLI
-# ---------------------------------------------------------------------------
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Evaluate a MIRA detection model on a YOLO validation set",
@@ -86,9 +76,7 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-# ---------------------------------------------------------------------------
 # Auto-discover default dataset
-# ---------------------------------------------------------------------------
 def discover_default_dataset() -> Path | None:
     """Return the first dataset YAML found in datasets/ with a val split."""
     for yaml_path in sorted((ROOT_DIR / "datasets").rglob("dataset.yaml")):
@@ -98,9 +86,7 @@ def discover_default_dataset() -> Path | None:
     return None
 
 
-# ---------------------------------------------------------------------------
 # Confusion matrix
-# ---------------------------------------------------------------------------
 def _iou(box_a: list[float], box_b: list[float]) -> float:
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
@@ -187,9 +173,7 @@ def plot_confusion_matrix(matrix: np.ndarray, output_dir: Path) -> None:
     logger.info("Confusion matrix saved to %s", path)
 
 
-# ---------------------------------------------------------------------------
 # Per-class PR curve
-# ---------------------------------------------------------------------------
 def compute_per_class_ap(
     model: DetectionModel,
     samples: list[tuple[Path, list[dict]]],
@@ -310,9 +294,7 @@ def plot_pr_curves(
     return per_class_ap
 
 
-# ---------------------------------------------------------------------------
 # Per-class metrics bar chart
-# ---------------------------------------------------------------------------
 def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) -> None:
     """Bar chart of per-class precision, recall, F1."""
     names = list(per_class.keys())
@@ -343,9 +325,7 @@ def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) 
     logger.info("Class metrics chart saved to %s", path)
 
 
-# ---------------------------------------------------------------------------
 # Main
-# ---------------------------------------------------------------------------
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,

@@ -1,9 +1,6 @@
-"""Generate Docker training infrastructure from experiment config.
+# Generate Docker training infrastructure from experiment config.
 
-Usage:
-    python scripts/generate_docker.py --config experiments/exp014_yolo11n_multidataset.yaml
-    python scripts/generate_docker.py --config experiments/exp014_yolo11n_multidataset.yaml --output docker/
-"""
+
 
 from __future__ import annotations
 

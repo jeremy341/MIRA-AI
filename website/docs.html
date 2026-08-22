@@ -118,7 +118,7 @@ inference:
         <h3>Key modules</h3>
         <div class="reference-grid">
           <div><code>src/inference_engine.py</code><p>Model loading, frame skipping, latency history, and cleanup.</p></div>
-          <div><code>src/dashboard/backend/</code><p>FastAPI routes, camera orchestration, and WebSocket transport.</p></div>
+          <div><code>src/dashboard/backend/</code><p>FastAPI routes, camera control, and WebSocket transport.</p></div>
           <div><code>src/pipeline/</code><p>Dataset handling, strategies, validation, training, and benchmarking.</p></div>
           <div><code>src/cli/</code><p>Plugin-registered commands for local and cloud workflows.</p></div>
         </div>
@@ -134,7 +134,7 @@ inference:
         <h3>Confidence tiers</h3>
         <div class="tier-grid">
           <div><strong>Below confidence</strong><span>Ignored</span><p>Detections below <code>--conf</code> are not drawn.</p></div>
-          <div><strong>Uncertain</strong><span>Visible, not counted</span><p>Detections between confidence and reject thresholds are labelled <code>unsicher</code>.</p></div>
+          <div><strong>Uncertain</strong><span>Visible, not counted</span><p>Detections between the confidence and reject thresholds are labelled <code>uncertain</code>.</p></div>
           <div><strong>Confident</strong><span>Visible and counted</span><p>Detections above the reject threshold contribute to inventory.</p></div>
         </div>
       </article>

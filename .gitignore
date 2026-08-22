@@ -50,6 +50,7 @@ results/**/*.tflite
 # --- JuFo LaTeX (local build, not tracked) ---
 jufo/latex/
 jufo/Stardance_Progress_Report.md
+jufo/
 
 # --- Large archives ---
 *.zip

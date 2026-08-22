@@ -1,5 +1,4 @@
 """Side-by-side comparison of multiple detection models.
-
 Loads 2+ YOLO models, runs them on the same validation dataset, and
 produces a comparison table (markdown) plus a bar chart saved to results/.
 """
