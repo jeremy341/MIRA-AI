@@ -40,7 +40,7 @@
       </div>
     </section>
 
-    <section class="record-story shell">
+    <section id="record" class="record-story shell">
       <div class="record-story-intro">
         <h2>Three changes shaped the project.</h2>
         <p>The experiment numbers matter because each group answered a different question. I started by learning the classification problem, then changed the task, and finally changed the data.</p>
@@ -91,18 +91,29 @@
 
     <section class="record-chart-section">
       <div class="shell">
-        <div class="record-section-heading">
-          <h2>The result did not improve in a straight line.</h2>
-          <p>The chart shows why I stopped treating the model architecture as the only variable.</p>
+        <div class="record-chart-intro">
+          <h2>The data changed the result more than the model did.</h2>
         </div>
-        <figure class="record-chart-panel">
-          <div class="chart-heading">
-            <div><span>Detection experiments</span><h3>mAP50 progression</h3></div>
-            <strong>EXP-019 · 90.58%</strong>
+        <div class="record-chart-layout">
+          <div class="record-chart-summary">
+            <p>EXP-018 and EXP-019 reached about 90.6% mAP50 after I removed inconsistent examples and rebuilt the detector around a cleaner dataset.</p>
+            <dl class="record-chart-metrics">
+              <div><dt>mAP50-95</dt><dd>82.15%</dd></div>
+              <div><dt>Precision</dt><dd>87.2%</dd></div>
+              <div><dt>Recall</dt><dd>84.6%</dd></div>
+              <div><dt>Classes</dt><dd>5</dd></div>
+            </dl>
+            <a class="record-chart-link" href="#record">See the experiment record <span aria-hidden="true">→</span></a>
           </div>
-          <div class="line-chart" data-chart="detectors" role="group" aria-label="Line chart of mAP50 across all detector experiments"></div>
-          <figcaption><strong>What I take from it.</strong> The large improvement arrived after the dataset was cleaned and balanced.</figcaption>
-        </figure>
+          <figure class="record-chart-panel">
+            <div class="chart-heading">
+              <div><span>Detection experiments</span><h3>mAP50 progression</h3></div>
+              <strong>EXP-019 · 90.58%</strong>
+            </div>
+            <div class="line-chart" data-chart="detectors" role="group" aria-label="Line chart of mAP50 across all detector experiments"></div>
+            <figcaption>Current through EXP-019. Values are generated from the repository experiment log.</figcaption>
+          </figure>
+        </div>
       </div>
     </section>
 
