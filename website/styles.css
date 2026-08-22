@@ -2064,7 +2064,6 @@ h3 {
 }
 
 
-/* Homepage refinement */
 .home-page .section-heading p {
   font-size: 1.15rem;
   line-height: 1.6;
@@ -2083,7 +2082,6 @@ h3 {
   margin-right: 12px;
 }
 
-/* Research record layout */
 .record-hero {
   padding-block: clamp(82px, 11vw, 140px) clamp(64px, 8vw, 100px);
 }
@@ -2368,7 +2366,6 @@ h3 {
   text-transform: uppercase;
 }
 
-/* Minimum readable UI type */
 .docs-search-wrap label,
 .docs-nav p,
 .docs-toc p,
@@ -2430,7 +2427,6 @@ h3 {
   color: var(--accent);
 }
 
-/* Docs page layout pass */
 .docs-body .docs-layout {
   grid-template-columns: 250px minmax(0, 900px);
   gap: clamp(42px, 6vw, 72px);
@@ -2671,7 +2667,6 @@ h3 {
   line-height: 1.55;
 }
 
-/* Readability and full-bleed finishing pass */
 .closing {
   width: 100%;
   max-width: none;
@@ -2713,7 +2708,7 @@ h3 {
 .record-limitations-list p,
 .docs-body .doc-section > p,
 .docs-body .doc-section li {
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .process p,
@@ -2722,7 +2717,7 @@ h3 {
 .record-detail-grid dd,
 .record-metrics dd,
 .closing-links strong {
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .hero-visual figcaption,
