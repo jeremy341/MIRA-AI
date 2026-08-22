@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 from src.model_picker import _getch, pick_model
 
 
-# ── _getch Windows tests ──────────────────────────────────────────────
 
 
 def _setup_win_mock(getch_return=None, getch_side_effect=None, kbhit_return=False):
@@ -77,7 +76,6 @@ def test_getch_win_function_key():
             assert _getch() == ""
 
 
-# ── _getch Unix tests ─────────────────────────────────────────────────
 
 
 def test_getch_unix_enter():
@@ -206,7 +204,6 @@ def test_getch_unix_regular_char():
                 assert _getch() == "a"
 
 
-# ── pick_model tests ──────────────────────────────────────────────────
 
 
 def test_pick_model_empty_items():

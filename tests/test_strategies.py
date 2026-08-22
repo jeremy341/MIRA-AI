@@ -21,7 +21,6 @@ from src.pipeline.strategies import (
 )
 
 
-# ── TrainConfig tests ────────────────────────────────────────────────
 
 
 def test_train_config_defaults():
@@ -134,7 +133,6 @@ export:
     assert "format" not in train_kwargs
 
 
-# ── TrainResult tests ────────────────────────────────────────────────
 
 
 def test_train_result_creation():
@@ -150,7 +148,6 @@ def test_train_result_creation():
     assert result.metrics["map50"] == 0.5
 
 
-# ── Strategy registry tests ──────────────────────────────────────────
 
 
 def test_get_strategy_detection():

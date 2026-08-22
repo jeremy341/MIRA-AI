@@ -9,7 +9,6 @@ from pathlib import Path
 from src.pipeline.validators import validate_yolo_dataset, dataset_summary
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
 
 
 def _make_yolo_dataset(tmp_path: Path, train_labels: list[str], val_labels: list[str] | None = None):
@@ -27,7 +26,6 @@ def _make_yolo_dataset(tmp_path: Path, train_labels: list[str], val_labels: list
     return tmp_path
 
 
-# ── validate_yolo_dataset tests ──────────────────────────────────────
 
 
 def test_valid_dataset():
@@ -123,7 +121,6 @@ def test_empty_dataset():
         assert any("0 images" in w for w in result.warnings)
 
 
-# ── dataset_summary tests ────────────────────────────────────────────
 
 
 def test_dataset_summary():

@@ -726,7 +726,6 @@
         elements.cameraPlaceholder.style.display = "none";
         drawBoundingBoxes(state.latestDetections);
       });
-      // Settings — sliders
       const sliders = [
         { slider: document.getElementById("modelConf"), label: document.getElementById("modelConfVal") },
         { slider: document.getElementById("modelReject"), label: document.getElementById("modelRejectVal") },
@@ -740,7 +739,6 @@
         }
       });
 
-      // Settings — reset buttons restore defaults
       const cameraResetDefaults = { index: 0, fps: 30, res: "640x360", autofocus: false, autoExposure: true };
       const modelResetDefaults  = { conf: 0.5, reject: 0.55, iou: 0.45, tracking: true, latency: 50 };
 

@@ -9,9 +9,6 @@ from src.config import CAMERA_DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU
 from src.exceptions import ConfigError
 from src.inference_engine import InferenceEngine
 
-# Fixtures
-
-
 @pytest.fixture
 def mock_yolo():
     """Mock ultralytics.YOLO so no real model loading occurs."""

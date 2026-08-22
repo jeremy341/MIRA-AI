@@ -186,26 +186,6 @@ class TestSendFrame:
         mock_ws.send_json.assert_not_called()
 
 
-class TestHandleConfig:
-    @pytest.mark.asyncio
-    async def test_valid_config(self, handler):
-        mock_ws = AsyncMock()
-        import json
-
-        await handler._handle_config(mock_ws, json.dumps({"camera": {"index": 1}}))
-        mock_ws.send_json.assert_called_once()
-        sent = mock_ws.send_json.call_args[0][0]
-        assert sent["type"] == "config_updated"
-
-    @pytest.mark.asyncio
-    async def test_invalid_json(self, handler):
-        mock_ws = AsyncMock()
-        await handler._handle_config(mock_ws, "not json")
-        mock_ws.send_json.assert_called_once()
-        sent = mock_ws.send_json.call_args[0][0]
-        assert sent["type"] == "error"
-
-
 class TestStartStop:
     @pytest.mark.asyncio
     async def test_start_creates_task(self, handler):

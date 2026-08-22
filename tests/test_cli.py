@@ -9,7 +9,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# ── Module-level mocks for external dependencies ──────────────────
 # These are set at import time (pytest collection) and restored
 # after the last test runs to avoid polluting other test modules.
 _SAVED_MODULES: dict[str, object] = {}
@@ -45,7 +44,6 @@ def _restore_mocks():
 # Trigger CLI module registration before any tests run
 import src.cli  # noqa: E402, F401
 
-# ── Helpers ───────────────────────────────────────────────────────
 
 
 def _build_parser(add_args_func, extra_subs_for=None):
@@ -66,7 +64,6 @@ def _parse(add_args_func, cmd_args, extra_subs_for=None):
     return parent.parse_args(["test_cmd"] + cmd_args)
 
 
-# ── 1: All 17+ registered commands are discovered ─────────────────
 
 EXPECTED_COMMANDS = {
     "train",
@@ -101,7 +98,6 @@ def test_all_commands_registered():
     assert len(found) >= 16, f"Expected >= 16 commands, got {len(found)}"
 
 
-# ── 2: Each command has help text ─────────────────────────────────
 
 
 def test_commands_have_help_text():
@@ -114,7 +110,6 @@ def test_commands_have_help_text():
         assert callable(entry.fn), f"Command '{name}' fn is not callable"
 
 
-# ── 3: Basic argument parsing per command category ────────────────
 
 
 def test_train_parsing():
@@ -235,7 +230,6 @@ def test_generate_kaggle_parsing():
     assert args.output == "out.ipynb"
 
 
-# ── 4: Missing required arguments produce errors ──────────────────
 
 
 def test_merge_missing_required():
@@ -282,7 +276,6 @@ def test_validate_missing_dataset():
         parent.parse_args(["validate"])
 
 
-# ── 5: Path traversal protection ─────────────────────────────────
 
 
 def test_resolve_safe_path_blocks_traversal():
@@ -306,7 +299,6 @@ def test_resolve_safe_path_blocks_traversal():
             resolve_safe_path("..", base_dir=base)
 
 
-# ── 6: Invalid config files produce clear error messages ──────────
 
 
 def test_trainconfig_yaml_not_found():
@@ -351,7 +343,6 @@ def test_trainconfig_minimal_yaml_uses_defaults():
         pathlib.Path(minimal).unlink(missing_ok=True)
 
 
-# ── 7: Default values from mira.yaml ──────────────────────────────
 
 
 def test_mira_yaml_defaults_in_config_module():
@@ -399,7 +390,6 @@ def test_project_config_validate_detects_errors():
     assert len(errors2) >= 3
 
 
-# ── 8: --help flag for each command ───────────────────────────────
 
 
 def test_help_flag_per_command():
@@ -430,7 +420,6 @@ def test_help_flag_per_command():
         ), f"Help for '{name}' missing expected content"
 
 
-# ── 9: --version flag ─────────────────────────────────────────────
 
 
 def test_version_flag():
@@ -445,7 +434,6 @@ def test_version_flag():
     assert __version__ == "1.0.0"
 
 
-# ── 10: Doctor returns HEALTHY status ─────────────────────────────
 
 
 def test_doctor_healthy(capsys):
@@ -457,7 +445,6 @@ def test_doctor_healthy(capsys):
     assert "HEALTHY" in out
 
 
-# ── 11: Config --validate works ───────────────────────────────────
 
 
 def test_config_validate_command(capsys):
@@ -469,7 +456,6 @@ def test_config_validate_command(capsys):
     assert "Classes:" in out
 
 
-# ── 12: Remaining commands run without crashing ───────────────────
 
 
 def test_models_command(capsys):

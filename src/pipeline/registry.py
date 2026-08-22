@@ -19,7 +19,6 @@ from ..logger import get_logger
 
 _logging = get_logger(__name__)
 
-# ── Command Registry ────────────────────────────────────────────────
 
 
 @dataclass
@@ -56,7 +55,6 @@ def get_commands() -> dict[str, CommandEntry]:
     return dict(_COMMANDS)
 
 
-# ── Model Adapter Registry ──────────────────────────────────────────
 
 
 @dataclass
