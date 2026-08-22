@@ -9,9 +9,7 @@ from src.config import CAMERA_DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU
 from src.exceptions import ConfigError
 from src.inference_engine import InferenceEngine
 
-# ---------------------------------------------------------------------------
 # Fixtures
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -48,9 +46,6 @@ def detection_dir(tmp_path):
     return det_dir
 
 
-# ===================================================================
-# 1. Constructor
-# ===================================================================
 
 
 class TestConstructor:
@@ -116,9 +111,6 @@ class TestConstructor:
                     mock_cleanup.assert_called_once()
 
 
-# ===================================================================
-# 2. Model loading
-# ===================================================================
 
 
 class TestModelLoading:
@@ -174,9 +166,6 @@ class TestModelLoading:
             assert kwargs.get("task") == "detect"
 
 
-# ===================================================================
-# 3. INT8-specific behaviour
-# ===================================================================
 
 
 class TestInt8Behavior:
@@ -214,9 +203,6 @@ class TestInt8Behavior:
             assert engine.enable_tracking is True
 
 
-# ===================================================================
-# 4. Context manager
-# ===================================================================
 
 
 class TestContextManager:
@@ -236,9 +222,6 @@ class TestContextManager:
             assert engine._released is True
 
 
-# ===================================================================
-# 5. Frame skipping
-# ===================================================================
 
 
 class TestFrameSkipping:
@@ -281,9 +264,6 @@ class TestFrameSkipping:
             assert engine.skip_frame is False
 
 
-# ===================================================================
-# 6. Latency tracking
-# ===================================================================
 
 
 class TestLatencyTracking:
@@ -306,9 +286,6 @@ class TestLatencyTracking:
             assert engine._current_fps > 0
 
 
-# ===================================================================
-# 7. Cleanup path
-# ===================================================================
 
 
 class TestCleanup:
@@ -355,9 +332,6 @@ class TestCleanup:
                 mock_warnings.warn.assert_not_called()
 
 
-# ===================================================================
-# 8. Infer routing
-# ===================================================================
 
 
 class TestInferRouting:

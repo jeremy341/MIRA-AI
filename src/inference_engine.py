@@ -79,7 +79,6 @@ class InferenceEngine:
             raise ConfigError(f"Model path escapes detection directory: {model_name}") from None
         self._load_model(imgsz)
 
-        # Initialize camera
         try:
             self.stream = USBCamera(camera_index, cam_width, cam_height)
         except Exception:

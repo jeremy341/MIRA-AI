@@ -30,7 +30,7 @@ def draw_boxes(
 
     Three confidence tiers:
         - conf_threshold > conf:        not drawn
-        - reject_threshold > conf:      yellow, labeled "unsicher"
+        - reject_threshold > conf:      yellow, labeled "uncertain"
         - conf >= reject_threshold:     green, labeled with class name
     """
     h, w = frame.shape[:2]
@@ -60,7 +60,7 @@ def draw_boxes(
             label = f"{cls_name} {conf:.2f}"
         else:
             color = (0, 200, 255)
-            label = f"unsicher {conf:.2f}"
+            label = f"uncertain {conf:.2f}"
 
         _draw_box(frame, x1, y1, x2, y2, color, label)
 

@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 """Build a balanced MIRA dataset without train/test leakage.
-
-Sources:
-  - dmedhi (train/validation)
-  - TACO (deterministic 70/15/15 split)
-  - Roboflow (official train/valid/test splits)
-  - SAM-labeled TrashNet (train/val — tabletop gold-standard splits)
-
-Uses TrashNet's ground-level tabletop val as the primary validation set
-and mixes TACO + Roboflow test splits for the final test set.
-
-SortWaste is EXCLUDED — its street-level 95.9% plastic distribution
-is incompatible with the tabletop robot-arm use case.
-
-The output is written to ``datasets/merged_mira_balanced`` and includes a
-manifest with source provenance for every copied sample.
+The output is written to ``datasets/merged_mira_balanced``
 """
 
 from __future__ import annotations

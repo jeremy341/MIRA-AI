@@ -1,11 +1,5 @@
-"""YOLO11n Training Script for Kaggle GPU.
+# YOLO11n Training Script for Kaggle GPU.
 
-Usage (on Kaggle):
-    py scripts/train_detector_kaggle.py
-    py scripts/train_detector_kaggle.py --dataset TACO+TrashNet+Roboflow
-    py scripts/train_detector_kaggle.py --dataset WaRP_only --epochs 200 --batch-size 16
-    py scripts/train_detector_kaggle.py --model yolo8n.pt --dataset All_TACO+TrashNet+Roboflow+WaRP
-"""
 
 import argparse
 import os
@@ -35,16 +29,10 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # ============================================================
-    # 1. INSTALL DEPENDENCIES
-    # ============================================================
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ultralytics"])
 
     from ultralytics import YOLO
 
-    # ============================================================
-    # 2. FIND DATASET
-    # ============================================================
     input_dir = os.environ.get("KAGGLE_INPUT_PATH", "/kaggle/input")
     data_root = None
 
@@ -82,9 +70,6 @@ def main():
     print(f"  Train: {len(train_imgs)} images")
     print(f"  Val:   {len(val_imgs)} images")
 
-    # ============================================================
-    # 3. WRITE dataset.yaml
-    # ============================================================
     work_dir = "/kaggle/working"
     yaml_path = Path(work_dir) / "dataset.yaml"
     yaml_content = f"""train: {data_root}/images/train
@@ -95,9 +80,6 @@ names: {CLASS_NAMES}
     yaml_path.write_text(yaml_content)
     print(f"Written: {yaml_path}")
 
-    # ============================================================
-    # 4. TRAIN
-    # ============================================================
     print(f"\nStarting training: {args.dataset} | Model: {args.model} | Epochs: {args.epochs}")
     model = YOLO(args.model)
 
@@ -137,17 +119,11 @@ names: {CLASS_NAMES}
         copy_paste=0.1,
     )
 
-    # ============================================================
-    # 5. EVALUATE
-    # ============================================================
     print("\nEvaluating...")
     metrics = model.val()
     print(f"\n  mAP50:    {metrics.box.map50:.3f}")
     print(f"  mAP50-95: {metrics.box.map:.3f}")
 
-    # ============================================================
-    # 6. EXPORT
-    # ============================================================
     print("\nExporting to TFLite INT8...")
     model.export(format="tflite", int8=True, imgsz=args.img_size)
     print("  TFLite INT8 exported")

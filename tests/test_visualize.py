@@ -111,8 +111,8 @@ def test_draw_boxes_multiple_detections(sample_frame):
     assert not np.array_equal(result, sample_frame)
 
 
-def test_draw_boxes_reject_tier_unsicher(sample_frame):
-    """Detection between conf_threshold and reject_threshold draws yellow 'unsicher'."""
+def test_draw_boxes_reject_tier_uncertain(sample_frame):
+    """Detection between the thresholds draws a yellow uncertain label."""
     from src.visualize import draw_boxes
 
     box = _make_mock_box(0.40, [10.0, 10.0, 50.0, 50.0], 0)

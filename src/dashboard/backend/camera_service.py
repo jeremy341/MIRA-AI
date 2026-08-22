@@ -5,14 +5,14 @@ Camera service managing inference pipeline
 import asyncio
 import threading
 import time
-import cv2
 from typing import Any
 from collections import deque, defaultdict
 from datetime import datetime, timedelta
 import psutil
 
 from ultralytics import YOLO
-from config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz, setup_camera_properties
+from config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz
+from src.hardware import USBCamera
 from logger import get_logger
 from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
 
@@ -26,36 +26,31 @@ class CameraService:
 
     def __init__(self, loop=None):
         self._lock = threading.Lock()
+        self._operation_lock = asyncio.Lock()
         self.status = SystemStatus.IDLE
         self.status_message = "System ready"
 
-        # Store event loop for thread-safe coroutine scheduling
         self._loop = loop
 
-        # Camera state
         self.camera = None
         self.camera_config = None
         self.is_streaming = False
         self._disconnect_count = 0
         self._streaming_thread = None
 
-        # Model state
         self.model = None
         self.model_config = None
         self.is_tflite_int8 = False
         self.img_size = 640
 
-        # Statistics
         self.detection_history = deque(maxlen=1000)
         self.class_history = defaultdict(list)
         self.metrics_history = deque(maxlen=100)
 
-        # Performance tracking
         self.latency_history = deque(maxlen=30)
         self.frame_times = deque(maxlen=30)
         self.skip_frame = False
 
-        # Callbacks for UI updates
         self.on_detection = None
         self.on_metrics = None
         self.on_status_change = None
@@ -90,76 +85,90 @@ class CameraService:
             logger.warning("Status callback failed: %s", exc)
 
     async def initialize_camera(self, config):
+        async with self._operation_lock:
+            return await self._initialize_camera(config)
+
+    async def _initialize_camera(self, config):
         """Initialize camera with configuration"""
-        if self.status == SystemStatus.RUNNING:
-            await self.stop()
+        if self.get_status_snapshot()["streaming"]:
+            self._update_status(SystemStatus.ERROR, "Stop the stream before changing camera settings")
+            return False
 
         self._update_status(SystemStatus.INITIALIZING, "Initializing camera...")
 
+        try:
+            camera = await asyncio.to_thread(self._open_camera, config)
+        except Exception as exc:
+            self._update_status(SystemStatus.ERROR, f"Camera error: {exc}")
+            return False
+
         with self._lock:
-            try:
-                self.camera = cv2.VideoCapture(config.index, cv2.CAP_DSHOW if hasattr(cv2, "CAP_DSHOW") else 0)
+            self.camera = camera
+            self.camera_config = config
 
-                if not self.camera.isOpened():
-                    raise RuntimeError(f"Failed to open camera index {config.index}")
+        self._update_status(SystemStatus.IDLE, "Camera ready")
+        return True
 
-                setup_camera_properties(self.camera, config.width, config.height, config.fps)
-
-                # Warmup camera
-                for _ in range(10):
-                    self.camera.read()
-
-                self.camera_config = config
-                self._update_status(SystemStatus.IDLE, "Camera ready")
-                return True
-
-            except Exception as e:
-                self._update_status(SystemStatus.ERROR, f"Camera error: {str(e)}")
-                return False
+    @staticmethod
+    def _open_camera(config):
+        """Open the same buffered USB camera abstraction used by `mira live`."""
+        return USBCamera(config.index, config.width, config.height)
 
     async def load_model(self, model_name: str, config):
+        async with self._operation_lock:
+            return await self._load_model_for_service(model_name, config)
+
+    async def _load_model_for_service(self, model_name: str, config):
         """Load detection model"""
+        with self._lock:
+            was_streaming = self.is_streaming
+        if was_streaming:
+            self._update_status(SystemStatus.ERROR, "Stop the stream before changing models")
+            return False
+
         self._update_status(SystemStatus.INITIALIZING, f"Loading model {model_name}...")
 
+        try:
+            model, model_config, is_tflite_int8, img_size = await asyncio.to_thread(
+                self._load_model, model_name, config
+            )
+        except Exception as exc:
+            self._update_status(SystemStatus.ERROR, f"Model load error: {exc}")
+            return False
+
         with self._lock:
-            try:
-                # Basic validation to prevent path traversal
-                if any(sep in model_name for sep in ("/", "\\", "..")):
-                    raise ValueError(f"Invalid model name: {model_name}")
-                model_path = DETECTION_DIR / model_name
-                model_path = model_path.resolve()
-                if not str(model_path).startswith(str(DETECTION_DIR.resolve())):
-                    raise ValueError(f"Invalid model path: {model_name}")
-                if not model_path.exists():
-                    raise FileNotFoundError(f"Model not found: {model_name}")
+            self.model = model
+            self.model_config = model_config
+            self.is_tflite_int8 = is_tflite_int8
+            self.img_size = img_size
 
-                # Load model
-                if model_path.suffix == ".tflite":
-                    task_type = "detect"
-                    self.is_tflite_int8 = "int8" in model_name.lower()
-                    self.img_size = get_tflite_imgsz(model_path)
-                else:
-                    task_type = "detect"
-                    self.is_tflite_int8 = False
-                    self.img_size = 640
+        self._update_status(SystemStatus.IDLE, f"Model {model_name} loaded")
+        return True
 
-                self.model = YOLO(str(model_path), task=task_type)
+    @staticmethod
+    def _load_model(model_name: str, config):
+        """Validate and load a model without touching shared service state."""
+        if any(sep in model_name for sep in ("/", "\\", "..")):
+            raise ValueError(f"Invalid model name: {model_name}")
 
-                # Adjust confidence for INT8 models
-                self.model_config = ModelConfig(
-                    name=config.name,
-                    conf_threshold=min(config.conf_threshold, 0.25) if self.is_tflite_int8 else config.conf_threshold,
-                    reject_threshold=config.reject_threshold,
-                    iou_threshold=config.iou_threshold,
-                    enable_tracking=config.enable_tracking if model_path.suffix != ".tflite" else False,
-                    target_latency_ms=config.target_latency_ms,
-                )
-                self._update_status(SystemStatus.IDLE, f"Model {model_name} loaded")
-                return True
+        model_path = (DETECTION_DIR / model_name).resolve()
+        detection_root = DETECTION_DIR.resolve()
+        if model_path.parent != detection_root or not model_path.exists():
+            raise FileNotFoundError(f"Model not found: {model_name}")
 
-            except Exception as e:
-                self._update_status(SystemStatus.ERROR, f"Model load error: {str(e)}")
-                return False
+        is_tflite = model_path.suffix.lower() == ".tflite"
+        is_tflite_int8 = is_tflite and "int8" in model_name.lower()
+        img_size = get_tflite_imgsz(model_path) if is_tflite else 640
+        model = YOLO(str(model_path), task="detect")
+        model_config = ModelConfig(
+            name=config.name,
+            conf_threshold=min(config.conf_threshold, 0.25) if is_tflite_int8 else config.conf_threshold,
+            reject_threshold=config.reject_threshold,
+            iou_threshold=config.iou_threshold,
+            enable_tracking=config.enable_tracking if not is_tflite else False,
+            target_latency_ms=config.target_latency_ms,
+        )
+        return model, model_config, is_tflite_int8, img_size
 
     async def start_streaming(self):
         """Start the inference streaming loop"""
@@ -169,24 +178,25 @@ class CameraService:
 
             if self._streaming_thread and self._streaming_thread.is_alive():
                 self._update_status_locked(SystemStatus.ERROR, "Previous streaming thread is still shutting down")
-                return False
-
-            if not self.camera or not self.model:
+                should_start = False
+            elif not self.camera or not self.model:
                 self._update_status_locked(SystemStatus.ERROR, "Camera or model not initialized")
-                return False
+                should_start = False
+            else:
+                self.is_streaming = True
+                self._update_status_locked(SystemStatus.RUNNING, "Streaming started")
+                self._streaming_thread = threading.Thread(target=self._streaming_loop, daemon=True)
+                self._streaming_thread.start()
+                should_start = True
 
-            self.is_streaming = True
-            self._update_status_locked(SystemStatus.RUNNING, "Streaming started")
-
-            self._streaming_thread = threading.Thread(target=self._streaming_loop, daemon=True)
-            self._streaming_thread.start()
-
-            return True
+        self._notify_status_change()
+        return should_start
 
     def _streaming_loop(self):
         """Main streaming and inference loop (runs in daemon thread)."""
         last_metrics_time = time.time()
         metrics_interval = 0.5
+        consecutive_read_failures = 0
 
         with self._lock:
             local_conf = self.model_config.conf_threshold if self.model_config else 0.5
@@ -215,18 +225,20 @@ class CameraService:
                     if not self.is_streaming:
                         break
                 if not ret:
-                    with self._lock:
-                        self._disconnect_count += 1
-                        dc = self._disconnect_count > 100
-                    if dc:
+                    consecutive_read_failures += 1
+                    if consecutive_read_failures >= 30:
                         self._update_status(SystemStatus.ERROR, "Camera disconnected")
                         with self._lock:
                             self.is_streaming = False
                         break
                     time.sleep(0.01)
                     continue
-                with self._lock:
-                    self._disconnect_count = 0
+                consecutive_read_failures = 0
+                if hasattr(cam, "is_alive") and not cam.is_alive():
+                    self._update_status(SystemStatus.ERROR, "Camera stream is frozen")
+                    with self._lock:
+                        self.is_streaming = False
+                    break
 
                 frame_start = time.perf_counter()
 
@@ -259,7 +271,7 @@ class CameraService:
 
                 inference_time = (time.perf_counter() - frame_start) * 1000
                 detections = self._process_results(results, local_conf)
-                self._update_performance_metrics(inference_time)
+                self._update_performance_metrics(inference_time, results)
 
                 current_time = time.time()
                 if current_time - last_metrics_time >= metrics_interval:
@@ -283,7 +295,9 @@ class CameraService:
                         logger.warning("Frame send error: %s", e)
 
                 with self._lock:
-                    if self.latency_history:
+                    if not results:
+                        self.skip_frame = False
+                    elif self.latency_history:
                         avg_latency = sum(self.latency_history) / len(self.latency_history)
                         self.skip_frame = avg_latency > local_target_latency
                     else:
@@ -335,10 +349,15 @@ class CameraService:
         from visualize import class_id_to_name
         return class_id_to_name(class_id, CLASS_NAMES)
 
-    def _update_performance_metrics(self, inference_time: float):
-        """Update performance tracking metrics"""
+    def _update_performance_metrics(self, inference_time: float, results=None):
+        """Track inference latency and frame timing like the CLI engine."""
         with self._lock:
-            self.latency_history.append(inference_time)
+            latency = inference_time
+            if results:
+                speed = getattr(results[0], "speed", None) or {}
+                if isinstance(speed, dict):
+                    latency = speed.get("inference", inference_time)
+            self.latency_history.append(latency)
 
             # Update frame times for FPS calculation
             self.frame_times.append(time.perf_counter())
@@ -410,18 +429,30 @@ class CameraService:
 
     def _update_status(self, status: SystemStatus, message: str):
         """Update system status"""
-        self._update_status_locked(status, message)
+        with self._lock:
+            self._update_status_locked(status, message)
         self._notify_status_change()
 
-    async def stop(self):
-        """Stop streaming and cleanup. Signals thread first, then releases camera."""
+    def get_status_snapshot(self) -> dict:
+        """Return one consistent view of the runtime state."""
+        with self._lock:
+            return {
+                "status": self.status.value,
+                "message": self.status_message,
+                "camera_initialized": self.camera is not None,
+                "model_loaded": self.model is not None,
+                "streaming": self.is_streaming,
+            }
+
+    async def stop_streaming(self, release_camera: bool = False) -> bool:
+        """Stop the inference worker and optionally release the camera."""
         with self._lock:
             self.is_streaming = False
             cam = self.camera
-            self.camera = None
             streaming_thread = self._streaming_thread
 
         thread_alive = False
+        camera_released = False
         if streaming_thread and streaming_thread is not threading.current_thread():
             await asyncio.to_thread(streaming_thread.join, self._STOP_JOIN_TIMEOUT_SECONDS)
             thread_alive = streaming_thread.is_alive()
@@ -431,9 +462,12 @@ class CameraService:
                     self._STOP_JOIN_TIMEOUT_SECONDS,
                 )
 
-        if cam:
+        if thread_alive and cam:
+            with self._lock:
+                self.camera = None
             try:
                 cam.release()
+                camera_released = True
             except Exception as exc:
                 logger.warning("Exception releasing camera: %s", exc)
 
@@ -443,12 +477,33 @@ class CameraService:
             if thread_alive:
                 logger.error("Streaming thread remains blocked after camera release; retaining daemon for tracking")
 
+        if release_camera and cam and not camera_released:
+            with self._lock:
+                self.camera = None
+            try:
+                cam.release()
+                camera_released = True
+            except Exception as exc:
+                logger.warning("Exception releasing camera: %s", exc)
+
         with self._lock:
             if self._streaming_thread is streaming_thread and not thread_alive:
                 self._streaming_thread = None
 
         with self._lock:
-            self._update_status_locked(SystemStatus.IDLE, "System stopped")
+            final_status = SystemStatus.ERROR if thread_alive else SystemStatus.IDLE
+            final_message = "Streaming worker did not stop" if thread_alive else "System stopped"
+            self._update_status_locked(final_status, final_message)
+        self._notify_status_change()
+        return not thread_alive
+
+    async def stop(self):
+        """Stop inference while keeping the camera ready for the next start."""
+        return await self.stop_streaming(release_camera=False)
+
+    async def shutdown(self):
+        """Stop inference and release the camera during application shutdown."""
+        return await self.stop_streaming(release_camera=True)
 
     def get_statistics(self, period_seconds: int = 60) -> Statistics:
         """Get statistics for the given time period (thread-safe via lock + UTC)."""

@@ -1,5 +1,4 @@
 """Profile detection model performance: FPS, latency percentiles, and memory usage.
-
 Loads a single YOLO model and runs warmup + benchmark iterations to produce
 a structured summary saved to results/.
 """
@@ -117,12 +116,10 @@ def profile_model(
     else:
         _dummy_generated = False
 
-    # --- Warmup ---
     print(f"  Warming up ({warmup} iterations)...")
     for _ in range(warmup):
         measure_inference(model, image_path, imgsz)
 
-    # --- Benchmark ---
     print(f"  Benchmarking ({iterations} iterations, batch_size={batch_size})...")
     latencies: list[float] = []
     peak_gpu_before = _peak_gpu_memory_mb()

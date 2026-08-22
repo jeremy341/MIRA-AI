@@ -204,7 +204,7 @@ def _add_live_args(parser):
         "--reject",
         type=float,
         default=CAMERA_DEFAULT_REJECT,
-        help="Reject threshold: uncertain detections below this are labeled 'unsicher' (default: 0.25).",
+        help="Reject threshold: uncertain detections below this are labeled 'uncertain' (default: 0.25).",
     )
 
 

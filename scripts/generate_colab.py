@@ -1,9 +1,6 @@
-"""Generate a Google Colab training notebook from experiment config.
+# Generate a Google Colab training notebook from experiment config.
 
-Usage:
-    python scripts/generate_colab.py --config experiments/exp014_yolo11n_multidataset.yaml
-    python scripts/generate_colab.py --config experiments/exp014_yolo11n_multidataset.yaml --output my_notebook.ipynb
-"""
+
 
 from __future__ import annotations
 
