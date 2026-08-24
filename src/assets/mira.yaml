@@ -13,7 +13,7 @@ paths:
   results: results/
 
 training:
-  default_model: yolo11n.pt
+  default_model: mira_exp014.pt
   default_epochs: 120
   default_batch_size: 32
   default_imgsz: 640

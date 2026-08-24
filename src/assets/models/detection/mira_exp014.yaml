@@ -1,0 +1,14 @@
+name: mira_exp014
+display_name: "EXP-014 (YOLO11n, TACO+TrashNet+Roboflow)"
+model_type: yolo_pt
+task: detect
+input_size: 640
+class_names: ["glass", "metal", "paper", "plastic", "trash"]
+training:
+  dataset: "TACO + TrashNet + Roboflow"
+  epochs: 120
+metrics:
+  map50: 0.607
+  map50_95: 0.506
+tags: [\"yolo11n\", \"multidataset\", \"best-so-far\"]
+deployment_status: pending_target_hardware_validation

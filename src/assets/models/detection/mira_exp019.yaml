@@ -1,0 +1,31 @@
+name: mira_exp019
+display_name: "EXP-019 (YOLO11n, clean balanced dataset)"
+model_type: yolo_pt
+task: detect
+input_size: 640
+class_names: ["glass", "metal", "paper", "plastic", "trash"]
+model_file: mira_exp019.pt
+training:
+  dataset: "dmedhi + TACO + Roboflow + TrashNet (no SortWaste/Keremberke)"
+  train_images: 5108
+  val_images: 415
+  test_images: 1375
+  epochs: 120
+  batch_size: 32
+  imgsz: 640
+  optimizer: AdamW
+  lr0: 0.001
+  device: "Tesla T4"
+  duration_hours: 2.672
+metrics:
+  map50: 0.9058
+  map50_95: 0.8215
+  precision: 0.872
+  recall: 0.846
+tags: ["yolo11n", "balanced", "no-sortwaste", "repeatability"]
+exports:
+  tflite_320: mira_exp019_int8_320.tflite
+  tflite_640: mira_exp019_int8_640.tflite
+  onnx: mira_exp019.onnx
+  tflite_io_dtype: "float32 input/output; integer-weight LiteRT export"
+deployment_status: pending_target_hardware_validation

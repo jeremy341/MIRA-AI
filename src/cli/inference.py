@@ -22,77 +22,62 @@ from src.pipeline.registry import register_command
 AVAILABLE_MODELS = {
     "mira_exp014.pt": {
         "description": "EXP-014 (YOLO11n, +Roboflow)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp014.pt",
         "category": "detection",
     },
     "mira_exp014_int8.tflite": {
         "description": "EXP-014 INT8 (YOLO11n, +Roboflow)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp014_int8.tflite",
         "category": "detection",
     },
     "mira_exp015.pt": {
         "description": "EXP-015 (YOLO11n, +WaRP+TrashNet)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp015.pt",
         "category": "detection",
     },
     "mira_exp015_int8.tflite": {
         "description": "EXP-015 INT8 (YOLO11n, +WaRP+TrashNet)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp015_int8.tflite",
         "category": "detection",
     },
     "mira_exp016.pt": {
         "description": "EXP-016 (YOLO11n, +WaRP)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp016.pt",
         "category": "detection",
     },
     "mira_exp016_int8.tflite": {
         "description": "EXP-016 INT8 (YOLO11n, +WaRP)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp016_int8.tflite",
         "category": "detection",
     },
     "mira_exp013.pt": {
         "description": "EXP-013 (YOLO11n, TACO+TrashNet)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp013.pt",
         "category": "detection",
     },
     "mira_exp013_int8.tflite": {
         "description": "EXP-013 INT8 (YOLO11n, TACO+TrashNet)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp013_int8.tflite",
         "category": "detection",
     },
     "mira_exp018.pt": {
         "description": "EXP-018 (YOLO11n, clean balanced dataset)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018.pt",
         "category": "detection",
     },
     "mira_exp018_int8.tflite": {
         "description": "EXP-018 INT8 TFLite export",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018_int8.tflite",
         "category": "detection",
     },
     "mira_exp018.onnx": {
         "description": "EXP-018 ONNX export",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp018.onnx",
         "category": "detection",
     },
     "mira_exp019.pt": {
         "description": "EXP-019 (YOLO11n, clean balanced repeatability run)",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019.pt",
         "category": "detection",
     },
     "mira_exp019_int8_320.tflite": {
         "description": "EXP-019 INT8 TFLite export at 320px",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019_int8_320.tflite",
         "category": "detection",
     },
     "mira_exp019_int8_640.tflite": {
         "description": "EXP-019 INT8 TFLite export at 640px",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019_int8_640.tflite",
         "category": "detection",
     },
     "mira_exp019.onnx": {
         "description": "EXP-019 ONNX export",
-        "url": "https://huggingface.co/Jeremy341/MIRA-AI/resolve/main/models/detection/mira_exp019.onnx",
         "category": "detection",
     },
 }
@@ -239,108 +224,28 @@ def cmd_live(args):
 
 
 def _add_download_args(parser):
-    parser.add_argument("model_name", nargs="?", default=None, help="Model filename to download (e.g. mira_exp014.pt).")
-    parser.add_argument("--all", action="store_true", help="Download all available models.")
+    parser.add_argument("model_name", nargs="?", default=None, help="Bundled model filename (e.g. mira_exp014.pt).")
+    parser.add_argument("--all", action="store_true", help="List all bundled models.")
     parser.add_argument(
-        "--list", action="store_true", dest="list_only", help="List available models without downloading."
+        "--list", action="store_true", dest="list_only", help="List bundled models."
     )
 
 
-@register_command("download", "Download pretrained models from Hugging Face", add_args=_add_download_args)
+@register_command("download", "List models bundled with the installation", add_args=_add_download_args)
 def cmd_download(args):
-    if args.list_only:
-        print("\n  Available models:")
-        print(f"  {'Name':<30} {'Description'}")
-        print("  " + "-" * 60)
-        for name, info in AVAILABLE_MODELS.items():
-            exists = (DETECTION_DIR / name).exists()
-            status = " (already downloaded)" if exists else ""
-            print(f"  {name:<30} {info['description']}{status}")
-        print()
+    registry = ModelRegistry()
+    registry.discover()
+    bundled = {model["name"]: model for model in registry.list_models()}
+
+    if args.model_name and not args.all and not args.list_only:
+        if args.model_name not in bundled:
+            print(f"Model '{args.model_name}' is not bundled. Run 'mira models' to see available models.")
+            sys.exit(1)
+        print(f"{args.model_name} is already bundled at {bundled[args.model_name]['path']}")
         return
 
-    if args.all:
-        models_to_download = list(AVAILABLE_MODELS.items())
-    elif args.model_name:
-        if args.model_name not in AVAILABLE_MODELS:
-            print(f"Unknown model '{args.model_name}'. Run 'mira download --list' to see available models.")
-            sys.exit(1)
-        models_to_download = [(args.model_name, AVAILABLE_MODELS[args.model_name])]
-    else:
-        print("\n  Available models:")
-        names = list(AVAILABLE_MODELS.keys())
-        for i, name in enumerate(names, 1):
-            exists = (DETECTION_DIR / name).exists()
-            status = " (downloaded)" if exists else ""
-            print(f"  [{i}] {name}{status} — {AVAILABLE_MODELS[name]['description']}")
-        print()
-        choice = input("  Enter model name or number: ").strip()
-        if choice.isdigit() and 1 <= int(choice) <= len(names):
-            choice = names[int(choice) - 1]
-        if choice not in AVAILABLE_MODELS:
-            print(f"  Invalid choice '{choice}'.")
-            sys.exit(1)
-        models_to_download = [(choice, AVAILABLE_MODELS[choice])]
-
-    failed = []
-    for name, info in models_to_download:
-        dest_dir = DETECTION_DIR
-        dest_path = dest_dir / name
-
-        if dest_path.exists():
-            print(f"  {name} already exists at {dest_path}")
-            continue
-
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        url = info["url"]
-        print(f"  Downloading {name}...")
-        print(f"    URL: {url}")
-
-        try:
-            _download_with_progress(url, dest_path)
-            print(f"    Saved to {dest_path}")
-        except Exception as e:
-            print(f"    Download failed: {e}")
-            if dest_path.exists():
-                dest_path.unlink()
-            failed.append(name)
-            continue
-
-    if failed:
-        print(f"\nFailed to download: {', '.join(failed)}")
-        sys.exit(1)
-
-    print("\nDone.")
-
-
-def _download_with_progress(url: str, dest: Path):
-    """Download a file with a progress indicator."""
-    import hashlib
-    import urllib.request
-
-    req = urllib.request.Request(url, headers={"User-Agent": "MIRA-AI/1.0"})
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        total = resp.headers.get("Content-Length")
-        total = int(total) if total else None
-        downloaded = 0
-        block_size = 8192
-        sha256 = hashlib.sha256()
-
-        with open(dest, "wb") as f:
-            while True:
-                chunk = resp.read(block_size)
-                if not chunk:
-                    break
-                f.write(chunk)
-                sha256.update(chunk)
-                downloaded += len(chunk)
-                if total:
-                    pct = downloaded * 100 / total
-                    bar_len = 30
-                    filled = int(bar_len * downloaded // total)
-                    bar = "=" * filled + "-" * (bar_len - filled)
-                    print(f"\r    [{bar}] {pct:.0f}% ({downloaded}/{total})", end="", flush=True)
-                else:
-                    print(f"\r    Downloaded {downloaded} bytes", end="", flush=True)
-        print()
-        print(f"    SHA-256: {sha256.hexdigest()}")
+    print("\n  Models bundled with mira-ai:")
+    for name, model in bundled.items():
+        print(f"  {name:<30} {model['label']}")
+    print("\n  No model download is required.")
+    return
