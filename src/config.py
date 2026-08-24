@@ -145,7 +145,15 @@ if _CONFIG_ERRORS:
 
 # Directory paths (derived from config)
 MODELS_DIR = ROOT_DIR / PROJECT_CONFIG.get("paths", {}).get("models", "models")
-DETECTION_DIR = MODELS_DIR / "detection"
+PROJECT_DETECTION_DIR = MODELS_DIR / "detection"
+PACKAGED_DETECTION_DIR = ASSETS_DIR / "models" / "detection"
+
+# A source checkout uses its project models. A wheel uses the bundled models
+# when no project-local model directory is available.
+if PROJECT_DETECTION_DIR.exists() and any(PROJECT_DETECTION_DIR.glob("*.pt")):
+    DETECTION_DIR = PROJECT_DETECTION_DIR
+else:
+    DETECTION_DIR = PACKAGED_DETECTION_DIR
 DATA_CLASSES_DIR = ROOT_DIR / "data" / "classes"
 
 # Prefer a project-local bytetrack.yaml, otherwise use the packaged default.
@@ -232,7 +240,7 @@ REJECT_THRESHOLD: float = _INFERENCE.get("reject_threshold", 0.55)
 DEFAULT_CONF: float = _INFERENCE.get("default_conf", 0.5)
 DEFAULT_IOU: float = _INFERENCE.get("default_iou", 0.45)
 DEFAULT_IMGSZ: int = _TRAINING.get("default_imgsz", 640)
-DEFAULT_MODEL: str = _TRAINING.get("default_model", "yolo11n.pt")
+DEFAULT_MODEL: str = _TRAINING.get("default_model", "mira_exp014.pt")
 TFLITE_INT8_CONF: float = 0.25
 
 # Camera basic mode defaults. These intentionally favor visible detections and

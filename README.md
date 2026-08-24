@@ -6,7 +6,6 @@ MIRA is my project for recognizing different types of waste with a camera. The
 long-term idea is to use the detections to sort objects automatically.
 
 - Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
-- Model files: [Hugging Face — Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
 - Python package: [mira-ai on PyPI](https://pypi.org/project/mira-ai/)
 
 ## Why I chose this problem
@@ -60,11 +59,17 @@ python -m pip install --upgrade pip
 python -m pip install mira-ai
 ```
 
-Download a trained model and start live detection:
+The PyPI package already includes the EXP-014, EXP-018, and EXP-019 detector
+weights. No model download, account, or external model-hosting service is
+needed after installation. EXP-014 is the default live-inference model for the
+demo. Its selection is based on the current live-demo workflow, not on treating
+the recorded mAP50 value as a real-time benchmark.
+
+List the bundled models and start live detection:
 
 ```powershell
-mira download mira_exp019.pt
-mira live --model mira_exp019.pt
+mira models
+mira live --model mira_exp014.pt
 ```
 
 To start the local dashboard:

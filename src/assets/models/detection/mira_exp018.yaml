@@ -1,0 +1,20 @@
+name: EXP-018 YOLO11n Teacher
+display_name: MIRA EXP-018 YOLO11n Teacher
+class_names:
+  - glass
+  - metal
+  - paper
+  - plastic
+  - trash
+model_type: yolo_pt
+model_file: mira_exp018.pt
+metrics:
+  mAP50: 0.906
+  mAP50_95: 0.822
+tags:
+  - teacher
+  - balanced
+  - no_sortwaste
+  - kaggle_t4
+  - adamw
+description: YOLO11n teacher trained on balanced 4-source dataset (dmedhi+TACO+Roboflow+TrashNet, 5108 train/415 val). Achieves 90.6% mAP50 on tabletop TrashNet validation. INT8 TFLite export 2.90 MB.
