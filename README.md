@@ -6,6 +6,7 @@ MIRA is my project for recognizing different types of waste with a camera. The
 long-term idea is to use the detections to sort objects automatically.
 
 - Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
+- Additional model files: [Hugging Face - Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
 - Python package: [mira-ai on PyPI](https://pypi.org/project/mira-ai/)
 
 ## Why I chose this problem
@@ -64,6 +65,10 @@ weights. No model download, account, or external model-hosting service is
 needed after installation. EXP-014 is the default live-inference model for the
 demo. Its selection is based on the current live-demo workflow, not on treating
 the recorded mAP50 value as a real-time benchmark.
+
+Hugging Face is optional and provides additional experiment models and exports
+after installation. MIRA does not depend on Hugging Face for its standard
+installation or live demo.
 
 List the bundled models and start live detection:
 
