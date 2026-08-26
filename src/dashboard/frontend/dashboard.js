@@ -246,14 +246,14 @@
         return {
           className: normalizeClass(item.class_name ?? item.class),
           confidence: normalizeConfidence(item.confidence),
-          trackId: item.track_id ?? "—",
+          trackId: item.track_id ?? "-",
           timestamp: item.timestamp || new Date().toISOString(),
           bbox: Array.isArray(item.bbox) ? item.bbox : null
         };
       }
       function formatTime(timestamp, withDate = false) {
         const date = new Date(timestamp);
-        if (Number.isNaN(date.getTime())) return "—";
+        if (Number.isNaN(date.getTime())) return "-";
         const options = withDate
           ? { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }
           : { hour: "2-digit", minute: "2-digit", second: "2-digit" };
@@ -338,9 +338,9 @@
           elements.cameraImage.classList.remove("visible");
           elements.cameraPlaceholder.style.display = "flex";
           elements.detectionCountValue.textContent = "0";
-          elements.liveConfidenceValue.textContent = "— %";
-          elements.fpsValue.textContent = "—";
-          elements.latencyValue.textContent = "— ms";
+          elements.liveConfidenceValue.textContent = "- %";
+          elements.fpsValue.textContent = "-";
+          elements.latencyValue.textContent = "- ms";
           clearBoundingBoxes();
           updateCharts();
           renderRecent();
@@ -419,8 +419,8 @@
           case "metrics":
             state.fps = Number(payload.fps);
             state.latency = Number(payload.inference_latency_ms);
-            elements.fpsValue.textContent = Number.isFinite(state.fps) ? state.fps.toFixed(1) : "—";
-            elements.latencyValue.textContent = Number.isFinite(state.latency) ? `${state.latency.toFixed(1)} ms` : "— ms";
+            elements.fpsValue.textContent = Number.isFinite(state.fps) ? state.fps.toFixed(1) : "-";
+            elements.latencyValue.textContent = Number.isFinite(state.latency) ? `${state.latency.toFixed(1)} ms` : "- ms";
             const now = formatTime(new Date().toISOString());
             state.perfLabels.push(now);
             state.fpsHistory.push(Number.isFinite(state.fps) ? state.fps : 0);
@@ -498,7 +498,7 @@
           const average = detections.reduce((sum, item) => sum + item.confidence, 0) / detections.length;
           elements.liveConfidenceValue.textContent = `${Math.round(average * 100)} %`;
         } else {
-          elements.liveConfidenceValue.textContent = "— %";
+          elements.liveConfidenceValue.textContent = "- %";
         }
         if (!detections.length) { drawBoundingBoxes([]); return; }
         detections.forEach(detection => {
@@ -598,14 +598,14 @@
         elements.summaryDuration.textContent = formatDuration(currentSessionMs());
         if (state.totalDetections > 0) {
           const topClass = Object.entries(state.classCounts).sort((a, b) => b[1] - a[1])[0];
-          elements.summaryTopClass.textContent = topClass[1] > 0 ? CLASS_LABELS[topClass[0]] : "—";
+          elements.summaryTopClass.textContent = topClass[1] > 0 ? CLASS_LABELS[topClass[0]] : "-";
           const avgConfidence = state.confidenceSamples > 0 ? Math.round((state.confidenceSum / state.confidenceSamples) * 100) : 0;
           elements.summaryConfidence.innerHTML = state.confidenceSamples > 0
             ? `${avgConfidence} <span class="summary-unit">%</span>`
-            : `— <span class="summary-unit">%</span>`;
+            : `- <span class="summary-unit">%</span>`;
         } else {
-          elements.summaryTopClass.textContent = "—";
-          elements.summaryConfidence.innerHTML = `— <span class="summary-unit">%</span>`;
+          elements.summaryTopClass.textContent = "-";
+          elements.summaryConfidence.innerHTML = `- <span class="summary-unit">%</span>`;
         }
       }
       function applyStatistics(statistics) {
@@ -893,4 +893,5 @@
       loadModelOptions().finally(prepareDefaults);
       updateReadinessMessage();
     })();
+
 

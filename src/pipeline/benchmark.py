@@ -121,7 +121,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[d
         from ..logger import get_logger as _get_logger
 
         _get_logger(__name__).warning(
-            "Validation split not found in %s — falling back to train split. "
+            "Validation split not found in %s - falling back to train split. "
             "Metrics may be inflated because the model is evaluated on training data.",
             dataset_path,
         )
@@ -474,3 +474,4 @@ class ModelBenchmark:
             )
 
         return "\n".join(rows)
+

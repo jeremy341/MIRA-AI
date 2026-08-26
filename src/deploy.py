@@ -1,4 +1,4 @@
-"""Deployment utilities for MIRA — hardware detection and environment checks."""
+"""Deployment utilities for MIRA - hardware detection and environment checks."""
 
 from __future__ import annotations
 
@@ -193,3 +193,4 @@ def _detect_cuda() -> tuple[bool, str]:
         except (ImportError, AttributeError):
             pass
     return False, ""
+

@@ -15,7 +15,7 @@ def _getch():
             mapped = {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second)
             if mapped:
                 return mapped
-            # Function key or other extended key — consume remaining bytes
+            # Function key or other extended key - consume remaining bytes
             for _ in range(100):
                 if not msvcrt.kbhit():
                     break
@@ -120,3 +120,4 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
             selected = choice
         elif ch in ("ESC", "CTRL_C"):
             return None
+

@@ -1,4 +1,4 @@
-# MIRA AI — Global Experiment Log
+# MIRA AI - Global Experiment Log
 **Project:** Machine Intelligence for Recycling Automation (MIRA)
 **Domain:** computer vision / edge ai
 **Target Hardware:** ESP32 / Raspberry Pi Zero 2W
@@ -248,7 +248,7 @@ Static quantization (8-bit integer weights and activations) successfully applied
 * **Commit Hash:** `decb9d1`
 * **Architecture:** YOLOv8-Nano (PyTorch .pt)
 * **Dataset Size:** 3,365 images (Pristine TACO-remaped Wild Dataset)
-* **Dataset Source:** TACO (Trash Annotations in Context) — outdoor/wild litter images, 60 COCO categories remapped to 5 MIRA classes
+* **Dataset Source:** TACO (Trash Annotations in Context) - outdoor/wild litter images, 60 COCO categories remapped to 5 MIRA classes
 * **Training Platform:** Kaggle Notebooks (NVIDIA Tesla T4 GPU)
 * **Training Time:** 0.309 hours (100 epochs)
 
@@ -351,7 +351,7 @@ EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both sma
 
 ---
 
-## EXP-014: YOLO11n on TACO + TrashNet + Roboflow (Model 1 — mira_tnr)
+## EXP-014: YOLO11n on TACO + TrashNet + Roboflow (Model 1 - mira_tnr)
 * **Date:** July 12, 2026
 * **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
 * **Dataset Size:** 6,802 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,778 Roboflow Trash Detection)
@@ -399,11 +399,11 @@ EXP-013 upgrades the architecture from YOLOv8-Nano to YOLO11n, which is both sma
 * **Export Time:** 1093.7 s
 
 ### Observation
-EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% — a +5.6 point improvement. The biggest gain comes from Trash (+11.3 pp, 15.6% → 26.9%); Glass drops slightly (−6.3 pp, 56.5% → 50.2%). Roboflow's diverse outdoor litter images help trash generalization. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) — consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
+EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash Detection (64 outdoor/wild classes remapped to 5 MIRA) to the TACO+TrashNet fusion. Overall mAP50 rises from 55.1% (EXP-013) to 60.7% - a +5.6 point improvement. The biggest gain comes from Trash (+11.3 pp, 15.6% → 26.9%); Glass drops slightly (−6.3 pp, 56.5% → 50.2%). Roboflow's diverse outdoor litter images help trash generalization. Paper remains the strongest class (82.9% mAP50), while Trash is still the weakest (26.9%) - consistent with its extreme intra-class diversity. The Roboflow segment/box count mismatch warning indicates a mixed dataset format but does not affect detection training.
 
 ---
 
-## EXP-015: YOLO11n on TACO + TrashNet + WaRP (Model 2 — mira_tnw)
+## EXP-015: YOLO11n on TACO + TrashNet + WaRP (Model 2 - mira_tnw)
 * **Date:** July 13, 2026
 * **Architecture:** YOLO11n (PyTorch .pt -> TFLite INT8 / LiteRT)
 * **Dataset Size:** ~6,800 images (1,497 TACO wild + 2,527 TrashNet tabletop + ~2,800 WaRP waste detection)
@@ -446,11 +446,11 @@ EXP-014 is the first result from the 4-Model Comparison, adding Roboflow Trash D
 * **Export Time:** 1239.5 s
 
 ### Observation
-EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+TrashNet fusion. Overall mAP50 drops to 56.0% — a -4.7 pp decline compared to EXP-014 (60.7%). The WaRP dataset significantly boosts Glass (+24.8 pp, 50.2% → 75.0%) due to its large number of glass bottle images, but drags down Metal (-14.3 pp, 71.3% → 57.0%), Paper (-20.3 pp, 82.9% → 62.6%), and especially Trash (-12.6 pp, 26.9% → 14.3%). The Trash decline is expected — WaRP contains zero trash-class images, diluting the trash signal from TACO/TrashNet. The high Precision (0.707) but extremely low Recall (0.087) for Trash confirms the model detects trash when present but misses most instances. Glass benefits strongly from WaRP's bottle-focused imagery, making this dataset combination viable only if Glass detection is the priority.
+EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+TrashNet fusion. Overall mAP50 drops to 56.0% - a -4.7 pp decline compared to EXP-014 (60.7%). The WaRP dataset significantly boosts Glass (+24.8 pp, 50.2% → 75.0%) due to its large number of glass bottle images, but drags down Metal (-14.3 pp, 71.3% → 57.0%), Paper (-20.3 pp, 82.9% → 62.6%), and especially Trash (-12.6 pp, 26.9% → 14.3%). The Trash decline is expected - WaRP contains zero trash-class images, diluting the trash signal from TACO/TrashNet. The high Precision (0.707) but extremely low Recall (0.087) for Trash confirms the model detects trash when present but misses most instances. Glass benefits strongly from WaRP's bottle-focused imagery, making this dataset combination viable only if Glass detection is the priority.
 
 ---
 
-## EXP-016: WaRP Only — YOLO11n (dataset: mira_warp_only)
+## EXP-016: WaRP Only - YOLO11n (dataset: mira_warp_only)
 * **Date:** July 13, 2026
 * **Commit Hash:** `0f90571`
 * **Model Architecture:** YOLO11n (nano, 2.58M params)
@@ -473,7 +473,7 @@ EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+
 | Metal | 0.421 |
 | Paper | 0.422 |
 | Plastic | 0.731 |
-| Trash | — (no trash in WaRP dataset) |
+| Trash | - (no trash in WaRP dataset) |
 
 ### Speed (GPU)
 * **Preprocess:** 0.1 ms
@@ -487,14 +487,14 @@ EXP-015 replaces Roboflow Trash Detection with WaRP Waste Detection in the TACO+
 * **Export Time:** 702.3 s
 
 ### Observation
-EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 classes). With 58.8% mAP50 overall, it outperforms the mixed-dataset EXP-015 (56.0%) despite having no Trash class. Glass (77.7%) and Plastic (73.1%) are strong — WaRP is rich in bottles and packaging. Metal (42.1%) and Paper (42.2%) are weaker, likely because WaRP's metal/paper subclasses are fewer and more diverse. Trash is absent entirely (WaRP has zero residual waste images), so the model cannot detect it. This makes EXP-016 a specialized model: excellent at glass/plastic detection but unusable for trash sorting. As a 4-model comparison entry, it confirms that WaRP alone is not a viable general-purpose recycling detector.
+EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 classes). With 58.8% mAP50 overall, it outperforms the mixed-dataset EXP-015 (56.0%) despite having no Trash class. Glass (77.7%) and Plastic (73.1%) are strong - WaRP is rich in bottles and packaging. Metal (42.1%) and Paper (42.2%) are weaker, likely because WaRP's metal/paper subclasses are fewer and more diverse. Trash is absent entirely (WaRP has zero residual waste images), so the model cannot detect it. This makes EXP-016 a specialized model: excellent at glass/plastic detection but unusable for trash sorting. As a 4-model comparison entry, it confirms that WaRP alone is not a viable general-purpose recycling detector.
 
 ---
 
 ## EXP-017: YOLO11n on ALL 4 Sources (TACO + TrashNet + Roboflow + WaRP)
 * **Date:** July 20, 2026
 * **Architecture:** YOLO11n
-* **Dataset:** mira_all (9,774 images, 5 classes — all 4 sources merged)
+* **Dataset:** mira_all (9,774 images, 5 classes - all 4 sources merged)
 * **Hardware:** Kaggle GPU (Tesla T4, 14GB VRAM)
 * **Training Time:** 6.01 hours (120 epochs)
 
@@ -523,17 +523,17 @@ EXP-016 trains exclusively on the WaRP dataset (28 classes remapped to MIRA's 5 
 * **Export Time:** 176.95 ms
 
 ### Comparison with EXP-014 (Best Previous)
-* **mAP50: 59.3%** — slightly lower than EXP-014 (60.7%)
-* **Trash: 22.7% mAP50** — similar to EXP-014 (28.3%), remains the worst class
-* **Plastic: 72.7% mAP50** — best class, improves over EXP-014 (70.7%)
-* **Paper: 68.6% mAP50** — best seen so far
+* **mAP50: 59.3%** - slightly lower than EXP-014 (60.7%)
+* **Trash: 22.7% mAP50** - similar to EXP-014 (28.3%), remains the worst class
+* **Plastic: 72.7% mAP50** - best class, improves over EXP-014 (70.7%)
+* **Paper: 68.6% mAP50** - best seen so far
 
 ### Observation
-EXP-017 merges ALL 4 available dataset sources (9,774 images), but adding WaRP actually hurt overall mAP50 (60.7% → 59.3%) compared to EXP-014 which used only 3 sources. This suggests label noise or distribution mismatch in WaRP degrades generalization despite the larger dataset size. Trash remains critically weak (22.7%) — it needs either more high-quality trash data or a dedicated augmentation strategy. Plastic and Paper saw minor gains. The TFLite export is fast (177 ms) and produces a 2.9 MB model suitable for edge deployment.
+EXP-017 merges ALL 4 available dataset sources (9,774 images), but adding WaRP actually hurt overall mAP50 (60.7% → 59.3%) compared to EXP-014 which used only 3 sources. This suggests label noise or distribution mismatch in WaRP degrades generalization despite the larger dataset size. Trash remains critically weak (22.7%) - it needs either more high-quality trash data or a dedicated augmentation strategy. Plastic and Paper saw minor gains. The TFLite export is fast (177 ms) and produces a 2.9 MB model suitable for edge deployment.
 
 
 ---
-## EXP-018 — YOLO11n Teacher on Clean Dataset (dmedhi + TACO + Roboflow + TrashNet)
+## EXP-018 - YOLO11n Teacher on Clean Dataset (dmedhi + TACO + Roboflow + TrashNet)
 
 - **Date:** 2026-07-30
 - **Platform:** Kaggle GPU (Tesla T4, 14.9 GB VRAM)
@@ -582,10 +582,10 @@ Overall:      mAP50 0.906  mAP50-95 0.822
 | Duration | ~5h | **2.7h** | ~2x faster |
 
 ### Observation
-EXP-018 uses the cleaned balanced dataset with 5,108 training images (SortWaste and Keremberke excluded, class-balanced at 1621-1982 boxes per class). Against the pure tabletop TrashNet validation set (415 images), this model achieves **90.6% mAP50** — a dramatic improvement over EXP-014's 60.7% on the old TACO+TrashNet+Roboflow mix. All five classes perform well, with trash going from 26.9% to 97.5% mAP50. Training completed in 2.7 hours over 120 epochs — significantly faster than EXP-014's ~5 hours, likely due to the smaller, cleaner dataset. The INT8 TFLite export is 2.90 MB, suitable for Raspberry Pi Zero 2W deployment. This result validates that dataset quality (balanced, clean, deployment-matching geometry) matters far more than model architecture or training duration.
+EXP-018 uses the cleaned balanced dataset with 5,108 training images (SortWaste and Keremberke excluded, class-balanced at 1621-1982 boxes per class). Against the pure tabletop TrashNet validation set (415 images), this model achieves **90.6% mAP50** - a dramatic improvement over EXP-014's 60.7% on the old TACO+TrashNet+Roboflow mix. All five classes perform well, with trash going from 26.9% to 97.5% mAP50. Training completed in 2.7 hours over 120 epochs - significantly faster than EXP-014's ~5 hours, likely due to the smaller, cleaner dataset. The INT8 TFLite export is 2.90 MB, suitable for Raspberry Pi Zero 2W deployment. This result validates that dataset quality (balanced, clean, deployment-matching geometry) matters far more than model architecture or training duration.
 
 ---
-## EXP-019 — YOLO11n Repeatability Run on Clean Balanced Dataset
+## EXP-019 - YOLO11n Repeatability Run on Clean Balanced Dataset
 
 - **Date:** 2026-07-31
 - **Purpose:** Repeat EXP-018 as a normal YOLO11n detector, not a teacher model
@@ -654,3 +654,4 @@ Tensor inspection found FP32 input/output tensors in both TFLite files. They are
 ### Observation
 
 EXP-019 reproduces EXP-018's validation performance almost exactly. The retraining confirms that the clean balanced dataset and training configuration are reproducible; it does not provide a measurable accuracy improvement. Training, validation, sanity checking, and exports completed before Kaggle later failed with `OSError: [Errno 28] No space left on device` while Papermill saved the notebook. The failure was caused by the notebook/archive output process, not by model training.
+

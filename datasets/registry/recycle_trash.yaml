@@ -1,6 +1,6 @@
 name: "Recycle Trash (NAVER Connect Foundation)"
 key: recycle_trash
-description: "21,818 images, 107k boxes, 10 classes — main source for glass + trash class coverage"
+description: "21,818 images, 107k boxes, 10 classes - main source for glass + trash class coverage"
 source_format: coco
 source_url: "https://github.com/connectfoundation/naverconnect-dataset-trash"
 input_path: datasets/raw/recycle_trash
@@ -44,3 +44,4 @@ stats:
     Clothing: 2091
     Battery: 738
     UNKNOWN: 758
+

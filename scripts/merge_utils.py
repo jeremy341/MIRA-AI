@@ -41,7 +41,7 @@ def remap_label_file(lbl_file, mapping):
         else:
             skipped_count += 1
     if skipped_count > 0:
-        print(f"Warning: {skipped_count} annotations skipped — no valid classes after remap", file=sys.stderr)
+        print(f"Warning: {skipped_count} annotations skipped - no valid classes after remap", file=sys.stderr)
     return new_lines
 
 
@@ -83,7 +83,7 @@ def copy_remapped_images(stems, src_img_dir, src_lbl_dir, dst_img_dir, dst_lbl_d
         new_lines = remap_label_file(lbl_file, mapping)
         if not new_lines:
             skipped += 1
-            print(f"  Warning: {stem} skipped — no valid classes after remap")
+            print(f"  Warning: {stem} skipped - no valid classes after remap")
             continue
         for ext in (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"):
             img_file = src_img_dir / f"{stem}{ext}"
@@ -150,3 +150,4 @@ names: {MIRA_CLASSES}
 """
     (output_dir / "dataset.yaml").write_text(yaml_content)
     print(f"\nSaved: {output_dir / 'dataset.yaml'}")
+

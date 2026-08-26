@@ -1,16 +1,11 @@
 # Generate a Google Colab training notebook from experiment config.
 
-
-
 from __future__ import annotations
-
 import argparse
 import json
 import sys
 from pathlib import Path
-
 import yaml
-
 
 def _load_experiment_config(config_path: Path) -> dict:
     try:

@@ -4,7 +4,7 @@ Documenting these obstacles is explicitly required by the *Jugend forscht* guide
 
 Save this text directly into your project repository as **`docs/JuFo_Huerden_und_Fehleranalyse.md`**.
 
-# MIRA — Wissenschaftliche Fehleranalyse und technologische Hürden
+# MIRA - Wissenschaftliche Fehleranalyse und technologische Hürden
 **Projekt:** Machine Intelligence for Recycling Automation (MIRA)
 **Wettbewerb:** Jugend forscht 2027 (Fachgebiet Technik / Informatik)
 **Zweck des Dokuments:** Systematische Dokumentation aufgetretener Schwierigkeiten, fehlerhafter Ansätze und deren ingenieurwissenschaftlicher Lösung zur Integration in die schriftliche Ausarbeitung.
@@ -37,7 +37,7 @@ Save this text directly into your project repository as **`docs/JuFo_Huerden_und
 
 ### 2.1 Das Versagen des Auto-Labelers durch Glanzlichter (GIGO-Effekt)
 * **Problembeschreibung:** Beim Übergang zur Objekterkennung (YOLOv8-Nano) wurden Bounding Boxes benötigt. Das initial entwickelte Auto-Labeling-Skript (`build_detector_dataset.py`), welches auf Canny-Edge-Detection und Otsu-Thresholding basierte, erzeugte fehlerhafte Annotationsdateien: Die Bounding Boxes umschlossen fast auf jedem Bild den gesamten Schreibtisch statt des Müllobjekts.
-* **Ursachenanalyse:** Die direkte Deckenbeleuchtung erzeugte starke weiße Glanzlichter (Specular Highlights) auf der Tischoberfläche sowie dunkle Schatten und harte Tischkanten. Der Canny-Algorithmus identifizierte die kontrastreiche Tischkante und die Reflexionen als größte zusammenhängende Kontur im Bild. Dies demonstrierte das klassische Prinzip „Garbage In, Garbage Out“ (GIGO) – das nachfolgende YOLO-Modell lernte fehlerfrei, dass der gesamte Tisch als Müll zu klassifizieren ist.
+* **Ursachenanalyse:** Die direkte Deckenbeleuchtung erzeugte starke weiße Glanzlichter (Specular Highlights) auf der Tischoberfläche sowie dunkle Schatten und harte Tischkanten. Der Canny-Algorithmus identifizierte die kontrastreiche Tischkante und die Reflexionen als größte zusammenhängende Kontur im Bild. Dies demonstrierte das klassische Prinzip „Garbage In, Garbage Out“ (GIGO) - das nachfolgende YOLO-Modell lernte fehlerfrei, dass der gesamte Tisch als Müll zu klassifizieren ist.
 * **Ingenieurwissenschaftliche Lösung:** Verwerfen des fehlerhaften synthetischen Label-Ansatzes für unkontrollierte Umgebungen. Pivot zu professionell von Menschen annotierten Open-Source-Datensätzen (Stanford TrashNet auf reinweißem Grund kombiniert mit verifizierten Roboflow/TACO-Daten).
 
 ### 2.2 Domain Shift vs. Domain Specialization (EXP-006 vs. EXP-008)

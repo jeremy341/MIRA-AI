@@ -2,9 +2,9 @@
 
 Supports console, file, and structured JSON output.
 Configure via environment variables:
-    MIRA_LOG_LEVEL      — DEBUG, INFO (default), WARNING, ERROR
-    MIRA_LOG_FORMAT     — text (default) or json
-    MIRA_LOG_FILE       — optional path to log file (enables rotation)
+    MIRA_LOG_LEVEL      - DEBUG, INFO (default), WARNING, ERROR
+    MIRA_LOG_FORMAT     - text (default) or json
+    MIRA_LOG_FILE       - optional path to log file (enables rotation)
 """
 
 from __future__ import annotations
@@ -93,3 +93,4 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
 
 # Global root logger for backward compatibility
 logger = get_logger("mira")
+
