@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIRA — Recycling Sorting Robot</title>
+  <title>MIRA - Recycling Sorting Robot</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -69,10 +69,10 @@
               <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot" />
               <canvas id="detectionCanvas" class="detection-canvas"></canvas>
               <div class="metric-rail" aria-label="Live metrics">
-                <div class="camera-metric"><span class="camera-metric-label">FPS</span><span id="fpsValue" class="camera-metric-value">—</span></div>
-                <div class="camera-metric"><span class="camera-metric-label">Latency</span><span id="latencyValue" class="camera-metric-value">— ms</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">FPS</span><span id="fpsValue" class="camera-metric-value">-</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">Latency</span><span id="latencyValue" class="camera-metric-value">- ms</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Objects</span><span id="detectionCountValue" class="camera-metric-value">0</span></div>
-                <div class="camera-metric"><span class="camera-metric-label">Confidence</span><span id="liveConfidenceValue" class="camera-metric-value">— %</span></div>
+                <div class="camera-metric"><span class="camera-metric-label">Confidence</span><span id="liveConfidenceValue" class="camera-metric-value">- %</span></div>
               </div>
               <div id="cameraState" class="camera-state">Waiting for stream…</div>
             </div>
@@ -127,14 +127,14 @@
             <span class="summary-accent"></span>
             <div class="summary-content">
                 <span class="summary-label">Most Common Class</span>
-              <span id="summaryTopClass" class="summary-value">—</span>
+              <span id="summaryTopClass" class="summary-value">-</span>
             </div>
           </article>
           <article class="summary-card">
             <span class="summary-accent"></span>
             <div class="summary-content">
                 <span class="summary-label">Avg. Confidence</span>
-              <span id="summaryConfidence" class="summary-value">— <span class="summary-unit">%</span></span>
+              <span id="summaryConfidence" class="summary-value">- <span class="summary-unit">%</span></span>
             </div>
           </article>
           <article class="panel trend-panel">
@@ -380,3 +380,4 @@
   <script src="dashboard.js"></script>
 </body>
 </html>
+

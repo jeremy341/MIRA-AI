@@ -10,14 +10,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-_src_dir = str(Path(__file__).resolve().parent.parent / "src")
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
 import matplotlib
-
-matplotlib.use("Agg")
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -28,6 +21,12 @@ from pipeline.benchmark import (
     load_yolo_dataset,
 )
 from pipeline.models import DetectionModel, ModelRegistry
+
+_src_dir = str(Path(__file__).resolve().parent.parent / "src")
+if _src_dir not in sys.path:
+    sys.path.insert(0, _src_dir)
+
+matplotlib.use("Agg")
 
 logger = logging.getLogger("evaluate")
 
@@ -75,7 +74,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def discover_default_dataset() -> Path | None:
-    """Return the first dataset YAML found in datasets/ with a val split."""
+    # Return the first dataset YAML found in datasets/ with a val split
     for yaml_path in sorted((ROOT_DIR / "datasets").rglob("dataset.yaml")):
         if yaml_path.exists():
             return yaml_path
@@ -100,7 +99,7 @@ def build_confusion_matrix(
     samples: list[tuple[Path, list[dict]]],
     conf: float,
 ) -> np.ndarray:
-    """Build and return a proper confusion matrix (GT rows, Pred cols)."""
+    # Build and return a proper confusion matrix (GT rows, Pred cols)
     n = len(CLASS_NAMES)
     matrix = np.zeros((n, n), dtype=int)
 
@@ -134,13 +133,12 @@ def build_confusion_matrix(
             if best_pi >= 0:
                 pred_used[best_pi] = True
                 matrix[gt_cls, pred_cls[best_pi]] += 1
-            # else: FN — not added to matrix (implicitly counted)
 
     return matrix
 
 
 def plot_confusion_matrix(matrix: np.ndarray, output_dir: Path) -> None:
-    """Save a formatted confusion matrix as PNG."""
+    # Save a formatted confusion matrix as PNG
     fig, ax = plt.subplots(figsize=(7, 6))
     im = ax.imshow(matrix, cmap="Blues", aspect="auto")
 
@@ -176,11 +174,9 @@ def compute_per_class_ap(
     class_id: int,
     iou_thresh: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    """Compute precision, recall arrays and AP for a single class.
-
-    Returns (precision, recall, ap) where arrays are sorted by descending
-    confidence with an interpolated precision envelope.
-    """
+    # Compute precision, recall arrays and AP for a single class.
+    # Returns (precision, recall, ap) where arrays are sorted by descending
+    # confidence with an interpolated precision envelope
     all_dets: list[dict] = []
 
     for img_idx, (img_path, gt_objects) in enumerate(samples):
@@ -261,7 +257,7 @@ def plot_pr_curves(
     conf: float,
     output_dir: Path,
 ) -> dict[str, float]:
-    """Plot per-class precision-recall curves and return per-class AP values."""
+    # Plot per-class precision-recall curves and return per-class AP values
     per_class_ap: dict[str, float] = {}
 
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -290,7 +286,7 @@ def plot_pr_curves(
 
 
 def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) -> None:
-    """Bar chart of per-class precision, recall, F1."""
+    # Bar chart of per-class precision, recall, F1
     names = list(per_class.keys())
     precisions = [m.precision for m in per_class.values()]
     recalls = [m.recall for m in per_class.values()]

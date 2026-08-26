@@ -1,6 +1,6 @@
 name: "Garbage Detection (Ultralytics Hub)"
 key: garbage_detection
-description: "~36k images, 72k boxes, 11 classes — lighting & background diversity for domain randomization"
+description: "~36k images, 72k boxes, 11 classes - lighting & background diversity for domain randomization"
 source_format: yolo
 source_url: "https://platform.ultralytics.com"
 input_path: datasets/raw/garbage_detection
@@ -46,3 +46,4 @@ stats:
     plastic: 0
     shoes: 0
     trash: 0
+

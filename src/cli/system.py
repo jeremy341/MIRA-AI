@@ -67,7 +67,7 @@ def cmd_doctor(args):
 
     print(f"\n  {'=' * 60}")
     if config_errors or env_warnings:
-        print("  Status: ISSUES FOUND — see details above")
+        print("  Status: ISSUES FOUND - see details above")
     else:
         print("  Status: HEALTHY")
     print()
@@ -209,3 +209,4 @@ def cmd_benchmark(args):
     print(ModelBenchmark.comparison_table(results))
     if args.output:
         ModelBenchmark.export(results, args.output)
+

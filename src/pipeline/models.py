@@ -378,7 +378,7 @@ class ThirdPartyAdapter(DetectionModel):
         if not self._loaded and not self._load_failed:
             self.load()
         if self._model is None:
-            log.warning("ThirdPartyAdapter.predict() called before load() — returning empty result")
+            log.warning("ThirdPartyAdapter.predict() called before load() - returning empty result")
             return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
 
         import torch
@@ -652,3 +652,4 @@ class ModelRegistry:
         adapter.load()
         self._adapters[name] = adapter
         return adapter
+

@@ -209,7 +209,7 @@ class DatasetRegistry:
             logger.info("[%s]", source.name)
 
             if source.source_format == "yolo" and source.class_mapping is None:
-                # Passthrough — already in MIRA format
+                # Passthrough - already in MIRA format
                 added = self._merge_passthrough(source, output, dry_run)
                 total_added += added
             elif source.source_format == "yolo" and source.class_mapping:
@@ -469,3 +469,4 @@ class DatasetRegistry:
             added += a
             skipped += s
         return added, skipped
+

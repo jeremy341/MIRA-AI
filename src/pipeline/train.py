@@ -1,4 +1,4 @@
-"""Training pipeline for MIRA — delegates to registered training strategies.
+"""Training pipeline for MIRA - delegates to registered training strategies.
 
 Usage:
     from pipeline.train import TrainingPipeline, TrainConfig, TrainResult
@@ -118,3 +118,4 @@ class TrainingPipeline:
     def register_strategy(cls, task: str, strategy_cls):
         """Register a custom training strategy."""
         _register_strategy(task, strategy_cls)
+

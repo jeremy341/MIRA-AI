@@ -9,12 +9,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
 import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -23,12 +18,17 @@ from pipeline.benchmark import ModelBenchmark, BenchmarkResult
 from pipeline.models import ModelRegistry
 
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+
+matplotlib.use("Agg")
+
+
 def _model_size_mb(path: Path) -> float:
     return path.stat().st_size / 1_048_576 if path.exists() else 0.0
 
 
 def build_comparison(results: list[BenchmarkResult]) -> str:
-    """Return a markdown table comparing models, sorted by F1 descending."""
+    # Return markdown table which compares models
     sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
 
     header = "| Model | Size (MB) | Latency (ms) | Precision | Recall | F1 | mAP50 | mAP50-95 |"
@@ -52,7 +52,7 @@ def build_comparison(results: list[BenchmarkResult]) -> str:
 
 
 def build_per_class_table(results: list[BenchmarkResult]) -> str:
-    """Return a markdown table with per-class precision / recall / F1."""
+    # Return a markdown table with per-class precision / recall / F1.
     sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
     headers = ["Model"]
     for cls in CLASS_NAMES:
@@ -82,7 +82,7 @@ def build_per_class_table(results: list[BenchmarkResult]) -> str:
 
 
 def plot_comparison(results: list[BenchmarkResult], output_path: Path) -> None:
-    """Generate a grouped bar chart comparing mAP50, F1, and latency."""
+    # Generate a grouped bar chart comparing mAP50, F1, and latency
     sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
     names = [r.model_name for r in sorted_res]
     map50_vals = [r.map50 * 100 for r in sorted_res]
@@ -112,7 +112,7 @@ def plot_comparison(results: list[BenchmarkResult], output_path: Path) -> None:
     ax2.tick_params(axis="y", labelcolor="#d62728")
     ax2.legend(loc="upper right", fontsize=9)
 
-    plt.title("Model Comparison — Detection Metrics", fontsize=12, fontweight="bold", pad=15)
+    plt.title("Model Comparison Detection Metrics", fontsize=12, fontweight="bold", pad=15)
     plt.tight_layout()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path, dpi=300)

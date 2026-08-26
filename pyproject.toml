@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mira-ai"
 dynamic = ["version"]
-description = "Machine Intelligence for Recycling Automation — Jugend Forscht 2027"
+description = "Machine Intelligence for Recycling Automation - Jugend Forscht 2027"
 authors = [{name = "Jeremy Darko"}]
 license = "MIT"
 license-files = ["LICENSE"]
@@ -73,3 +73,4 @@ ignore = ["E501", "E402", "I001", "UP017"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+

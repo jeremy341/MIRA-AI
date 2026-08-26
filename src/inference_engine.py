@@ -153,7 +153,7 @@ class InferenceEngine:
         # TFLite models don't support ByteTrack; disable tracking
         if self.model_path.suffix == ".tflite" and self.enable_tracking:
             self.enable_tracking = False
-            logger.info("Tracking disabled — not supported for TFLite models.")
+            logger.info("Tracking disabled - not supported for TFLite models.")
 
     def __enter__(self) -> Self:
         """Context manager entry."""
@@ -165,7 +165,7 @@ class InferenceEngine:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        """Context manager exit — always release resources."""
+        """Context manager exit - always release resources."""
         self._cleanup()
 
     def stop(self) -> None:
@@ -337,3 +337,4 @@ class InferenceEngine:
             self._cleanup()
         except Exception:
             pass
+

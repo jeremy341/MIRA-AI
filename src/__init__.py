@@ -1,4 +1,4 @@
-"""MIRA — Machine Intelligence for Recycling Automation."""
+"""MIRA - Machine Intelligence for Recycling Automation."""
 
 from .exceptions import MiraError, ConfigError, ModelError, DatasetError, CameraError, PipelineError
 from .version import __version__
@@ -12,3 +12,4 @@ __all__ = [
     "CameraError",
     "PipelineError",
 ]
+

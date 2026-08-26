@@ -1,4 +1,4 @@
-# MIRA — Machine Intelligence for Recycling Automation
+# MIRA - Machine Intelligence for Recycling Automation
 
 **Jugend forscht 2027**
 
@@ -114,3 +114,4 @@ part of my own project work.
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
+

@@ -1,0 +1,21 @@
+name: exp020
+model: yolo11n.pt
+dataset: datasets/exp020_roboflow_dominant/dataset.yaml
+dataset_policy: "Roboflow 70%, TACO 20%, dmedhi 5%, TrashNet 5% by training-image count"
+train_images: 6000
+epochs: 120
+batch_size: 32
+imgsz: 640
+optimizer: AdamW
+lr0: 0.001
+lrf: 0.01
+weight_decay: 0.0005
+patience: 30
+seed: 2026
+device: auto
+evaluation:
+  validation: "mixed held-out source splits"
+  real_camera: "must be evaluated separately before deployment"
+notes:
+  - "Same YOLO11n architecture as EXP019; this experiment changes source weighting."
+  - "Do not deploy based on confidence alone; compare recall and false positives on real camera footage."

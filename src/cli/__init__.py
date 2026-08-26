@@ -1,4 +1,4 @@
-"""CLI entry point for MIRA — registers and dispatches all subcommands."""
+"""CLI entry point for MIRA - registers and dispatches all subcommands."""
 
 import sys
 
@@ -25,7 +25,7 @@ def main():
     logger = get_logger(__name__)
 
     parser = argparse.ArgumentParser(
-        description="MIRA CLI — Machine Intelligence for Recycling Automation",
+        description="MIRA CLI - Machine Intelligence for Recycling Automation",
         epilog="""\
 Examples:
   mira live --model mira_exp014_int8.tflite
@@ -75,3 +75,4 @@ Examples:
 
 if __name__ == "__main__":
     main()
+
