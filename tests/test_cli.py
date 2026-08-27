@@ -5,13 +5,11 @@ import io
 import pathlib
 import sys
 import tempfile
-from unittest.mock import MagicMock
 
 import pytest
 
-# These are set at import time (pytest collection) and restored
-# after the last test runs to avoid polluting other test modules.
-_SAVED_MODULES: dict[str, object] = {}
+import src.cli  # noqa: F401
+
 _MOCK_KEYS = [
     "ultralytics",
     "ultralytics.nn",
@@ -24,26 +22,9 @@ _MOCK_KEYS = [
     "tensorflow.keras",
     "uvicorn",
     "psutil",
+    "torch",
+    "cv2",
 ]
-
-for _key in _MOCK_KEYS:
-    _SAVED_MODULES[_key] = sys.modules.get(_key)
-    sys.modules[_key] = MagicMock()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _restore_mocks():
-    yield
-    for key in _MOCK_KEYS:
-        if key in _SAVED_MODULES and _SAVED_MODULES[key] is not None:
-            sys.modules[key] = _SAVED_MODULES[key]
-        else:
-            sys.modules.pop(key, None)
-
-
-# Trigger CLI module registration before any tests run
-import src.cli  # noqa: E402, F401
-
 
 
 def _build_parser(add_args_func, extra_subs_for=None):
@@ -62,7 +43,6 @@ def _build_parser(add_args_func, extra_subs_for=None):
 def _parse(add_args_func, cmd_args, extra_subs_for=None):
     parent, _, _ = _build_parser(add_args_func, extra_subs_for=extra_subs_for)
     return parent.parse_args(["test_cmd"] + cmd_args)
-
 
 
 EXPECTED_COMMANDS = {
@@ -98,8 +78,6 @@ def test_all_commands_registered():
     assert len(found) >= 16, f"Expected >= 16 commands, got {len(found)}"
 
 
-
-
 def test_commands_have_help_text():
     from src.pipeline.registry import get_commands
 
@@ -108,8 +86,6 @@ def test_commands_have_help_text():
         assert isinstance(entry.help_text, str), f"Command '{name}' help is not str"
         assert len(entry.help_text) > 3, f"Command '{name}' help too short: {entry.help_text!r}"
         assert callable(entry.fn), f"Command '{name}' fn is not callable"
-
-
 
 
 def test_train_parsing():
@@ -230,8 +206,6 @@ def test_generate_kaggle_parsing():
     assert args.output == "out.ipynb"
 
 
-
-
 def test_merge_missing_required():
     from src.cli.data import _add_merge_args
 
@@ -276,8 +250,6 @@ def test_validate_missing_dataset():
         parent.parse_args(["validate"])
 
 
-
-
 def test_resolve_safe_path_blocks_traversal():
     from src.config import resolve_safe_path
     from src.exceptions import ConfigError
@@ -297,8 +269,6 @@ def test_resolve_safe_path_blocks_traversal():
 
         with pytest.raises(ConfigError):
             resolve_safe_path("..", base_dir=base)
-
-
 
 
 def test_trainconfig_yaml_not_found():
@@ -341,8 +311,6 @@ def test_trainconfig_minimal_yaml_uses_defaults():
         assert config.imgsz == 640
     finally:
         pathlib.Path(minimal).unlink(missing_ok=True)
-
-
 
 
 def test_mira_yaml_defaults_in_config_module():
@@ -390,8 +358,6 @@ def test_project_config_validate_detects_errors():
     assert len(errors2) >= 3
 
 
-
-
 def test_help_flag_per_command():
     from src.pipeline.registry import get_commands
 
@@ -420,8 +386,6 @@ def test_help_flag_per_command():
         ), f"Help for '{name}' missing expected content"
 
 
-
-
 def test_version_flag():
     from src.version import __version__
 
@@ -431,9 +395,7 @@ def test_version_flag():
     with pytest.raises(SystemExit):
         parent.parse_args(["--version"])
 
-    assert __version__ == "1.0.0"
-
-
+    assert __version__ == "1.0.2"
 
 
 def test_doctor_healthy(capsys):
@@ -445,8 +407,6 @@ def test_doctor_healthy(capsys):
     assert "HEALTHY" in out
 
 
-
-
 def test_config_validate_command(capsys):
     from src.cli.system import cmd_config
 
@@ -454,8 +414,6 @@ def test_config_validate_command(capsys):
     out = capsys.readouterr().out
     assert "mira.yaml is valid" in out
     assert "Classes:" in out
-
-
 
 
 def test_models_command(capsys):
@@ -495,7 +453,7 @@ def test_download_list_command(capsys):
 
     cmd_download(argparse.Namespace(list_only=True, all=False, model_name=None))
     out = capsys.readouterr().out
-    assert "Available models" in out
+    assert "Models bundled with mira-ai" in out
     assert "mira_exp014.pt" in out
 
 

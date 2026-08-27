@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 from starlette.websockets import WebSocketDisconnect
 
-from models import Detection, SystemMetrics
+from src.dashboard.backend.models import Detection, SystemMetrics
 
 logger = logging.getLogger(__name__)
 

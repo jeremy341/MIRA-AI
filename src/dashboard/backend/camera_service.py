@@ -11,10 +11,10 @@ from datetime import datetime, timedelta
 import psutil
 
 from ultralytics import YOLO
-from config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz
+from src.config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz
 from src.hardware import USBCamera
-from logger import get_logger
-from models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
+from src.logger import get_logger
+from src.dashboard.backend.models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
 
 logger = get_logger(__name__)
 

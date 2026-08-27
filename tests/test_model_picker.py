@@ -8,8 +8,6 @@ from unittest.mock import MagicMock, patch
 from src.model_picker import _getch, pick_model
 
 
-
-
 def _setup_win_mock(getch_return=None, getch_side_effect=None, kbhit_return=False):
     mock_msvcrt = MagicMock()
     if getch_side_effect is not None:
@@ -74,8 +72,6 @@ def test_getch_win_function_key():
     with patch.object(sys, "platform", "win32"):
         with patch.dict("sys.modules", {"msvcrt": mock}):
             assert _getch() == ""
-
-
 
 
 def test_getch_unix_enter():
@@ -202,8 +198,6 @@ def test_getch_unix_regular_char():
         ):
             with patch("sys.stdin", mock_stdin):
                 assert _getch() == "a"
-
-
 
 
 def test_pick_model_empty_items():

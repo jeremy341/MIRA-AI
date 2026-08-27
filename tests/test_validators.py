@@ -9,8 +9,6 @@ from pathlib import Path
 from src.pipeline.validators import validate_yolo_dataset, dataset_summary
 
 
-
-
 def _make_yolo_dataset(tmp_path: Path, train_labels: list[str], val_labels: list[str] | None = None):
     """Create a minimal YOLO-format dataset structure."""
     for split, labels in [("train", train_labels), ("val", val_labels or [])]:
@@ -24,8 +22,6 @@ def _make_yolo_dataset(tmp_path: Path, train_labels: list[str], val_labels: list
             # Create label file
             (lbl_dir / f"img_{i}.txt").write_text(content)
     return tmp_path
-
-
 
 
 def test_valid_dataset():
@@ -119,8 +115,6 @@ def test_empty_dataset():
         assert not result.is_valid  # empty dataset is not valid
         assert result.total_images == 0
         assert any("0 images" in w for w in result.warnings)
-
-
 
 
 def test_dataset_summary():

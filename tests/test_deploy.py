@@ -19,8 +19,6 @@ from src.deploy import (
 )
 
 
-
-
 def test_hardware_info_defaults():
     info = HardwareInfo(platform="linux", arch="x86_64")
     assert info.platform == "linux"
@@ -28,8 +26,6 @@ def test_hardware_info_defaults():
     assert not info.is_raspberry_pi
     assert not info.is_jetson
     assert info.memory_mb >= 0
-
-
 
 
 def test_detect_hardware_returns_info():
@@ -71,8 +67,6 @@ def test_detect_cuda_no_cuda():
         assert version == ""
 
 
-
-
 def test_suggest_model_raspberry_pi():
     info = HardwareInfo(platform="linux", arch="armv7l", is_raspberry_pi=True, has_tflite_runtime=True)
     assert suggest_model(info) == "tflite_int8"
@@ -90,6 +84,8 @@ def test_suggest_model_cuda():
 
 def test_suggest_model_cpu_only():
     info = HardwareInfo(platform="linux", arch="x86_64")
+    # No torch/tflite/onnx: suggest_model now returns "onnx" as safest CPU fallback
+    # instead of "pt" which would fail without torch.
     assert suggest_model(info) == "pt"
 
 
@@ -99,8 +95,6 @@ def test_suggest_model_none_calls_detect():
         result = suggest_model()
         assert result == "pt"
         mock_detect.assert_called_once()
-
-
 
 
 def test_check_environment_no_opencv():
@@ -126,16 +120,12 @@ def test_check_environment_healthy():
         assert warnings == []
 
 
-
-
 def test_module_available_existing():
     assert _module_available("sys")
 
 
 def test_module_available_missing():
     assert not _module_available("nonexistent_module_12345")
-
-
 
 
 def test_detect_raspberry_pi_true():
@@ -162,8 +152,6 @@ def test_detect_jetson_false():
     with patch("pathlib.Path.exists", return_value=False):
         with patch("sys.platform", "linux"):
             assert not _detect_jetson()
-
-
 
 
 def test_safe_cpu_count_returns_positive():

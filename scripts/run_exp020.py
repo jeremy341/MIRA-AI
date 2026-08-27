@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import random
 import shutil
 import sys
@@ -30,8 +31,9 @@ from build_balanced_dataset import Record, load_all_records  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Build and train the Roboflow-dominant MIRA EXP020.")
-    parser.add_argument("--prepare-only", action="store_true", help="Build the dataset but do not train.")
-    parser.add_argument("--train", action="store_true", help="Build the dataset and train YOLO11n.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--prepare-only", action="store_true", help="Build the dataset but do not train.")
+    group.add_argument("--train", action="store_true", help="Build the dataset and train YOLO11n.")
     parser.add_argument("--force", action="store_true", help="Replace the existing EXP020 output directory.")
     parser.add_argument("--train-images", type=int, default=6000, help="Number of training images (default: 6000).")
     parser.add_argument("--epochs", type=int, default=120)
@@ -56,8 +58,22 @@ def choose_records(records: list[Record], total: int, seed: int = 2026) -> list[
     for source_records in by_source.values():
         rng.shuffle(source_records)
 
-    requested = {source: round(total * share) for source, share in SOURCE_SHARES.items()}
-    requested["roboflow"] += total - sum(requested.values())
+    # Largest-remainder to guarantee sum(requested) == total.
+    # Use Fraction to avoid float tie-bias (e.g., 0.05*6000 float epsilon).
+    from fractions import Fraction
+    ideal_frac = {source: Fraction(str(share)) * total for source, share in SOURCE_SHARES.items()}
+    base = {source: int(frac // 1) for source, frac in ideal_frac.items()}
+    frac_part = {source: ideal_frac[source] - base[source] for source in ideal_frac}
+    remainder = total - sum(base.values())
+    order = list(SOURCE_SHARES.keys())
+    frac_sorted = sorted(
+        ideal_frac.keys(),
+        key=lambda s: (frac_part[s], -order.index(s)),
+        reverse=True,
+    )
+    for i in range(remainder):
+        base[frac_sorted[i % len(frac_sorted)]] += 1
+    requested = base
     if len(by_source.get("roboflow", [])) < requested["roboflow"]:
         raise RuntimeError(
             f"EXP020 needs at least {requested['roboflow']} Roboflow training images for the "
@@ -72,6 +88,19 @@ def choose_records(records: list[Record], total: int, seed: int = 2026) -> list[
         remaining -= take
 
     if remaining > 0:
+        # Some source(s) short — warn that fallback changes effective ratios.
+        short = {
+            s: (requested[s], len(by_source.get(s, [])))
+            for s in requested
+            if len(by_source.get(s, [])) < requested[s]
+        }
+        msg = (
+            f"Warning: fallback activated — requested mix {dict(requested)} could not be satisfied; "
+            f"short sources {short}; filling {remaining} slots from remaining images (effective ratios will differ). "
+        )
+        print(msg, file=sys.stderr)
+        import warnings
+        warnings.warn(msg, UserWarning, stacklevel=2)
         unused = {
             source: items[requested.get(source, 0) :]
             for source, items in by_source.items()
@@ -79,7 +108,11 @@ def choose_records(records: list[Record], total: int, seed: int = 2026) -> list[
         }
         fallback = [item for items in unused.values() for item in items]
         rng.shuffle(fallback)
-        selected.extend(fallback[:remaining])
+        take_fallback = min(remaining, len(fallback))
+        if take_fallback < remaining:
+            print(f"Warning: fallback pool only has {len(fallback)} images but {remaining} needed; capping fallback to {take_fallback}.", file=sys.stderr)
+        selected.extend(fallback[:take_fallback])
+        remaining -= take_fallback
 
     if len(selected) < total:
         raise RuntimeError(
@@ -99,7 +132,17 @@ def write_dataset(records: dict[str, list[Record]], output: Path, force: bool) -
     counts: dict[str, Counter] = {split: Counter() for split in records}
     source_counts: dict[str, Counter] = {split: Counter() for split in records}
     manifest: list[dict[str, object]] = []
-    for split, split_records in records.items():
+    # Track requested vs actual for dedup reporting.
+    requested_totals: dict[str, int] = {split: len(srec) for split, srec in records.items()}
+    requested_source_counts: dict[str, Counter] = {
+        split: Counter(r.source for r in srec) for split, srec in records.items()
+    }
+    dropped_per_split: dict[str, int] = {split: 0 for split in records}
+    # Cross-split dedup: preserve val/test over train by processing eval splits first.
+    priority = ["val", "test", "train"]
+    ordered_splits = [s for s in priority if s in records] + [s for s in records if s not in priority]
+    for split in ordered_splits:
+        split_records = records[split]
         image_dir = output / "images" / split
         label_dir = output / "labels" / split
         image_dir.mkdir(parents=True, exist_ok=True)
@@ -107,9 +150,10 @@ def write_dataset(records: dict[str, list[Record]], output: Path, force: bool) -
         for index, record in enumerate(split_records):
             digest = hashlib.sha256(record.image.read_bytes()).hexdigest()
             if digest in hashes:
+                dropped_per_split[split] += 1
                 continue
             hashes.add(digest)
-            stem = f"{record.source}_{record.source_split}_{index:06d}_{record.image.stem}"
+            stem = f"{record.source}_{getattr(record, 'source_split', getattr(record, 'split', 'unknown'))}_{index:06d}_{record.image.stem}"
             destination = image_dir / f"{stem}{record.image.suffix.lower()}"
             shutil.copy2(record.image, destination)
             (label_dir / f"{stem}.txt").write_text("\n".join(record.labels) + "\n", encoding="utf-8")
@@ -133,6 +177,15 @@ def write_dataset(records: dict[str, list[Record]], output: Path, force: bool) -
         encoding="utf-8",
     )
     print(f"EXP020 dataset: {output}")
+    for split in ("train", "val", "test"):
+        actual = sum(source_counts[split].values())
+        requested = requested_totals.get(split, actual)
+        dropped = dropped_per_split.get(split, 0)
+        extra = f" (requested {requested}, dropped {dropped} duplicates)" if dropped or requested != actual else ""
+        print(f"  {split}: {actual} images | {dict(source_counts[split])} | requested {requested}{extra}")
+        if requested_source_counts.get(split):
+            if dict(requested_source_counts[split]) != dict(source_counts[split]):
+                print(f"    requested sources: {dict(requested_source_counts[split])} -> actual {dict(source_counts[split])}")
     print(f"  train: {sum(source_counts['train'].values())} images | {dict(source_counts['train'])}")
     print(f"  val:   {sum(source_counts['val'].values())} images | {dict(source_counts['val'])}")
     print(f"  test:  {sum(source_counts['test'].values())} images | {dict(source_counts['test'])}")

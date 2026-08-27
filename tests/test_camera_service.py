@@ -1,23 +1,14 @@
 """Focused runtime regression tests for the dashboard camera service."""
 
 import asyncio
-import sys
 import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-SRC_DIR = Path(__file__).parent.parent / "src"
-sys.path.insert(0, str(SRC_DIR))
-sys.path.insert(0, str(SRC_DIR / "dashboard" / "backend"))
-
-import src.config
-
-sys.modules["config"] = src.config
-
-from camera_service import CameraService
-from models import CameraConfig, ModelConfig, SystemStatus
+from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.models import CameraConfig, ModelConfig, SystemStatus
 
 
 def test_initializes_runtime_state():
@@ -62,7 +53,7 @@ async def test_status_callback_failure_does_not_change_camera_initialization_res
 
     service.on_status_change = broken_callback
 
-    with patch("camera_service.USBCamera", return_value=camera):
+    with patch("src.dashboard.backend.camera_service.USBCamera", return_value=camera):
         result = await service.initialize_camera(CameraConfig())
 
     assert result is True
@@ -82,7 +73,7 @@ async def test_status_callback_is_scheduled_without_waiting_for_completion():
 
     service.on_status_change = slow_callback
 
-    with patch("camera_service.USBCamera", return_value=camera):
+    with patch("src.dashboard.backend.camera_service.USBCamera", return_value=camera):
         result = await asyncio.wait_for(service.initialize_camera(CameraConfig()), timeout=0.5)
 
     assert result is True
@@ -94,7 +85,7 @@ async def test_status_callback_is_scheduled_without_waiting_for_completion():
 async def test_failed_camera_initialization_releases_the_capture():
     service = CameraService()
 
-    with patch("camera_service.USBCamera", side_effect=RuntimeError("camera unavailable")):
+    with patch("src.dashboard.backend.camera_service.USBCamera", side_effect=RuntimeError("camera unavailable")):
         result = await service.initialize_camera(CameraConfig())
 
     assert result is False

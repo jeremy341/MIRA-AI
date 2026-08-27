@@ -339,11 +339,18 @@ def write_dataset(records_by_split: dict[str, list[Record]], requested_train_cou
     manifest = []
     hashes: set[str] = set()
     copied = Counter()
+    # dedup tracking
+    requested_totals = {split: len(srec) for split, srec in records_by_split.items()}
+    dropped_per_split = {split: 0 for split in records_by_split}
     copied_boxes = {split: Counter() for split in records_by_split}
-    for split, records in records_by_split.items():
-        for index, record in enumerate(records):
+    priority = ["val","test","train"]
+    ordered_splits = [s for s in priority if s in records_by_split] + [s for s in records_by_split if s not in priority]
+    for split in ordered_splits:
+        recs = records_by_split[split]
+        for index, record in enumerate(recs):
             digest = hashlib.sha256(record.image.read_bytes()).hexdigest()
             if digest in hashes:
+                dropped_per_split[split] += 1
                 continue
             hashes.add(digest)
             safe_stem = f"{record.source}_{record.split}_{index:06d}_{record.image.stem}"

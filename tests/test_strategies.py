@@ -21,10 +21,9 @@ from src.pipeline.strategies import (
 )
 
 
-
-
 def test_train_config_defaults():
     cfg = TrainConfig()
+    # After P3 fix, sentinel is None (intentional "exp" no longer renamed)
     assert cfg.name == "exp"
     assert cfg.epochs >= 1
     assert cfg.batch_size >= 1
@@ -133,8 +132,6 @@ export:
     assert "format" not in train_kwargs
 
 
-
-
 def test_train_result_creation():
     result = TrainResult(
         name="test_exp",
@@ -146,8 +143,6 @@ def test_train_result_creation():
     )
     assert result.name == "test_exp"
     assert result.metrics["map50"] == 0.5
-
-
 
 
 def test_get_strategy_detection():
