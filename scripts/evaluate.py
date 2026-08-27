@@ -82,6 +82,12 @@ def discover_default_dataset() -> Path | None:
     return None
 
 
+def _validate_dataset_path(dataset_path):
+    import sys, pathlib
+    if not dataset_path.exists():
+        import sys; sys.exit(1)
+
+
 def _iou(box_a: list[float], box_b: list[float]) -> float:
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
@@ -116,14 +122,14 @@ def build_confusion_matrix(
 
         for gt in gt_objects:
             gt_box = gt["bbox"]
-            gt_cls = gt["class_id"]
+            gt_cls = int(gt["class_id"])
+            if not (0 <= gt_cls < len(CLASS_NAMES)):
+                continue
             best_iou = 0.5
             best_pi = -1
 
             for pi in range(len(pred_boxes)):
                 if pred_used[pi]:
-                    continue
-                if gt_cls != pred_cls[pi]:
                     continue
                 iou_val = _iou(gt_box, pred_boxes[pi])
                 if iou_val >= best_iou:
@@ -132,7 +138,11 @@ def build_confusion_matrix(
 
             if best_pi >= 0:
                 pred_used[best_pi] = True
-                matrix[gt_cls, pred_cls[best_pi]] += 1
+                pc = int(pred_cls[best_pi])
+                if 0 <= pc < len(CLASS_NAMES):
+                    matrix[gt_cls, pc] += 1
+            else:
+                logger.debug("GT class %s at %s not matched (FN)", gt_cls, img_path.name)
 
     return matrix
 
@@ -174,15 +184,19 @@ def compute_per_class_ap(
     class_id: int,
     iou_thresh: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    # Compute precision, recall arrays and AP for a single class.
-    # Returns (precision, recall, ap) where arrays are sorted by descending
-    # confidence with an interpolated precision envelope
+    """Compute precision, recall and AP for a single class."""
     all_dets: list[dict] = []
+    gt_by_img: dict[int, list[dict]] = {}
+    failed_images: list[str] = []
 
     for img_idx, (img_path, gt_objects) in enumerate(samples):
+        gt_matches = [gt for gt in gt_objects if gt["class_id"] == class_id]
+        gt_by_img[img_idx] = gt_matches
         try:
             result = model.predict(str(img_path), conf=0.0, iou=iou_thresh)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Prediction failed for %s (class_id=%s): %s — counting as no detections for AP", img_path.name, class_id, exc)
+            failed_images.append(str(img_path))
             continue
 
         for det in result.detections:
@@ -190,29 +204,22 @@ def compute_per_class_ap(
                 continue
             if det.confidence < conf_thresh:
                 continue
-            # Find best IoU with GT of same class in same image
-            gt_matches = [gt for gt in gt_objects if gt["class_id"] == class_id]
-            best_iou = 0.0
-            best_gt_idx = -1
-            for gi, gt in enumerate(gt_matches):
-                iou_val = _iou(list(det.bbox), gt["bbox"])
-                if iou_val > best_iou:
-                    best_iou = iou_val
-                    best_gt_idx = gi
-
             all_dets.append(
                 {
                     "img_idx": img_idx,
-                    "confidence": det.confidence,
-                    "best_iou": best_iou,
-                    "matched_gt": best_gt_idx,
-                    "gt_total": len(gt_matches),
+                    "confidence": float(det.confidence),
+                    "bbox": list(det.bbox),
                 }
             )
 
+    if failed_images:
+        logger.warning("Per-class AP class_id=%s: %d/%d images had prediction failures and were counted as missed detections", class_id, len(failed_images), len(samples))
+
     all_dets.sort(key=lambda x: x["confidence"], reverse=True)
 
-    num_gt = sum(1 for _, gts in samples for gt in gts if gt["class_id"] == class_id)
+    num_gt = sum(len(v) for v in gt_by_img.values())
+    if num_gt == 0:
+        logger.warning("Per-class AP class_id=%s: no ground-truth boxes for this class (AP=0.0)", class_id)
     if num_gt == 0:
         return np.array([0.0]), np.array([0.0]), 0.0
 
@@ -222,20 +229,32 @@ def compute_per_class_ap(
 
     for i, d in enumerate(all_dets):
         img = d["img_idx"]
-        if d["best_iou"] >= iou_thresh:
-            used = used_gt.setdefault(img, set())
-            if d["matched_gt"] not in used:
-                tp[i] = 1.0
-                used.add(d["matched_gt"])
-            else:
-                fp[i] = 1.0
+        gt_list = gt_by_img.get(img, [])
+        if not gt_list:
+            fp[i] = 1.0
+            continue
+        used = used_gt.setdefault(img, set())
+        best_iou = 0.0
+        best_gt_idx = -1
+        for gi, gt in enumerate(gt_list):
+            if gi in used:
+                continue
+            iou_val = _iou(d["bbox"], gt["bbox"])
+            if iou_val > best_iou:
+                best_iou = iou_val
+                best_gt_idx = gi
+        if best_iou >= iou_thresh and best_gt_idx >= 0:
+            tp[i] = 1.0
+            used.add(best_gt_idx)
         else:
             fp[i] = 1.0
 
     tp_cum = np.cumsum(tp)
     fp_cum = np.cumsum(fp)
-    precision = tp_cum / (tp_cum + fp_cum)
-    recall = tp_cum / num_gt
+    denom = tp_cum + fp_cum
+    precision = np.divide(tp_cum, denom, out=np.zeros_like(tp_cum, dtype=float), where=denom != 0)
+    precision = np.nan_to_num(precision, nan=0.0)
+    recall = tp_cum / num_gt if num_gt > 0 else np.zeros_like(tp_cum, dtype=float)
 
     # Append endpoints
     precision = np.concatenate([[1.0], precision])
@@ -335,11 +354,13 @@ def main() -> None:
         data_path = Path(args.data)
         if not data_path.is_absolute():
             data_path = ROOT_DIR / data_path
+        _validate_dataset_path(data_path)
     else:
         data_path = discover_default_dataset()
         if data_path is None:
             logger.error("No dataset found. Specify --data path explicitly.")
             sys.exit(1)
+        _validate_dataset_path(data_path)
     logger.info("Dataset: %s", data_path)
 
     if args.output:
@@ -366,10 +387,12 @@ def main() -> None:
     logger.info("Running benchmark (conf=%.2f) ...", args.conf)
     benchmark = ModelBenchmark(models=[model], dataset=data_path, conf=args.conf)
     benchmark.samples = samples
+    benchmark.evaluated_on_train = evaluated_on_train
     t0 = time.perf_counter()
     results = benchmark.run()
     elapsed = time.perf_counter() - t0
-    logger.info("Benchmark completed in %.1fs", elapsed)
+    throughput_fps = len(samples) / elapsed if elapsed > 0 else 0.0
+    logger.info("Benchmark completed in %.1fs (throughput: %.1f images/sec)", elapsed, throughput_fps)
 
     result = results[0]
 
@@ -391,7 +414,7 @@ def main() -> None:
     print(f"  Precision: {result.overall_precision:.4f}")
     print(f"  Recall:    {result.overall_recall:.4f}")
     print(f"  F1:        {result.overall_f1:.4f}")
-    print(f"  Latency:   {result.avg_latency_ms:.1f} ms")
+    print(f"  Latency:   {result.avg_latency_ms:.1f} ms (throughput: {throughput_fps:.1f} FPS)")
     print("-" * 60)
     print("  Per-class breakdown:")
     for cls_name, m in result.per_class.items():
@@ -402,6 +425,7 @@ def main() -> None:
     export_data = result.to_dict()
     export_data["per_class_ap"] = per_class_ap
     export_data["confusion_matrix"] = matrix.tolist()
+    export_data["throughput_fps"] = throughput_fps
     export_data["eval_args"] = {
         "conf": args.conf,
         "data": str(data_path),

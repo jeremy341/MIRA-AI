@@ -31,16 +31,18 @@ def build_comparison(results: list[BenchmarkResult]) -> str:
     # Return markdown table which compares models
     sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
 
-    header = "| Model | Size (MB) | Latency (ms) | Precision | Recall | F1 | mAP50 | mAP50-95 |"
+    header = "| Model | Size (MB) | Latency (ms) | Throughput (FPS) | Precision | Recall | F1 | mAP50 | mAP50-95 |"
     sep = "|---|---:|---:|---:|---:|---:|---:|---:|"
     rows = [header, sep]
 
     for r in sorted_res:
         size = _model_size_mb(Path(r.model_path))
+        throughput = 1000.0 / r.avg_latency_ms if r.avg_latency_ms > 0 else 0.0
         rows.append(
             f"| {r.model_name} "
             f"| {size:.1f} "
             f"| {r.avg_latency_ms:.1f} "
+            f"| {throughput:.1f} "
             f"| {r.overall_precision:.1%} "
             f"| {r.overall_recall:.1%} "
             f"| {r.overall_f1:.1%} "
@@ -133,6 +135,7 @@ def main() -> None:
         required=True,
         help="Path to YOLO-format dataset YAML or directory.",
     )
+    parser.add_argument("--batch", type=int, default=1, help="Batch size")
     parser.add_argument("--conf", type=float, default=0.5, help="Confidence threshold (default: 0.5).")
     parser.add_argument(
         "--output",

@@ -1,8 +1,17 @@
 @echo off
 setlocal
 rem MIRA Unified Windows CLI Wrapper
-rem All paths are relative to the batch file's location
+rem Prefers the installed console script 'mira' (pip install) with fallback
+rem to a repo-relative .venv / python -m src for development checkouts.
 
+rem Prefer installed 'mira' console script when available
+where mira >nul 2>&1
+if %ERRORLEVEL% equ 0 (
+    mira %*
+    exit /b %ERRORLEVEL%
+)
+
+rem Fallback: development checkout with optional .venv
 set "PROJECT_DIR=%~dp0..\"
 
 rem Prefer the local venv if it exists, otherwise fall back to system python

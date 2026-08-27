@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # MIRA Unified Linux/macOS CLI Wrapper
-# All paths are relative to the script's location
+# Prefers the installed console script 'mira' (pip install) and falls back
+# to a repo-relative .venv / python -m src for development checkouts.
 
+# If an installed 'mira' console script is on PATH, use it directly.
+if command -v mira >/dev/null 2>&1; then
+    # Avoid exec-loop when this wrapper itself is on PATH as 'mira'
+    # (e.g. pipx shim vs. repo launcher): compare resolved paths.
+    MIRA_BIN="$(command -v mira)"
+    WRAPPER_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+    if [ "$MIRA_BIN" != "$WRAPPER_PATH" ]; then
+        exec mira "$@"
+    fi
+fi
+
+# Fallback: development checkout with optional .venv
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" || exit 1
 
 # Prefer the local venv if it exists, otherwise fall back to system python

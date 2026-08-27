@@ -1,6 +1,6 @@
 project:
   name: MIRA
-  version: "1.0.0"
+  version: "1.0.2"
   description: "Machine Intelligence for Recycling Automation"
 
 classes:
@@ -38,7 +38,12 @@ inference:
   reject_threshold: 0.55
   default_conf: 0.5
   default_iou: 0.45
+  tflite_int8_conf: 0.25
+  camera_default_conf: 0.25
+  camera_default_reject: 0.25
+  camera_target_latency_ms: 1000
 
 quantization:
   formats: ["int8", "fp32"]
   calibration_samples: 100
+  tflite_int8_conf: 0.25

@@ -1,18 +1,13 @@
 """Tests for MIRA dashboard WebSocket handler."""
 
-import sys
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
 
-# Add dashboard backend to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "dashboard" / "backend"))
-
-from models import Detection, SystemMetrics, SystemStatus, WasteClass
-from websocket_handler import WebSocketHandler
+from src.dashboard.backend.models import Detection, SystemMetrics, SystemStatus, WasteClass
+from src.dashboard.backend.websocket_handler import WebSocketHandler
 
 
 @pytest.fixture

@@ -1,20 +1,12 @@
 """Tests for MIRA research pipeline modules."""
 
-import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 import yaml
 
-_project_root = str(Path(__file__).resolve().parent.parent)
-_src_dir = str(Path(__file__).resolve().parent.parent / "src")
-if _project_root not in sys.path:
-    sys.path.insert(0, _project_root)
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-
-
+_project_root = Path(__file__).resolve().parent.parent
 
 
 def test_mira_yaml_exists():
@@ -45,8 +37,6 @@ def test_project_config_returns_dict():
     assert "inference" in cfg
 
 
-
-
 def test_register_command():
     from src.pipeline.registry import get_commands, register_command, _COMMANDS
 
@@ -60,8 +50,6 @@ def test_register_command():
         assert commands["test_cmd_pytest"].help_text == "A test command"
     finally:
         _COMMANDS.pop("test_cmd_pytest", None)
-
-
 
 
 def test_discover_loads_yaml_files():
@@ -115,8 +103,6 @@ def test_yaml_descriptors_valid():
         assert "source_format" in data, f"{yf.name} missing 'source_format'"
 
 
-
-
 def test_discover_finds_models():
     from src.pipeline.models import ModelRegistry
 
@@ -144,8 +130,6 @@ def test_third_party_adapter():
         adapter = ThirdPartyAdapter(path=f.name, name="test_model")
         assert adapter.name == "test_model"
         assert adapter.model_type == "third_party"
-
-
 
 
 def test_per_class_metrics():
@@ -203,13 +187,11 @@ def test_comparison_table():
     assert "model_b" in table
 
 
-
-
 def test_default_config():
     from src.pipeline.strategies import TrainConfig
 
     cfg = TrainConfig()
-    assert cfg.model == "yolo11n.pt"
+    assert cfg.model == "mira_exp014.pt"
     assert cfg.epochs == 120
     assert cfg.batch_size == 32
     assert cfg.imgsz == 640

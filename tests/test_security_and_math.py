@@ -11,8 +11,6 @@ def _approx(a, b, abs_tol=1e-6):
     assert math.isclose(float(a), float(b), abs_tol=abs_tol), f"{a} != {b} (tol={abs_tol})"
 
 
-
-
 class TestResolveSafePath:
     """Path-traversal prevention for user-supplied file paths."""
 
@@ -78,8 +76,6 @@ class TestResolveSafePath:
             resolve_safe_path("/etc", base_dir=tmp_path)
 
 
-
-
 class TestComputeIoU:
     """Intersection-over-Union calculation for axis-aligned bounding boxes."""
 
@@ -127,8 +123,6 @@ class TestComputeIoU:
         a = [0, 0, 10, 10]
         b = [10, 0, 20, 10]
         _approx(compute_iou(a, b), 0.0)
-
-
 
 
 class TestComputeMap:
@@ -226,8 +220,6 @@ class TestComputeMap:
         assert 0.0 <= ap <= 1.0 + 1e-9
 
 
-
-
 class TestSetupCameraProperties:
     """Hardware-focused camera config tests using mocked OpenCV."""
 
@@ -283,8 +275,6 @@ class TestSetupCameraProperties:
                 setup_camera_properties(cap, 640, 480)
 
 
-
-
 @pytest.mark.skipif(not hasattr(pytest, "skip"), reason="Requires PyTorch installation")
 class TestHardwareDetection:
     """Hardware detection tests requiring PyTorch."""
@@ -297,8 +287,6 @@ class TestHardwareDetection:
         assert info.cpu_count > 0
         assert len(info.platform) > 0
         assert info.python_version is not None
-
-
 
 
 class TestDatasetSummary:

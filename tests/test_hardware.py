@@ -16,8 +16,6 @@ from src.hardware import (
 )
 
 
-
-
 def test_frame_buffer_update_and_get():
     buf = _FrameBuffer()
     fake_frame = MagicMock()
@@ -56,8 +54,6 @@ def test_frame_buffer_stop():
     assert buf.running
     buf.stop()
     assert not buf.running
-
-
 
 
 def test_usbcamera_init_success():
@@ -115,8 +111,6 @@ def test_usbcamera_context_manager():
             assert isinstance(cam, USBCamera)
 
 
-
-
 def test_ipcamera_init_success():
     with patch("src.hardware.cv2.VideoCapture") as mock_cap:
         mock_instance = MagicMock()
@@ -144,8 +138,6 @@ def test_ipcamera_reconnection():
         # Let reader thread run briefly
         time.sleep(0.1)
         cam.release()
-
-
 
 
 def test_abstract_camera_constants():

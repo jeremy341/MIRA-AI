@@ -1,16 +1,11 @@
 """Tests for MIRA dashboard backend models."""
 
-import sys
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
-# Add dashboard backend to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src" / "dashboard" / "backend"))
-
-from models import (
+from src.dashboard.backend.models import (
     CameraConfig,
     Detection,
     ModelConfig,

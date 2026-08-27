@@ -26,8 +26,6 @@ from src.serialization import (
 )
 
 
-
-
 def test_encoder_handles_path():
     encoder = _MiraEncoder()
     result = encoder.default(Path("/tmp/test"))
@@ -63,8 +61,6 @@ def test_encoder_falls_back_to_super():
 
     with pytest.raises(TypeError):
         encoder.default(object())
-
-
 
 
 def test_dataclass_to_dict_simple():
@@ -114,8 +110,6 @@ def test_dataclass_to_dict_passthrough_primitive():
     assert _dataclass_to_dict("hello") == "hello"
 
 
-
-
 def test_atomic_write_creates_file(tmp_path):
     target = tmp_path / "output.txt"
     _atomic_write(target, "hello world")
@@ -142,8 +136,6 @@ def test_atomic_write_no_temp_files_left(tmp_path):
     assert len(temp_files) == 0
 
 
-
-
 def test_backup_creates_bak_file(tmp_path):
     target = tmp_path / "file.txt"
     target.write_text("original content")
@@ -157,8 +149,6 @@ def test_backup_skips_if_not_exists(tmp_path):
     target = tmp_path / "nonexistent.txt"
     _backup_if_exists(target)
     assert not target.with_suffix(".txt.bak").exists()
-
-
 
 
 def test_serialize_result_dict_to_json(tmp_path):
@@ -217,8 +207,6 @@ def test_serialize_result_backups_existing(tmp_path):
     assert new["v"] == 2
 
 
-
-
 def test_serialize_config_to_yaml(tmp_path):
     @dataclass
     class Cfg:
@@ -233,8 +221,6 @@ def test_serialize_config_to_yaml(tmp_path):
     assert loaded["epochs"] == 100
     assert loaded["__schema_version__"] == CURRENT_SCHEMA_VERSION
     assert "__serialized_at__" in loaded
-
-
 
 
 def test_experiment_record_defaults():
@@ -269,8 +255,6 @@ def test_experiment_metadata_explicit_git_sha():
     assert record.uncommitted_changes is True
 
 
-
-
 def test_detect_git_sha_via_subprocess():
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="abc123def456\n")
@@ -284,8 +268,6 @@ def test_detect_git_sha_subprocess_fails_returns_none():
         with patch("pathlib.Path.read_text", side_effect=OSError):
             sha = _detect_git_sha()
             assert sha is None
-
-
 
 
 def test_has_uncommitted_changes_true():

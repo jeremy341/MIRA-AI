@@ -4,22 +4,28 @@ on: [push, pull_request]
 jobs:
   lint:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt ruff mypy
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e .[dev] mypy==1.15.0 ruff==0.12.1
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
       - run: mypy src/ --ignore-missing-imports --follow-imports=skip --exclude 'src/dashboard/'
 
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements.txt
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e .[dev]
       - run: pytest tests/ -v --tb=short

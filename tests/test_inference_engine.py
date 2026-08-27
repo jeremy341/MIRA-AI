@@ -9,6 +9,7 @@ from src.config import CAMERA_DEFAULT_CONF, DEFAULT_IMGSZ, DEFAULT_IOU
 from src.exceptions import ConfigError
 from src.inference_engine import InferenceEngine
 
+
 @pytest.fixture
 def mock_yolo():
     """Mock ultralytics.YOLO so no real model loading occurs."""
@@ -41,8 +42,6 @@ def detection_dir(tmp_path):
     det_dir.mkdir(parents=True)
     (det_dir / "yolo11n.pt").touch()
     return det_dir
-
-
 
 
 class TestConstructor:
@@ -108,8 +107,6 @@ class TestConstructor:
                     mock_cleanup.assert_called_once()
 
 
-
-
 class TestModelLoading:
     def test_pt_model_img_size_and_not_int8(self, mock_yolo, mock_camera, detection_dir):
         with patch("src.inference_engine.DETECTION_DIR", detection_dir):
@@ -163,8 +160,6 @@ class TestModelLoading:
             assert kwargs.get("task") == "detect"
 
 
-
-
 class TestInt8Behavior:
     def test_int8_defaults_conf_to_025_and_disables_tracking(self, mock_yolo, mock_camera, detection_dir):
         (detection_dir / "model_int8.tflite").touch()
@@ -200,8 +195,6 @@ class TestInt8Behavior:
             assert engine.enable_tracking is True
 
 
-
-
 class TestContextManager:
     def test_enter_returns_self(self, mock_yolo, mock_camera, detection_dir):
         with patch("src.inference_engine.DETECTION_DIR", detection_dir):
@@ -217,8 +210,6 @@ class TestContextManager:
             except RuntimeError:
                 pass
             assert engine._released is True
-
-
 
 
 class TestFrameSkipping:
@@ -261,8 +252,6 @@ class TestFrameSkipping:
             assert engine.skip_frame is False
 
 
-
-
 class TestLatencyTracking:
     def test_deque_respects_maxlen(self, mock_yolo, mock_camera, mock_cv2, detection_dir):
         with patch("src.inference_engine.DETECTION_DIR", detection_dir):
@@ -281,8 +270,6 @@ class TestLatencyTracking:
             result.speed = {"inference": 10}
             engine._update_metrics([result])
             assert engine._current_fps > 0
-
-
 
 
 class TestCleanup:
@@ -327,8 +314,6 @@ class TestCleanup:
                 engine._released = True
                 engine.__del__()
                 mock_warnings.warn.assert_not_called()
-
-
 
 
 class TestInferRouting:

@@ -11,9 +11,9 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse
 
-from models import CameraConfig, ModelConfig
-from camera_service import CameraService
-from websocket_handler import WebSocketHandler
+from src.dashboard.backend.models import CameraConfig, ModelConfig
+from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.websocket_handler import WebSocketHandler
 
 camera_service = CameraService()
 websocket_handler = WebSocketHandler(camera_service)

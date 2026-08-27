@@ -6,15 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "mira-ai"
 dynamic = ["version"]
 description = "Machine Intelligence for Recycling Automation - Jugend Forscht 2027"
-authors = [{name = "Jeremy Darko"}]
-license = "MIT"
+authors = [{name = "Jeremy Darko", email = "jeremy@example.com"}]
+license = {text = "MIT"}
 license-files = ["LICENSE"]
 readme = "README.md"
 keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.13"
 dependencies = [
     "ultralytics>=8.3.0",
-    "opencv-python>=4.0",
+    "opencv-python-headless>=4.0",
     "torch>=2.0",
     "torchvision>=0.15",
     "numpy>=1.24",
@@ -39,7 +39,7 @@ analysis = [
     "scipy>=1.0",
 ]
 all = ["mira-ai[train,analysis]"]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.24", "pytest-mock>=3.14", "ruff>=0.9.0", "mira-ai[all]"]
+dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "mira-ai[all]"]
 
 [project.urls]
 Repository = "https://github.com/jeremy341/MIRA-AI"
@@ -47,11 +47,9 @@ Repository = "https://github.com/jeremy341/MIRA-AI"
 [project.scripts]
 mira = "src.cli:main"
 
-[tool.setuptools.dynamic]
-version = {attr = "src.version.__version__"}
-
 [tool.setuptools.packages.find]
-include = ["src*"]
+include = ["src", "src.*"]
+exclude = ["tests*", "scripts*", "src.dashboard.frontend*"]
 
 [tool.setuptools.package-data]
 "src" = ["assets/*.yaml", "assets/models/detection/*.pt", "assets/models/detection/*.yaml"]
@@ -60,6 +58,7 @@ include = ["src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "strict"
+pythonpath = ["src", "src/dashboard/backend"]
 
 [tool.ruff]
 target-version = "py311"
@@ -73,4 +72,10 @@ ignore = ["E501", "E402", "I001", "UP017"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+follow_imports = "skip"
+exclude = "src/dashboard"
 

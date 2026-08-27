@@ -17,8 +17,6 @@ from src.logger import (
 )
 
 
-
-
 def _make_record(level=logging.INFO, msg="test message", exc_info=None):
     record = logging.LogRecord(
         name="test.logger",
@@ -66,8 +64,6 @@ def test_json_formatter_includes_exception():
     assert "ValueError" in data["exception"]
 
 
-
-
 def test_text_formatter_format():
     formatter = _TextFormatter()
     record = _make_record(msg="text test")
@@ -75,8 +71,6 @@ def test_text_formatter_format():
     assert "text test" in output
     assert "INFO" in output
     assert "test.logger" in output
-
-
 
 
 def test_make_handler_returns_stream_handler():
@@ -108,8 +102,6 @@ def test_make_handler_json_format_when_env_set():
             assert isinstance(handler.formatter, _JsonFormatter)
         finally:
             logger_module._DEFAULT_FORMAT = original_format
-
-
 
 
 def test_get_logger_returns_logger():
@@ -149,8 +141,6 @@ def test_get_logger_does_not_duplicate_handlers():
 def test_get_logger_invalid_level_falls_back_to_info():
     log = get_logger("test_module_6", level="INVALID_LEVEL")
     assert log.level == logging.INFO
-
-
 
 
 def test_add_file_handler_creates_log_file(tmp_path):
