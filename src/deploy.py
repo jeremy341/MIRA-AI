@@ -1,4 +1,4 @@
-"""Deployment utilities for MIRA - hardware detection and environment checks."""
+# deploy helpers - hardware detection and env checks
 
 from __future__ import annotations
 
@@ -30,7 +30,6 @@ class HardwareInfo:
 
 
 def detect_hardware() -> HardwareInfo:
-    """Detect the current hardware platform and available capabilities."""
     info = HardwareInfo(
         platform=sys.platform,
         arch=platform.machine(),
@@ -64,7 +63,7 @@ def detect_hardware() -> HardwareInfo:
 
 
 def suggest_model(info: HardwareInfo | None = None) -> str:
-    """Suggest the best model type for the current hardware."""
+    # Suggest the best model type for the current hardware.
     if info is None:
         info = detect_hardware()
 
@@ -74,8 +73,6 @@ def suggest_model(info: HardwareInfo | None = None) -> str:
         return "tflite_fp32"
     if info.is_jetson:
         return "tensorrt"
-    if info.has_cuda and info.has_torch:
-        return "pt"
     if info.has_cuda:
         return "pt"
     if info.has_tflite_runtime or info.has_tensorflow:
@@ -84,7 +81,6 @@ def suggest_model(info: HardwareInfo | None = None) -> str:
 
 
 def check_environment() -> list[str]:
-    """Run environment checks and return a list of warnings."""
     warnings: list[str] = []
     info = detect_hardware()
 
@@ -193,4 +189,3 @@ def _detect_cuda() -> tuple[bool, str]:
         except (ImportError, AttributeError):
             pass
     return False, ""
-

@@ -1,13 +1,10 @@
-"""
-Camera service managing inference pipeline
-"""
-
+# Camera service managing inference pipeline
 import asyncio
 import threading
 import time
 from typing import Any
 from collections import deque, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import psutil
 
 from ultralytics import YOLO
@@ -20,8 +17,6 @@ logger = get_logger(__name__)
 
 
 class CameraService:
-    """Main service handling camera, inference, and statistics"""
-
     _STOP_JOIN_TIMEOUT_SECONDS = 1.0
 
     def __init__(self, loop=None):
@@ -57,7 +52,6 @@ class CameraService:
         self.on_frame = None
 
     def _update_status_locked(self, status: SystemStatus, message: str):
-        """Caller must hold self._lock"""
         self.status = status
         self.status_message = message
 
@@ -89,7 +83,6 @@ class CameraService:
             return await self._initialize_camera(config)
 
     async def _initialize_camera(self, config):
-        """Initialize camera with configuration"""
         if self.get_status_snapshot()["streaming"]:
             self._update_status(SystemStatus.ERROR, "Stop the stream before changing camera settings")
             return False
@@ -103,23 +96,35 @@ class CameraService:
             return False
 
         with self._lock:
+            previous_camera = self.camera
             self.camera = camera
             self.camera_config = config
+
+        if previous_camera is not None and previous_camera is not camera:
+            try:
+                previous_camera.release()
+            except Exception as exc:
+                logger.warning("Exception releasing previous camera: %s", exc)
 
         self._update_status(SystemStatus.IDLE, "Camera ready")
         return True
 
     @staticmethod
     def _open_camera(config):
-        """Open the same buffered USB camera abstraction used by `mira live`."""
-        return USBCamera(config.index, config.width, config.height)
+        return USBCamera(
+            config.index,
+            config.width,
+            config.height,
+            config.fps,
+            config.autofocus,
+            config.auto_exposure,
+        )
 
     async def load_model(self, model_name: str, config):
         async with self._operation_lock:
             return await self._load_model_for_service(model_name, config)
 
     async def _load_model_for_service(self, model_name: str, config):
-        """Load detection model"""
         with self._lock:
             was_streaming = self.is_streaming
         if was_streaming:
@@ -147,7 +152,6 @@ class CameraService:
 
     @staticmethod
     def _load_model(model_name: str, config):
-        """Validate and load a model without touching shared service state."""
         if any(sep in model_name for sep in ("/", "\\", "..")):
             raise ValueError(f"Invalid model name: {model_name}")
 
@@ -171,7 +175,6 @@ class CameraService:
         return model, model_config, is_tflite_int8, img_size
 
     async def start_streaming(self):
-        """Start the inference streaming loop"""
         with self._lock:
             if self.is_streaming:
                 return True
@@ -193,13 +196,13 @@ class CameraService:
         return should_start
 
     def _streaming_loop(self):
-        """Main streaming and inference loop (runs in daemon thread)."""
         last_metrics_time = time.time()
         metrics_interval = 0.5
         consecutive_read_failures = 0
 
         with self._lock:
             local_conf = self.model_config.conf_threshold if self.model_config else 0.5
+            local_reject = self.model_config.reject_threshold if self.model_config else local_conf
             local_iou = self.model_config.iou_threshold if self.model_config else 0.45
             local_img_size = self.img_size
             local_is_tflite_int8 = self.is_tflite_int8
@@ -270,7 +273,7 @@ class CameraService:
                     )
 
                 inference_time = (time.perf_counter() - frame_start) * 1000
-                detections = self._process_results(results, local_conf)
+                detections = self._process_results(results, local_conf, local_reject)
                 self._update_performance_metrics(inference_time, results)
 
                 current_time = time.time()
@@ -310,9 +313,9 @@ class CameraService:
                     self.is_streaming = False
                 break
 
-    def _process_results(self, results, conf_threshold: float = 0.5):
-        """Process YOLO results into Detection objects"""
+    def _process_results(self, results, conf_threshold: float = 0.5, reject_threshold: float | None = None):
         detections = []
+        effective_threshold = max(conf_threshold, reject_threshold or conf_threshold)
 
         if not results or len(results) == 0:
             return detections
@@ -322,8 +325,10 @@ class CameraService:
             return detections
 
         for box in boxes:
+            if box.conf is None or len(box.conf) == 0 or box.cls is None or len(box.cls) == 0:
+                continue
             conf = float(box.conf[0])
-            if conf < conf_threshold:
+            if conf < effective_threshold:
                 continue
 
             cls_id = int(box.cls[0])
@@ -336,7 +341,7 @@ class CameraService:
                 continue  # Skip unknown classes
 
             x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
-            track_id = int(box.id[0]) if box.id is not None else None
+            track_id = int(box.id[0]) if box.id is not None and len(box.id) > 0 else None
 
             detection = Detection(class_name=waste_class, confidence=conf, bbox=[x1, y1, x2, y2], track_id=track_id)
 
@@ -345,12 +350,11 @@ class CameraService:
         return detections
 
     def _class_id_to_name(self, class_id: int) -> str:
-        """Map class ID to name"""
-        from visualize import class_id_to_name
+        from src.visualize import class_id_to_name
+
         return class_id_to_name(class_id, CLASS_NAMES)
 
     def _update_performance_metrics(self, inference_time: float, results=None):
-        """Track inference latency and frame timing like the CLI engine."""
         with self._lock:
             latency = inference_time
             if results:
@@ -367,7 +371,6 @@ class CameraService:
                     self.frame_times.popleft()
 
     def _calculate_system_metrics(self) -> SystemMetrics:
-        """Calculate current system metrics (snapshot shared state under lock)."""
         with self._lock:
             frame_times_snapshot = list(self.frame_times)
             latency_history_snapshot = list(self.latency_history)
@@ -417,7 +420,6 @@ class CameraService:
         )
 
     def _update_history(self, detections: list[Detection]):
-        """Update detection history, avoiding immediate duplicates"""
         with self._lock:
             for detection in detections:
                 if self.detection_history:
@@ -428,13 +430,11 @@ class CameraService:
                 self.class_history[detection.class_name].append(detection)
 
     def _update_status(self, status: SystemStatus, message: str):
-        """Update system status"""
         with self._lock:
             self._update_status_locked(status, message)
         self._notify_status_change()
 
     def get_status_snapshot(self) -> dict:
-        """Return one consistent view of the runtime state."""
         with self._lock:
             return {
                 "status": self.status.value,
@@ -445,7 +445,6 @@ class CameraService:
             }
 
     async def stop_streaming(self, release_camera: bool = False) -> bool:
-        """Stop the inference worker and optionally release the camera."""
         with self._lock:
             self.is_streaming = False
             cam = self.camera
@@ -498,23 +497,22 @@ class CameraService:
         return not thread_alive
 
     async def stop(self):
-        """Stop inference while keeping the camera ready for the next start."""
         return await self.stop_streaming(release_camera=False)
 
     async def shutdown(self):
-        """Stop inference and release the camera during application shutdown."""
         return await self.stop_streaming(release_camera=True)
 
     def get_statistics(self, period_seconds: int = 60) -> Statistics:
-        """Get statistics for the given time period (thread-safe via lock + UTC)."""
-        from datetime import timezone
-
         cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=period_seconds)
 
         with self._lock:
             snapshot = list(self.detection_history)
 
-        recent_detections = [d for d in snapshot if d.timestamp.replace(tzinfo=timezone.utc) >= cutoff_time]
+        recent_detections = [
+            d
+            for d in snapshot
+            if (d.timestamp if d.timestamp.tzinfo else d.timestamp.replace(tzinfo=timezone.utc)) >= cutoff_time
+        ]
 
         class_counts = defaultdict(int)
         confidence_sums = defaultdict(float)
@@ -536,13 +534,12 @@ class CameraService:
         )
 
     def get_available_models(self) -> list[dict[str, Any]]:
-        """Get list of available models"""
         models = []
 
         for model_file in DETECTION_DIR.glob("*"):
             if model_file.suffix.lower() in (".pt", ".tflite"):
                 is_int8 = "int8" in model_file.name.lower()
-                is_tflite = model_file.suffix == ".tflite"
+                is_tflite = model_file.suffix.lower() == ".tflite"
 
                 try:
                     if is_tflite:

@@ -68,7 +68,10 @@ config.local.*
 # --- Experiment results (regenerable plots, CSVs, args) ---
 results/
 !results/experiments_log.md
-!results/field_benchmark_results.md
+
+# --- EXP020 (local runbook + script, not tracked) ---
+docs/EXP020_RUNBOOK.md
+scripts/run_exp020.py
 
 # --- CLAUDE AI context (private) ---
 CLAUDE/

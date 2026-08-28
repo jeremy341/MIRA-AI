@@ -1,7 +1,4 @@
-"""Side-by-side comparison of multiple detection models.
-Loads 2+ YOLO models, runs them on the same validation dataset, and
-produces a comparison table (markdown) plus a bar chart saved to results/.
-"""
+# Side-by-side comparison of multiple detection models. Loads 2+ YOLO models, runs them on the same validation dataset, and produces a comparison table (markdown) plus a bar chart saved to results/.
 
 from __future__ import annotations
 
@@ -9,27 +6,33 @@ import argparse
 import json
 import sys
 from pathlib import Path
+
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
-from config import CLASS_NAMES, ROOT_DIR
-from pipeline.benchmark import ModelBenchmark, BenchmarkResult
-from pipeline.models import ModelRegistry
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
 
-
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+from src.config import CLASS_NAMES, ROOT_DIR
+from src.pipeline.benchmark import BenchmarkResult, ModelBenchmark
+from src.pipeline.models import ModelRegistry
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 
 def _model_size_mb(path: Path) -> float:
     return path.stat().st_size / 1_048_576 if path.exists() else 0.0
 
 
+def _rank_results(results: list[BenchmarkResult]) -> list[BenchmarkResult]:
+    return sorted(results, key=lambda result: result.overall_f1, reverse=True)
+
+
 def build_comparison(results: list[BenchmarkResult]) -> str:
     # Return markdown table which compares models
-    sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
+    sorted_res = _rank_results(results)
 
     header = "| Model | Size (MB) | Latency (ms) | Throughput (FPS) | Precision | Recall | F1 | mAP50 | mAP50-95 |"
     sep = "|---|---:|---:|---:|---:|---:|---:|---:|"
@@ -55,7 +58,7 @@ def build_comparison(results: list[BenchmarkResult]) -> str:
 
 def build_per_class_table(results: list[BenchmarkResult]) -> str:
     # Return a markdown table with per-class precision / recall / F1.
-    sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
+    sorted_res = _rank_results(results)
     headers = ["Model"]
     for cls in CLASS_NAMES:
         headers.extend([f"{cls} P", f"{cls} R", f"{cls} F1"])
@@ -85,7 +88,7 @@ def build_per_class_table(results: list[BenchmarkResult]) -> str:
 
 def plot_comparison(results: list[BenchmarkResult], output_path: Path) -> None:
     # Generate a grouped bar chart comparing mAP50, F1, and latency
-    sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
+    sorted_res = _rank_results(results)
     names = [r.model_name for r in sorted_res]
     map50_vals = [r.map50 * 100 for r in sorted_res]
     f1_vals = [r.overall_f1 * 100 for r in sorted_res]
@@ -147,6 +150,8 @@ def main() -> None:
 
     if len(args.models) < 2:
         parser.error("At least 2 models are required for comparison.")
+    if args.batch != 1:
+        parser.error("Batch comparison is not supported; use --batch 1.")
 
     dataset_path = Path(args.data)
     if not dataset_path.exists():

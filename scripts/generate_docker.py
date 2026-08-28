@@ -1,6 +1,5 @@
 # Generate Docker training infrastructure from experiment config.
 
-from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
@@ -28,6 +27,8 @@ def _load_project_config(project_root: Path) -> dict:
 def _build_training_params(exp: dict, project: dict) -> dict:
     train = project.get("training", {})
     aug = exp.get("augmentation", train.get("augmentation", {}))
+    classes = project.get("classes", {})
+    class_names = classes.get("names", ["glass", "metal", "paper", "plastic", "trash"])
 
     return {
         "model": exp.get("model", train.get("default_model", "yolo11n.pt")),
@@ -44,6 +45,8 @@ def _build_training_params(exp: dict, project: dict) -> dict:
         "workers": exp.get("workers", 4),
         "amp": exp.get("amp", True),
         "augmentation": aug,
+        "num_classes": classes.get("count", len(class_names)),
+        "class_names": class_names,
     }
 
 
@@ -89,8 +92,8 @@ def generate_entrypoint(params: dict, exp: dict) -> str:
 
     export_block = "\n\n".join(export_lines)
 
-    nc = exp.get("nc", 5)
-    names = exp.get("names", ["glass", "metal", "paper", "plastic", "trash"])
+    nc = params.get("num_classes", exp.get("nc", 5))
+    names = params.get("class_names", exp.get("names", ["glass", "metal", "paper", "plastic", "trash"]))
 
     lines = [
         "#!/bin/bash",
@@ -166,7 +169,8 @@ def generate_entrypoint(params: dict, exp: dict) -> str:
         f"ls -la runs/{exp_name}/weights/",
         "",
     ]
-    return "\n".join(lines)
+    compose = "\n".join(lines)
+    return compose
 
 
 def generate_docker_compose() -> str:
@@ -210,9 +214,16 @@ def generate_train_script(params: dict, exp: dict) -> str:
     aug = params["augmentation"]
 
     aug_kwargs = ",\n        ".join(f"{k}={v}" for k, v in aug.items())
+    export_config = exp.get("export", {})
+    export_formats = export_config.get("formats", ["tflite_int8", "onnx"]) if isinstance(export_config, dict) else []
+    export_lines = []
+    if "tflite_int8" in export_formats:
+        export_lines.append(f'    model.export(format="tflite", int8=True, imgsz={params["imgsz"]})')
+    if "onnx" in export_formats:
+        export_lines.append(f'    model.export(format="onnx", imgsz={params["imgsz"]})')
 
     lines = [
-        '"""Train YOLO detection model inside Docker."""',
+        # Train YOLO detection model inside Docker.
         "",
         "from pathlib import Path",
         "",
@@ -255,8 +266,7 @@ def generate_train_script(params: dict, exp: dict) -> str:
         "    print(f'mAP50-95: {metrics.box.map:.3f}')",
         "",
         "    # Export",
-        f'    model.export(format="tflite", int8=True, imgsz={params["imgsz"]})',
-        f'    model.export(format="onnx", imgsz={params["imgsz"]})',
+        *export_lines,
         '    print("Export complete!")',
         "",
         "",

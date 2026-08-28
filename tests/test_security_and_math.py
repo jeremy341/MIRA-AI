@@ -1,4 +1,4 @@
-"""Tests for security-critical and math utility functions in MIRA."""
+# Tests for security-critical and math utility functions in MIRA.
 
 import math
 from pathlib import Path
@@ -12,7 +12,7 @@ def _approx(a, b, abs_tol=1e-6):
 
 
 class TestResolveSafePath:
-    """Path-traversal prevention for user-supplied file paths."""
+    # Path-traversal prevention for user-supplied file paths.
 
     def test_safe_relative_path_returns_resolved(self, tmp_path):
         from src.config import resolve_safe_path
@@ -77,8 +77,6 @@ class TestResolveSafePath:
 
 
 class TestComputeIoU:
-    """Intersection-over-Union calculation for axis-aligned bounding boxes."""
-
     def test_identical_boxes(self):
         from src.pipeline.benchmark import compute_iou
 
@@ -126,8 +124,6 @@ class TestComputeIoU:
 
 
 class TestComputeMap:
-    """Mean Average Precision across classes."""
-
     def test_identical_coordinates_on_different_images_do_not_match(self):
         from src.pipeline.benchmark import compute_map
 
@@ -221,7 +217,7 @@ class TestComputeMap:
 
 
 class TestSetupCameraProperties:
-    """Hardware-focused camera config tests using mocked OpenCV."""
+    # Hardware-focused camera config tests using mocked OpenCV.
 
     def test_creates_a_two_dimensional_numpy_array(self):
         import cv2
@@ -277,10 +273,8 @@ class TestSetupCameraProperties:
 
 @pytest.mark.skipif(not hasattr(pytest, "skip"), reason="Requires PyTorch installation")
 class TestHardwareDetection:
-    """Hardware detection tests requiring PyTorch."""
-
     def test_detect_hardware_has_cpu(self):
-        """Hardware detection should always find CPU cores."""
+        # Hardware detection should always find CPU cores.
         from src.deploy import detect_hardware
 
         info = detect_hardware()
@@ -290,7 +284,7 @@ class TestHardwareDetection:
 
 
 class TestDatasetSummary:
-    """Tests for the dataset_summary helper."""
+    # Tests for the dataset_summary helper.
 
     def test_dataset_summary_calls_validator(self, tmp_path):
         from src.pipeline.validators import dataset_summary

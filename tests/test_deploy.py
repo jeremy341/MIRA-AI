@@ -1,4 +1,4 @@
-"""Tests for MIRA deployment and hardware detection utilities."""
+# Tests for MIRA deployment and hardware detection utilities.
 
 from __future__ import annotations
 

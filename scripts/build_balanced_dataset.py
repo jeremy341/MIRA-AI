@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""Build a balanced MIRA dataset without train/test leakage.
-The output is written to ``datasets/merged_mira_balanced``
-"""
+# Build a balanced MIRA dataset, the output is written to datasets/merged_mira_balanced
 
-from __future__ import annotations
 
 import hashlib
 import json
+import math
 import random
 import shutil
 from collections import Counter
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -174,16 +171,36 @@ def remap_lines(lines: list[str], mapping: dict[int, int]) -> tuple[str, ...]:
             continue
         try:
             old_id = int(fields[0])
+            coords = [float(value) for value in fields[1:5]]
         except ValueError:
             continue
-        if old_id in mapping:
+        if old_id in mapping and all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords):
             result.append(f"{mapping[old_id]} {' '.join(fields[1:5])}")
+    return tuple(result)
+
+
+def valid_lines(lines: list[str]) -> tuple[str, ...]:
+    result = []
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 5:
+            continue
+        try:
+            class_id = int(fields[0])
+            coords = [float(value) for value in fields[1:5]]
+        except ValueError:
+            continue
+        if class_id < 0 or not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords):
+            continue
+        result.append(" ".join(fields))
     return tuple(result)
 
 
 def yolo_records(
     source: str, split: str, image_dir: Path, label_dir: Path, mapping: dict[int, int] | None = None
 ) -> list[Record]:
+    if not image_dir.exists() or not label_dir.exists():
+        return []
     records = []
     for image in sorted(image_dir.iterdir()):
         if image.suffix.lower() not in IMAGE_EXTS:
@@ -192,11 +209,7 @@ def yolo_records(
         if not label.exists():
             continue
         lines = label.read_text(encoding="utf-8").splitlines()
-        labels = (
-            remap_lines(lines, mapping)
-            if mapping is not None
-            else tuple(line for line in lines if len(line.split()) >= 5)
-        )
+        labels = remap_lines(lines, mapping) if mapping is not None else valid_lines(lines)
         if labels:
             records.append(Record(source, split, image.name, image, labels))
     return records
@@ -223,7 +236,13 @@ def coco_records(
             if target is None:
                 continue
             x, y, width, height = annotation["bbox"]
-            if info["width"] <= 0 or info["height"] <= 0:
+            if (
+                info["width"] <= 0
+                or info["height"] <= 0
+                or not all(math.isfinite(float(value)) for value in (x, y, width, height))
+                or width <= 0
+                or height <= 0
+            ):
                 continue
             labels.append(
                 f"{target} {(x + width / 2) / info['width']:.6f} "
@@ -237,7 +256,10 @@ def coco_records(
 
 def load_taco() -> list[Record]:
     root = DATASETS / "taco_raw" / "TACO-master" / "data"
-    records = coco_records("taco", "unsplit", root / "annotations.json", root, TACO_MAP)
+    annotation_file = root / "annotations.json"
+    if not annotation_file.exists():
+        return []
+    records = coco_records("taco", "unsplit", annotation_file, root, TACO_MAP)
     random.Random(42).shuffle(records)
     n = len(records)
     return [
@@ -256,7 +278,10 @@ def load_dmedhi() -> list[Record]:
         ("train-00000-of-00001.parquet", "train"),
         ("validation-00000-of-00001.parquet", "val"),
     ]:
-        table = parquet.read_table(DATASETS / "raw" / "dmedhi" / "data" / parquet_file)
+        parquet_path = DATASETS / "raw" / "dmedhi" / "data" / parquet_file
+        if not parquet_path.exists():
+            continue
+        table = parquet.read_table(parquet_path)
         for index, row in enumerate(table.to_pylist()):
             target = mapping.get(row["class_name"])
             boxes = row["bbox"]
@@ -281,9 +306,7 @@ def load_dmedhi() -> list[Record]:
 
 
 def load_all_records() -> list[Record]:
-    records = []
-    records.extend(load_dmedhi())
-    records.extend(load_taco())
+    records = [*load_dmedhi(), *load_taco()]
 
     roboflow = DATASETS / "roboflow_raw"
     for source_split, output_split in (("train", "train"), ("valid", "val"), ("test", "test")):
@@ -340,10 +363,9 @@ def write_dataset(records_by_split: dict[str, list[Record]], requested_train_cou
     hashes: set[str] = set()
     copied = Counter()
     # dedup tracking
-    requested_totals = {split: len(srec) for split, srec in records_by_split.items()}
     dropped_per_split = {split: 0 for split in records_by_split}
     copied_boxes = {split: Counter() for split in records_by_split}
-    priority = ["val","test","train"]
+    priority = ["val", "test", "train"]
     ordered_splits = [s for s in priority if s in records_by_split] + [s for s in records_by_split if s not in priority]
     for split in ordered_splits:
         recs = records_by_split[split]

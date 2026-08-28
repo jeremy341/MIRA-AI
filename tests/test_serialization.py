@@ -1,4 +1,4 @@
-"""Tests for MIRA experiment result serialization."""
+# Tests for MIRA experiment result serialization.
 
 from __future__ import annotations
 

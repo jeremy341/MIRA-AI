@@ -1,4 +1,4 @@
-"""Tests for generated training notebooks."""
+# Tests for generated training notebooks.
 
 from pathlib import Path
 

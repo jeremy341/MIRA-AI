@@ -1,4 +1,4 @@
-"""Unit tests for the shared inference engine."""
+# Unit tests for the shared inference engine.
 
 import time
 from unittest.mock import MagicMock, patch
@@ -12,7 +12,7 @@ from src.inference_engine import InferenceEngine
 
 @pytest.fixture
 def mock_yolo():
-    """Mock ultralytics.YOLO so no real model loading occurs."""
+    # Mock ultralytics.YOLO so no real model loading occurs.
     with patch("src.inference_engine.YOLO") as yolo_cls:
         mock_model = MagicMock()
         yolo_cls.return_value = mock_model
@@ -21,7 +21,7 @@ def mock_yolo():
 
 @pytest.fixture
 def mock_camera():
-    """Mock USBCamera so no real hardware is opened."""
+    # Mock USBCamera so no real hardware is opened.
     with patch("src.inference_engine.USBCamera") as cam_cls:
         mock_cam = MagicMock()
         cam_cls.return_value = mock_cam
@@ -30,14 +30,13 @@ def mock_camera():
 
 @pytest.fixture
 def mock_cv2():
-    """Patch cv2 used by the engine to avoid windowing calls."""
+    # Patch cv2 used by the engine to avoid windowing calls.
     with patch("src.inference_engine.cv2") as cv2_mock:
         yield cv2_mock
 
 
 @pytest.fixture
 def detection_dir(tmp_path):
-    """Temporary DETECTION_DIR containing a placeholder .pt model."""
     det_dir = tmp_path / "detection"
     det_dir.mkdir(parents=True)
     (det_dir / "yolo11n.pt").touch()

@@ -1,14 +1,15 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 rem MIRA Unified Windows CLI Wrapper
 rem Prefers the installed console script 'mira' (pip install) with fallback
 rem to a repo-relative .venv / python -m src for development checkouts.
 
 rem Prefer installed 'mira' console script when available
-where mira >nul 2>&1
-if %ERRORLEVEL% equ 0 (
-    mira %*
-    exit /b %ERRORLEVEL%
+for /f "delims=" %%M in ('where mira 2^>nul') do (
+    if /I not "%%~fM"=="%~f0" (
+        "%%~fM" %*
+        exit /b !ERRORLEVEL!
+    )
 )
 
 rem Fallback: development checkout with optional .venv

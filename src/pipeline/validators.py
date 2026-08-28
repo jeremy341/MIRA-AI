@@ -1,14 +1,15 @@
-"""Dataset validators for MIRA pipeline.
-
-Provides validation and integrity checking for YOLO-format datasets
-before and after merge operations.
-"""
+# Dataset validators for MIRA pipeline.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+from ..config import NUM_CLASSES
+
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff")
 
 
 @dataclass
@@ -26,14 +27,6 @@ class ValidationResult:
 
 
 def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
-    """Validate a YOLO-format dataset.
-
-    Checks:
-    - Directory structure exists (images/train, labels/train, etc.)
-    - Each label file has a corresponding image
-    - Label files are valid (proper format, valid class IDs)
-    - No orphaned files
-    """
     path = Path(dataset_path)
     result = ValidationResult(dataset_path=str(path.resolve()))
 
@@ -61,7 +54,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
 
         images: dict[str, Path] = {}
         for p in img_dir.glob("*"):
-            if p.suffix.lower() in (".jpg", ".jpeg", ".png"):
+            if p.suffix.lower() in IMAGE_EXTENSIONS:
                 stem = p.stem
                 if stem in images:
                     result.warnings.append(f"Duplicate image stem '{stem}' in {img_dir}: {images[stem]} and {p}")
@@ -85,14 +78,23 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
                     if len(parts) < 5:
                         result.invalid_labels.append((str(lbl_path), f"line {line_num}: < 5 values"))
                         continue
+                    if len(parts) != 5 and (len(parts) < 7 or (len(parts) - 1) % 2 != 0):
+                        result.invalid_labels.append((str(lbl_path), f"line {line_num}: invalid coordinate count"))
+                        continue
                     try:
                         cls_id = int(parts[0])
                         if cls_id < 0:
                             result.invalid_labels.append((str(lbl_path), f"line {line_num}: negative class ID"))
                             continue
-                        coords = [float(p) for p in parts[1:5]]
-                        if not all(0.0 <= c <= 1.0 for c in coords):
+                        if cls_id >= NUM_CLASSES:
+                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: class ID out of range"))
+                            continue
+                        coords = [float(p) for p in parts[1:]]
+                        if not all(math.isfinite(c) and 0.0 <= c <= 1.0 for c in coords):
                             result.invalid_labels.append((str(lbl_path), f"line {line_num}: coords out of [0,1]"))
+                            continue
+                        if len(coords) == 4 and (coords[2] <= 0.0 or coords[3] <= 0.0):
+                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: non-positive box size"))
                             continue
                         result.class_counts[cls_id] = result.class_counts.get(cls_id, 0) + 1
                     except (ValueError, IndexError):
@@ -126,7 +128,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
 
 
 def dataset_summary(dataset_path: str | Path) -> dict[str, Any]:
-    """Generate a human-readable summary of a dataset."""
+    # Generate a human-readable summary of a dataset.
     result = validate_yolo_dataset(dataset_path)
     return {
         "path": result.dataset_path,

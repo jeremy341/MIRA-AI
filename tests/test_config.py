@@ -1,4 +1,4 @@
-"""Tests for MIRA shared configuration."""
+# Tests for MIRA shared configuration.
 
 import pathlib
 from unittest.mock import MagicMock, patch

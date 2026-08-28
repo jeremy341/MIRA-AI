@@ -5,10 +5,12 @@ from pathlib import Path
 import cv2
 import datetime
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-from config import CLASS_NAMES, DATA_CLASSES_DIR as DATA_DIR
-from config import setup_camera_properties
-from logger import logger
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
+
+from src.config import CLASS_NAMES, DATA_CLASSES_DIR as DATA_DIR, setup_camera_properties
+from src.logger import logger
 
 
 def main() -> None:
@@ -80,16 +82,14 @@ def main() -> None:
             if key == ord("q"):
                 break
 
-            try:
-                key_char = chr(key)
-                if key_char in classes:
-                    label, folder = classes[key_char]
-                    filename = f"{label}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-                    filepath = folder / filename
-                    cv2.imwrite(str(filepath), frame)
-                    logger.info("Saved: %s", filepath)
-            except ValueError:
-                pass
+            key_char = chr(key)
+            if key_char not in classes:
+                continue
+            label, folder = classes[key_char]
+            filename = f"{label}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+            filepath = folder / filename
+            cv2.imwrite(str(filepath), frame)
+            logger.info("Saved: %s", filepath)
     finally:
         cap.release()
         cv2.destroyAllWindows()

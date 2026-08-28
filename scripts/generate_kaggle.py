@@ -1,11 +1,4 @@
-"""Generate a Kaggle training notebook from experiment config.
-
-Usage:
-    python scripts/generate_kaggle.py --config experiments/exp014_yolo11n_multidataset.yaml
-    python scripts/generate_kaggle.py --config experiments/exp014_yolo11n_multidataset.yaml --output my_notebook.ipynb
-"""
-
-from __future__ import annotations
+# Generate a Kaggle training notebook from experiment config.
 
 import argparse
 import json
@@ -55,27 +48,27 @@ def _build_training_params(exp: dict, project: dict) -> dict:
     }
 
 
-def _md_cell(source: str) -> dict:
+def _cell_lines(source: str) -> list[str]:
     lines = source.split("\n")
     src_lines = [line + "\n" for line in lines[:-1]]
     if lines[-1]:
         src_lines.append(lines[-1])
+    return src_lines
+
+
+def _md_cell(source: str) -> dict:
     return {
         "cell_type": "markdown",
         "metadata": {},
-        "source": src_lines,
+        "source": _cell_lines(source),
     }
 
 
 def _code_cell(source: str) -> dict:
-    lines = source.split("\n")
-    src_lines = [line + "\n" for line in lines[:-1]]
-    if lines[-1]:
-        src_lines.append(lines[-1])
     return {
         "cell_type": "code",
         "metadata": {},
-        "source": src_lines,
+        "source": _cell_lines(source),
         "execution_count": None,
         "outputs": [],
     }
@@ -165,12 +158,8 @@ def generate_kaggle_notebook(exp: dict, project: dict) -> dict:
                 "work_dir = Path('/kaggle/working')\n"
                 "yaml_path = work_dir / 'dataset.yaml'\n"
                 f'names_yaml = "[" + ", ".join(f"\'{{c}}\'" for c in {class_names}) + "]"\n'
-                "yaml_content = f'''\n"
-                "train: {data_root}/images/train\n"
-                "val: {data_root}/images/val\n"
-                f"nc: {num_classes}\n"
-                "names: {names_yaml}\n"
-                "'''\n"
+                # \n" "train: {data_root}/images/train\n" "val: {data_root}/images/val\n" f"nc: {num_classes}\n" "names: {names_yaml}\n" "
+                f"yaml_content = f'train: {{data_root}}/images/train\\nval: {{data_root}}/images/val\\nnc: {num_classes}\\nnames: {{names_yaml}}\\n'\n"
                 "yaml_path.write_text(yaml_content.strip())\n"
                 "print(f'Written: {yaml_path}')"
             ),

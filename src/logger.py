@@ -1,11 +1,4 @@
-"""Structured logging configuration for MIRA.
-
-Supports console, file, and structured JSON output.
-Configure via environment variables:
-    MIRA_LOG_LEVEL      - DEBUG, INFO (default), WARNING, ERROR
-    MIRA_LOG_FORMAT     - text (default) or json
-    MIRA_LOG_FILE       - optional path to log file (enables rotation)
-"""
+# Structured logging configuration for MIRA.
 
 from __future__ import annotations
 
@@ -16,14 +9,13 @@ import sys
 from logging.handlers import RotatingFileHandler
 from typing import Any
 
-
 _DEFAULT_LEVEL = os.environ.get("MIRA_LOG_LEVEL", "INFO").upper()
 _DEFAULT_FORMAT = os.environ.get("MIRA_LOG_FORMAT", "text").lower()
 _LOG_FILE = os.environ.get("MIRA_LOG_FILE", "")
 
 
 class _JsonFormatter(logging.Formatter):
-    """JSON formatter for structured logging."""
+    # JSON formatter for structured logging.
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -40,7 +32,7 @@ class _JsonFormatter(logging.Formatter):
 
 
 class _TextFormatter(logging.Formatter):
-    """Human-readable text formatter."""
+    # Human-readable text formatter.
 
     def __init__(self) -> None:
         super().__init__("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -48,29 +40,21 @@ class _TextFormatter(logging.Formatter):
 
 def _make_handler(stream=None) -> logging.Handler:
     handler: logging.Handler = logging.StreamHandler(stream or sys.stdout)
-    formatter: logging.Formatter = _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
-    handler.setFormatter(formatter)
+    handler.setFormatter(_JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter())
     return handler
 
 
 def _add_file_handler(logger: logging.Logger, path: str) -> None:
-    """Add a rotating file handler to the logger."""
+    # Add a rotating file handler to the logger.
     from pathlib import Path
 
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler(path, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8")
-    formatter: logging.Formatter = _JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter()
-    handler.setFormatter(formatter)
+    handler.setFormatter(_JsonFormatter() if _DEFAULT_FORMAT == "json" else _TextFormatter())
     logger.addHandler(handler)
 
 
 def get_logger(name: str, level: str | None = None) -> logging.Logger:
-    """Get a configured logger instance.
-
-    Args:
-        name: Logger name (typically __name__).
-        level: Override log level. Defaults to MIRA_LOG_LEVEL env var or INFO.
-    """
     logger = logging.getLogger(name)
     effective_level = (level or _DEFAULT_LEVEL).upper()
     try:
@@ -81,7 +65,7 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
     else:
         logger.setLevel(level_val)
 
-    if not logger.hasHandlers():
+    if not logger.handlers:
         logger.addHandler(_make_handler())
         if _LOG_FILE:
             _add_file_handler(logger, _LOG_FILE)
@@ -93,4 +77,3 @@ def get_logger(name: str, level: str | None = None) -> logging.Logger:
 
 # Global root logger for backward compatibility
 logger = get_logger("mira")
-

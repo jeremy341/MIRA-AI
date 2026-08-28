@@ -1,25 +1,28 @@
-"""Centralized exception hierarchy for MIRA."""
+# Centralized exception hierarchy for MIRA.
 
 
 class MiraError(Exception):
-    """Base exception for all MIRA errors."""
+    # Base exception for all MIRA errors.
+    pass
 
 
 class ConfigError(MiraError):
-    """Configuration loading or validation error."""
+    pass
 
 
 class ModelError(MiraError):
-    """Model loading or inference error."""
+    # Model loading or inference error.
+    pass
 
 
 class DatasetError(MiraError):
-    """Dataset loading or merge error."""
+    pass
 
 
 class CameraError(MiraError):
-    """Camera initialization or streaming error."""
+    pass
 
 
 class PipelineError(MiraError):
-    """Pipeline execution error."""
+    # Pipeline execution error.
+    pass

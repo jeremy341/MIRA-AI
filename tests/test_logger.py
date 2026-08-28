@@ -1,4 +1,4 @@
-"""Tests for MIRA structured logging configuration."""
+# Tests for MIRA structured logging configuration.
 
 from __future__ import annotations
 

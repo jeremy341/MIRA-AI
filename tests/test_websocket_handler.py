@@ -1,4 +1,4 @@
-"""Tests for MIRA dashboard WebSocket handler."""
+# Tests for MIRA dashboard WebSocket handler.
 
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch

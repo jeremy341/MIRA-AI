@@ -1,8 +1,4 @@
-"""Detection model adapters for MIRA benchmarking pipeline.
-
-Provides abstract base + concrete adapters so third-party models
-can be benchmarked alongside YOLO models.
-"""
+# Detection model adapters for MIRA benchmarking pipeline. Provides abstract base + concrete adapters so third-party models can be benchmarked alongside YOLO models.
 
 from __future__ import annotations
 
@@ -36,10 +32,7 @@ def letterbox_preprocess(
     image_path: str | Path,
     imgsz: int,
 ) -> tuple[torch.Tensor, int, int, int, int, float, int, int]:
-    """Load and preprocess an image for YOLO inference.
-
-    Returns (tensor, top, bottom, left, right, scale, orig_w, orig_h).
-    """
+    # Load and preprocess an image for YOLO inference. Returns (tensor, top, bottom, left, right, scale, orig_w, orig_h).
     import torch
 
     img_bgr = cv2.imread(str(image_path))
@@ -71,7 +64,7 @@ def adjust_boxes_to_original(
     w0: int,
     h0: int,
 ):
-    """Convert letterbox-adjusted box coords back to original image space."""
+    # Convert letterbox-adjusted box coords back to original image space.
     import torch
 
     boxes = preds[:, :4].clone()
@@ -86,7 +79,6 @@ def adjust_boxes_to_original(
 
 
 def _get_device(backend: Any):
-    """Get the torch device from a model backend."""
     import torch
 
     if hasattr(backend, "device"):
@@ -167,7 +159,8 @@ class YOLOAdapter(DetectionModel):
                 data=None,
                 fp16=False,
             )
-        self._names = self._model.names if hasattr(self._model, "names") else {}
+        names = self._model.names if hasattr(self._model, "names") else {}
+        self._names = names if isinstance(names, dict) else dict(enumerate(names))
         try:
             if callable(self._model.model):
                 self._imgsz = (
@@ -254,7 +247,8 @@ class YOLOTFLiteAdapter(DetectionModel):
             data=None,
             fp16=False,
         )
-        self._names = self._model.names if hasattr(self._model, "names") else {}
+        names = self._model.names if hasattr(self._model, "names") else {}
+        self._names = names if isinstance(names, dict) else dict(enumerate(names))
         # Detect correct input size from model
         if hasattr(self._backend, "backend") and hasattr(self._backend.backend, "interpreter"):
             self._imgsz = get_tflite_imgsz(self.path)
@@ -409,7 +403,7 @@ class ThirdPartyAdapter(DetectionModel):
                     detections.append(
                         Detection(
                             class_id=cid,
-                            class_name=names[cid] if cid < len(names) else f"class_{cid}",
+                            class_name=names[cid] if 0 <= cid < len(names) else f"class_{cid}",
                             confidence=float(preds[i, 4].item()),
                             bbox=tuple(boxes[i].cpu().tolist()),
                         )
@@ -424,7 +418,7 @@ class ThirdPartyAdapter(DetectionModel):
         except Exception as e:
             log.error(f"Prediction failed: {type(e).__name__}: {e}")
             log.exception("ThirdPartyAdapter.predict failed for %s", image)
-            return InferenceResult(detections=[], latency_ms=0.0, model_name=self.name, image_path=str(image))
+            raise RuntimeError(f"Prediction backend failed for {self.name}") from e
 
 
 class ModelRegistry:
@@ -440,16 +434,13 @@ class ModelRegistry:
         if not self.detection_dir.exists():
             return 0
 
-        loaded_sidecars: set[str] = set()
         sidecar_meta: dict[str, dict] = {}
 
         for p in sorted(self.detection_dir.iterdir()):
-            if p.suffix in (".yaml", ".yml") and not p.name.startswith("example"):
+            if p.suffix.lower() in (".yaml", ".yml") and not p.name.startswith("example"):
                 registered = self._load_descriptor(p)
                 name = p.stem
-                if registered:
-                    loaded_sidecars.add(name)
-                else:
+                if not registered:
                     meta = self._load_sidecar_meta(p)
                     if meta:
                         sidecar_meta[name] = meta
@@ -484,8 +475,7 @@ class ModelRegistry:
                     }
 
         for p in sorted(self.detection_dir.iterdir()):
-            stem = p.stem
-            if stem in loaded_sidecars:
+            if not p.is_file():
                 continue
             if p.suffix.lower() in (".pt", ".pth"):
                 if f"{p.name}" in self._models:
@@ -496,15 +486,21 @@ class ModelRegistry:
                     "label": p.stem,
                     "is_third_party": False,
                 }
-            elif p.suffix == ".tflite":
-                base_name = stem.replace("_int8", "").replace("_fp32", "")
-                if base_name in loaded_sidecars:
-                    continue
+            elif p.suffix.lower() == ".tflite":
                 if f"{p.name}" in self._models:
                     continue
                 self._models[p.name] = {
                     "path": p,
                     "model_type": "yolo_tflite",
+                    "label": p.stem,
+                    "is_third_party": False,
+                }
+            elif p.suffix.lower() == ".onnx":
+                if p.name in self._models:
+                    continue
+                self._models[p.name] = {
+                    "path": p,
+                    "model_type": "yolo_onnx",
                     "label": p.stem,
                     "is_third_party": False,
                 }
@@ -581,7 +577,8 @@ class ModelRegistry:
             log.warning("Model file %s for %s not found, skipping", model_file, name)
             return False
 
-        self._models[name] = {
+        model_name = Path(model_file).name
+        self._models[model_name] = {
             "path": model_path,
             "model_type": data.get("type", "third_party"),
             "label": data.get("display_name", data.get("label", name)),
@@ -610,6 +607,10 @@ class ModelRegistry:
         ]
 
     def get_model(self, name: str) -> dict[str, Any]:
+        if name not in self._models:
+            candidate = Path(name).name
+            if candidate in self._models:
+                name = candidate
         if name not in self._models:
             available = ", ".join(self._models.keys())
             raise KeyError(f"Unknown model '{name}'. Available: {available}")
@@ -652,4 +653,3 @@ class ModelRegistry:
         adapter.load()
         self._adapters[name] = adapter
         return adapter
-

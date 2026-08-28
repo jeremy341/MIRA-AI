@@ -1,4 +1,4 @@
-"""CLI commands for diagnostics, config display, model listing, and benchmarking."""
+# CLI commands for diagnostics, config display, model listing, and benchmarking.
 
 import sys
 
@@ -9,7 +9,6 @@ from src.pipeline.registry import register_command
 
 @register_command("doctor", "Check the project environment and configuration")
 def cmd_doctor(args):
-    """Check configuration, hardware, dependencies, models, and datasets."""
     from src.config import validate_config
     from src.deploy import check_environment, detect_hardware, suggest_model
     from src.pipeline.dataset import DatasetRegistry
@@ -81,7 +80,6 @@ def _add_config_args(parser):
 
 @register_command("config", "Display current project configuration", add_args=_add_config_args)
 def cmd_config(args):
-    """Display the current mira.yaml configuration."""
     import json
 
     from src.config import DETECTION_DIR, MODELS_DIR, PROJECT_CONFIG, ROOT_DIR, get_project_config, validate_config
@@ -197,6 +195,9 @@ def cmd_benchmark(args):
 
     from .inference import resolve_detection_data_yaml
 
+    if args.max_images is not None and args.max_images < 1:
+        print("Error: --max-images must be >= 1")
+        sys.exit(2)
     dataset = resolve_detection_data_yaml(args.dataset)
 
     bench = ModelBenchmark.from_registry(
@@ -209,4 +210,3 @@ def cmd_benchmark(args):
     print(ModelBenchmark.comparison_table(results))
     if args.output:
         ModelBenchmark.export(results, args.output)
-

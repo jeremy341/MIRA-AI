@@ -228,8 +228,10 @@ function renderLineChart(element, data) {
   const margin = { top: 18, right: 18, bottom: 58, left: 48 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const x = (index) => margin.left + (plotWidth * index) / (data.values.length - 1);
-  const y = (value) => margin.top + plotHeight * (1 - (value - data.min) / (100 - data.min));
+  const xDenominator = Math.max(data.values.length - 1, 1);
+  const yDenominator = Math.max(100 - data.min, 1);
+  const x = (index) => margin.left + (plotWidth * index) / xDenominator;
+  const y = (value) => margin.top + plotHeight * (1 - (value - data.min) / yDenominator);
   const svg = document.createElementNS(namespace, "svg");
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.setAttribute("aria-hidden", "true");
@@ -323,7 +325,7 @@ function renderBarChart(element, values) {
   element.replaceChildren(fragment);
 }
 function renderSplitChart(element, values) {
-  const total = values.reduce((sum, [, value]) => sum + value, 0);
+  const total = values.reduce((sum, [, value]) => sum + value, 0) || 1;
   const track = document.createElement("div");
   track.className = "split-track";
   values.forEach(([, value]) => {

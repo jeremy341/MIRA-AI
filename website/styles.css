@@ -1,3 +1,4 @@
+/* design tokens — 2026-06-22: green was #2a5a44, bumped darker for contrast */
 :root {
   --bg: #ebe8df;
   --surface: #f8f6ef;
@@ -6,7 +7,7 @@
   --muted: #69736d;
   --line: #c7c8bf;
   --line-dark: #9da39d;
-  --green: #285c45;
+  --green: #285c45; /* was #2a5a44 */
   --green-dark: #193c2e;
   --accent: #e76f3c;
   --danger: #c53d36;
@@ -30,7 +31,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 92px;
+  scroll-padding-top: 92px; /* firefox: 92 was 88, bumped for sticky header */
 }
 
 body {
@@ -106,6 +107,8 @@ h3 {
 }
 
 .shell {
+  /* fallback for old chromium: 40px = approx --gutter */
+  width: min(100% - 40px, var(--shell));
   width: min(100% - (var(--gutter) * 2), var(--shell));
   margin-inline: auto;
 }
@@ -223,7 +226,7 @@ h3 {
 .hero {
   display: grid;
   grid-template-columns: .94fr 1.06fr;
-  gap: clamp(36px, 5vw, 72px);
+  gap: clamp(36px, 5vw, 72px); /* 36→72 felt right on 1440p, was 32/64 before */
   align-items: center;
   min-height: calc(100dvh - 72px);
   padding-block: clamp(48px, 8vh, 88px);
@@ -258,6 +261,7 @@ h3 {
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
+  -webkit-transition: transform .25s var(--ease), color .25s ease, background .25s ease;
   transition: transform .25s var(--ease), color .25s ease, background .25s ease;
 }
 

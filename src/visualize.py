@@ -1,4 +1,6 @@
-"""Shared visualization utilities for MIRA detection models."""
+# Shared visualization utilities for MIRA detection models.
+
+from __future__ import annotations
 
 import cv2
 import numpy as np
@@ -14,9 +16,8 @@ CLASS_COLORS: dict[str, tuple[int, int, int]] = {
 
 
 def class_id_to_name(class_id: int, class_names: list[str] | None = None) -> str:
-    """Map a class ID to its name. Returns 'class_{id}' if out of range."""
     names = class_names or []
-    return names[class_id] if class_id < len(names) else f"class_{class_id}"
+    return f"class_{class_id}" if not 0 <= class_id < len(names) else names[class_id]
 
 
 def draw_boxes(
@@ -26,13 +27,6 @@ def draw_boxes(
     reject_threshold: float = 0.55,
     class_names: list[str] | None = None,
 ) -> np.ndarray:
-    """Draw bounding boxes on a frame from YOLO detection results.
-
-    Three confidence tiers:
-        - conf_threshold > conf:        not drawn
-        - reject_threshold > conf:      yellow, labeled "uncertain"
-        - conf >= reject_threshold:     green, labeled with class name
-    """
     h, w = frame.shape[:2]
 
     if not results or len(results) == 0 or results[0].boxes is None or len(results[0].boxes) == 0:
@@ -53,7 +47,8 @@ def draw_boxes(
         names = class_names if class_names else results[0].names
         cls_name = class_id_to_name(cls_id, names)
 
-        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(w, x2), min(h, y2)
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(w, x2), min(h, y2)
 
         if conf >= reject_threshold:
             color = (0, 255, 0)
@@ -72,11 +67,6 @@ def draw_detections(
     detections: list,
     class_names: list[str] | None = None,
 ) -> np.ndarray:
-    """Draw detections (list of Detection dataclass instances) on a frame.
-
-    Each Detection must have: bbox, class_name, confidence, track_id (optional).
-    Uses per-class colors.
-    """
     if not detections:
         return frame
 
@@ -108,7 +98,6 @@ def _draw_box(
     color: tuple[int, int, int],
     label: str,
 ):
-    """Draw a single bounding box with label background."""
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
 
     font = cv2.FONT_HERSHEY_SIMPLEX

@@ -1,8 +1,4 @@
-"""Experiment result serialization for reproducibility.
-
-Provides atomic writes, schema versioning, backward-compatible loading,
-and experiment metadata capture.
-"""
+# Experiment result serialization for reproducibility.
 
 from __future__ import annotations
 
@@ -28,8 +24,6 @@ CURRENT_SCHEMA_VERSION = "1.0"
 
 
 class _MiraEncoder(json.JSONEncoder):
-    """Custom JSON encoder handling Path, datetime, dataclasses, and sets."""
-
     def default(self, o: Any) -> Any:
         if isinstance(o, Path):
             return str(o)
@@ -43,18 +37,24 @@ class _MiraEncoder(json.JSONEncoder):
 
 
 def _dataclass_to_dict(obj: Any) -> Any:
-    """Recursively convert a dataclass (or nested structure) to a plain dict."""
+    # Recursively convert a dataclass (or nested structure) to a plain dict.
     if hasattr(obj, "__dataclass_fields__"):
         return _dataclass_to_dict(asdict(obj))
+    if isinstance(obj, Path):
+        return str(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, set):
+        return sorted(obj)
     if isinstance(obj, dict):
-        return {k: _dataclass_to_dict(v) for k, v in obj.items()}
+        return {_dataclass_to_dict(k): _dataclass_to_dict(v) for k, v in obj.items()}
     if isinstance(obj, (list, tuple)):
-        return [_dataclass_to_dict(item) for item in obj]
+        return list(map(_dataclass_to_dict, obj))
     return obj
 
 
 def _atomic_write(path: Path, data: str) -> None:
-    """Write data atomically using a temporary file and rename."""
+    # Write data atomically using a temporary file and rename.
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = None
@@ -78,7 +78,7 @@ def _atomic_write(path: Path, data: str) -> None:
 
 
 def _backup_if_exists(path: Path) -> None:
-    """Create a .bak backup if the file already exists."""
+    # Create a .bak backup if the file already exists.
     if path.exists():
         bak = path.with_suffix(path.suffix + ".bak")
         try:
@@ -88,20 +88,16 @@ def _backup_if_exists(path: Path) -> None:
 
 
 def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
-    """Serialize a result object to JSON or YAML file atomically.
-
-    Handles dataclasses, dicts, lists, Path objects, and datetime.
-    Creates parent directories if they don't exist.
-    Returns the path to the saved file.
-    """
+    # Serialize a result object to JSON or YAML file atomically. Handles dataclasses, dicts, lists, Path objects, and datetime. Creates parent directories if they don't exist. Returns the path to the saved file.
     path = Path(path)
 
-    if hasattr(result, "__dataclass_fields__"):
-        data = asdict(result)
-    elif isinstance(result, dict):
-        data = dict(result)
-    else:
-        data = {"value": result}
+    data = (
+        asdict(result)
+        if hasattr(result, "__dataclass_fields__")
+        else dict(result)
+        if isinstance(result, dict)
+        else {"value": result}
+    )
 
     # Inject schema version
     if isinstance(data, dict):
@@ -110,7 +106,7 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
     _backup_if_exists(path)
 
     if fmt == "yaml":
-        _atomic_write(path, yaml.dump(data, default_flow_style=False, sort_keys=False))
+        _atomic_write(path, yaml.safe_dump(_dataclass_to_dict(data), default_flow_style=False, sort_keys=False))
     else:
         _atomic_write(path, json.dumps(data, indent=2, cls=_MiraEncoder))
 
@@ -119,7 +115,6 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
 
 
 def serialize_config(config: Any, path: str | Path) -> Path:
-    """Serialize configuration to YAML for reproducibility."""
     path = Path(path)
     data = _dataclass_to_dict(config)
     if isinstance(data, dict):
@@ -127,19 +122,21 @@ def serialize_config(config: Any, path: str | Path) -> Path:
         data["__serialized_at__"] = datetime.now(timezone.utc).isoformat()
 
     _backup_if_exists(path)
-    _atomic_write(path, yaml.dump(data, default_flow_style=False, sort_keys=False))
+    _atomic_write(path, yaml.safe_dump(_dataclass_to_dict(data), default_flow_style=False, sort_keys=False))
     logger.debug(f"Serialized config to {path}")
     return path
 
 
 def _detect_git_sha() -> str | None:
-    """Try to detect the current git SHA. Returns None on failure."""
+    # Try to detect the current git SHA. Returns None on failure.
+    project_root = Path(__file__).resolve().parents[1]
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             timeout=5,
+            cwd=project_root,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -148,9 +145,11 @@ def _detect_git_sha() -> str | None:
 
     # Fallback: read .git/HEAD directly
     try:
-        head = (Path(__file__).resolve().parents[2] / ".git" / "HEAD").read_text(encoding="utf-8").strip()
+        git_path = project_root / ".git"
+        head_path = git_path / "HEAD" if git_path.is_dir() else git_path
+        head = head_path.read_text(encoding="utf-8").strip()
         if head.startswith("ref: "):
-            ref_path = Path(__file__).resolve().parents[2] / ".git" / head[5:]
+            ref_path = git_path / head[5:]
             if ref_path.exists():
                 return ref_path.read_text(encoding="utf-8").strip()
         elif len(head) == 40:
@@ -162,13 +161,15 @@ def _detect_git_sha() -> str | None:
 
 
 def _has_uncommitted_changes() -> bool:
-    """Check whether the working tree has uncommitted changes."""
+    # Check whether the working tree has uncommitted changes.
+    project_root = Path(__file__).resolve().parents[1]
     try:
         result = subprocess.run(
             ["git", "status", "--porcelain"],
             capture_output=True,
             text=True,
             timeout=5,
+            cwd=project_root,
         )
         if result.returncode == 0:
             return bool(result.stdout.strip())
@@ -179,7 +180,7 @@ def _has_uncommitted_changes() -> bool:
 
 @dataclass
 class ExperimentRecord:
-    """Standard experiment record with reproducibility metadata."""
+    # Standard experiment record with reproducibility metadata.
 
     command: str
     args: dict[str, Any] = field(default_factory=dict)
@@ -209,11 +210,7 @@ def experiment_metadata(
     git_sha: str | None = None,
     uncommitted_changes: bool = False,
 ) -> ExperimentRecord:
-    """Generate an ExperimentRecord for experiment reproducibility.
-
-    Includes timestamp, command, args, git SHA (auto-detected if available),
-    Python version, and platform info.
-    """
+    # Generate an ExperimentRecord for experiment reproducibility. Includes timestamp, command, args, git SHA (auto-detected if available), Python version, and platform info.
     if git_sha is None:
         git_sha = _detect_git_sha()
     if not uncommitted_changes:

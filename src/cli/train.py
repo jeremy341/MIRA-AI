@@ -1,4 +1,4 @@
-"""CLI commands for training, exporting, and auto-detecting training parameters."""
+# CLI commands for training, exporting, and auto-detecting training parameters.
 
 import argparse
 import re
@@ -131,6 +131,15 @@ def cmd_train(args):
             print(f"  - {e}")
         sys.exit(2)
 
+    if args.task == "detection" and not config.dataset:
+        from src.cli.inference import resolve_detection_data_yaml
+
+        try:
+            config.dataset = str(resolve_detection_data_yaml())
+        except FileNotFoundError as exc:
+            print(f"Configuration error: {exc}")
+            sys.exit(2)
+
     if args.dry_run:
         print("Configuration is valid. Dry run - no training started.")
         print(f"  model: {config.model}")
@@ -147,6 +156,10 @@ def cmd_train(args):
         result = pipeline.train_classifier(config, base_model=args.base_model, fine_tune=args.fine_tune)
     else:
         result = pipeline.train_yolo(config)
+        export_formats = getattr(args, "export_formats", None)
+        if export_formats:
+            formats = [value.strip() for value in export_formats.split(",") if value.strip()]
+            result.exported.extend(pipeline.export_model(result.best_path, formats, config.dataset))
     print(f"\nTraining complete: {result.name}")
     print(f"  Best model: {result.best_path}")
     print(f"  Duration:   {result.duration_seconds:.1f}s")
@@ -195,4 +208,3 @@ def cmd_export(args):
             print(f"  {p}")
     else:
         print("No files exported.")
-

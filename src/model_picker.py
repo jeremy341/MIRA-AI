@@ -1,11 +1,11 @@
-"""Interactive model picker for MIRA CLI."""
+# Interactive model picker for MIRA CLI.
 
 import os
 import sys
 
 
 def _getch():
-    """Read a single keypress. Returns a token string for easy comparison."""
+    # Read a single keypress. Returns a token string for easy comparison.
     if sys.platform == "win32":
         import msvcrt
 
@@ -66,10 +66,7 @@ def _getch():
 
 
 def pick_model(items, labels=None, title="Available models", filter_func=None):
-    """Interactive arrow-key model picker with y/N confirmation.
-
-    Returns selected item name, or None if cancelled.
-    """
+    # Interactive arrow-key model picker with y/N confirmation. Returns selected item name, or None if cancelled.
     if filter_func:
         items = [i for i in items if filter_func(i)]
 
@@ -88,8 +85,9 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
         print()
 
         for i, item in enumerate(display_items):
-            prefix = "  " if idx != i else "\u2192"
-            suffix = "  <--" if idx == i else ""
+            selected_item = idx == i
+            prefix = "  " if not selected_item else "\u2192"
+            suffix = "  <--" if selected_item else ""
             if item == "[Cancel]":
                 label = "Exit without selecting"
             else:
@@ -120,4 +118,3 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
             selected = choice
         elif ch in ("ESC", "CTRL_C"):
             return None
-

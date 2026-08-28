@@ -1,4 +1,4 @@
-"""CLI entry point for MIRA - registers and dispatches all subcommands."""
+# CLI entry point for MIRA, registers and dispatches all subcommands.
 
 import sys
 
@@ -26,17 +26,6 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="MIRA CLI - Machine Intelligence for Recycling Automation",
-        epilog="""\
-Examples:
-  mira live --model mira_exp014_int8.tflite
-  mira train --config experiments/exp014_yolo11n_multidataset.yaml
-  mira train --model yolo11n.pt --dataset datasets/trashnet_labeled/dataset.yaml --epochs 50
-  mira merge --sources taco_trashnet roboflow warp --output datasets/mira_merged
-  mira benchmark --models mira_exp014.pt mira_exp014_int8.tflite
-  mira models
-  mira experiments
-  mira doctor
-""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"MIRA {__version__}")
@@ -75,4 +64,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-

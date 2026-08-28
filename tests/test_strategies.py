@@ -1,4 +1,4 @@
-"""Tests for MIRA training strategies and configuration."""
+# Tests for MIRA training strategies and configuration.
 
 from __future__ import annotations
 

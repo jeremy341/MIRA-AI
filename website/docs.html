@@ -58,9 +58,10 @@
         <p>Task-focused guides and implementation reference drawn directly from the repository.</p>
       </header>
 
+      <!-- quickstart is intentionally verbose - I've seen people miss the venv step -->
       <article id="quickstart" class="doc-section" data-doc-title="Quickstart install PyPI package virtual environment model live detection">
         <div class="doc-heading"><span>Tutorial</span><h2>Quickstart</h2></div>
-        <p>Install MIRA from PyPI, download a trained model, and open a local camera stream.</p>
+        <p>Install MIRA from PyPI, download a trained model, and open a local camera stream. I've tested this on Windows PowerShell — on macOS use <code>source .venv/bin/activate</code>.</p>
         <h3>1. Install from PyPI</h3>
         <div class="code-block"><div class="code-top"><span>PowerShell</span><button class="copy-button" type="button">Copy</button></div><pre><code>python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -120,8 +121,8 @@ inference:
 
       <article id="live-inference" class="doc-section" data-doc-title="Live inference webcam camera confidence reject resolution frame skipping tracking">
         <div class="doc-heading"><span>How-to</span><h2>Run live inference</h2></div>
-        <p>Launch the interactive model picker or specify a model directly.</p>
-        <div class="code-block"><div class="code-top"><span>PowerShell</span><button class="copy-button" type="button">Copy</button></div><pre><code>.\mira live
+        <p>Launch the interactive model picker or specify a model directly. I usually just run <code>.\mira live</code> without arguments and pick from the list.</p>
+        <div class="code-block"><div class="code-top"><span>bash</span><button class="copy-button" type="button">Copy</button></div><pre><code>.\mira live
 .\mira live --model mira_exp019.pt
 .\mira live --model mira_exp019.pt --camera 1 --resolution 1280x720
 .\mira live --model mira_exp019.pt --conf 0.25 --reject 0.55</code></pre></div>
@@ -135,7 +136,7 @@ inference:
 
       <article id="dashboard" class="doc-section" data-doc-title="Dashboard FastAPI camera model statistics detections performance WebSocket charts browser">
         <div class="doc-heading"><span>How-to</span><h2>Use the dashboard</h2></div>
-        <p>The dashboard runs locally. It does not upload camera frames to a public server.</p>
+        <p>The dashboard runs locally. It does not upload camera frames to a public server. I've been running it on <code>127.0.0.1:8000</code> during development — it doesn't need internet.</p>
         <div class="code-block"><div class="code-top"><span>PowerShell</span><button class="copy-button" type="button">Copy</button></div><pre><code>.\mira dashboard
 .\mira dashboard --port 8080
 .\mira dashboard --host 0.0.0.0</code></pre></div>
@@ -145,8 +146,8 @@ inference:
 
       <article id="datasets" class="doc-section" data-doc-title="Datasets merge validate registry TACO TrashNet Roboflow labels remap split manifest">
         <div class="doc-heading"><span>How-to</span><h2>Prepare datasets</h2></div>
-        <p>Dataset files stay outside Git. Registry metadata and processing code keep their origins and transformations traceable.</p>
-        <div class="code-block"><div class="code-top"><span>PowerShell</span><button class="copy-button" type="button">Copy</button></div><pre><code>.\mira datasets
+        <p>Dataset files stay outside Git. Registry metadata and processing code keep their origins and transformations traceable. I've kept the raw zips out of git since they're a few GB.</p>
+        <div class="code-block"><div class="code-top"><span>Terminal</span><button class="copy-button" type="button">Copy</button></div><pre><code>.\mira datasets
 .\mira merge --sources taco_trashnet roboflow --output datasets/mira_tnr
 .\mira validate --dataset datasets/mira_tnr</code></pre></div>
         <h3>Source families</h3>

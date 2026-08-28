@@ -1,8 +1,7 @@
-"""Focused runtime regression tests for the dashboard camera service."""
+# Focused runtime regression tests for the dashboard camera service.
 
 import asyncio
 import threading
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest

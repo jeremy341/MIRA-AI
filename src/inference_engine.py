@@ -1,6 +1,4 @@
-"""Shared inference engine: camera setup, model loading, inference loop."""
-
-from __future__ import annotations
+# Shared inference engine: camera setup, model loading, inference loop.
 
 import time
 import warnings
@@ -29,16 +27,6 @@ from .visualize import draw_boxes
 
 
 class InferenceEngine:
-    """Unified inference engine for MIRA detection models.
-
-    Handles camera initialization, model loading, TFLite/INT8 configuration,
-    and the main real-time inference loop.
-
-    Usage as context manager (recommended):
-        with InferenceEngine(...) as engine:
-            engine.run()
-    """
-
     def __init__(
         self,
         model_name: str,
@@ -92,8 +80,8 @@ class InferenceEngine:
         self._current_fps = 0.0
 
     def _load_model(self, imgsz: int | None):
-        """Load YOLO model with TFLite/INT8-specific configuration."""
-        available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite", ".keras"))
+        # Load YOLO model with TFLite/INT8-specific configuration.
+        available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix.lower() in (".pt", ".tflite", ".keras"))
 
         logger.info("\nAvailable models in models/:")
         for name in available:
@@ -123,9 +111,9 @@ class InferenceEngine:
         except Exception as e:
             raise RuntimeError(f"Failed to load model {self.model_name}: {e}") from e
 
-        self.is_tflite_int8 = self.model_path.suffix == ".tflite" and "int8" in self.model_name.lower()
+        self.is_tflite_int8 = self.model_path.suffix.lower() == ".tflite" and "int8" in self.model_name.lower()
 
-        if self.model_path.suffix == ".tflite":
+        if self.model_path.suffix.lower() == ".tflite":
             native_img_size = get_tflite_imgsz(self.model_path)
             if imgsz is not None and imgsz != native_img_size:
                 logger.warning(
@@ -151,12 +139,12 @@ class InferenceEngine:
             logger.info(f"Using requested confidence threshold {self.conf_threshold} for INT8 model.")
 
         # TFLite models don't support ByteTrack; disable tracking
-        if self.model_path.suffix == ".tflite" and self.enable_tracking:
+        if self.model_path.suffix.lower() == ".tflite" and self.enable_tracking:
             self.enable_tracking = False
             logger.info("Tracking disabled - not supported for TFLite models.")
 
     def __enter__(self) -> Self:
-        """Context manager entry."""
+        # Context manager entry.
         return self
 
     def __exit__(
@@ -165,15 +153,15 @@ class InferenceEngine:
         exc_val: BaseException | None,
         exc_tb: TracebackType | None,
     ) -> None:
-        """Context manager exit - always release resources."""
+        # Context manager exit - always release resources.
         self._cleanup()
 
     def stop(self) -> None:
-        """Signal the inference loop to stop on the next iteration."""
+        # Signal the inference loop to stop on the next iteration.
         self._stopped = True
 
     def _cleanup(self) -> None:
-        """Release all held resources. Safe to call multiple times (idempotent)."""
+        # Release all held resources. Safe to call multiple times (idempotent).
         if self._released:
             return
         self._released = True
@@ -206,7 +194,7 @@ class InferenceEngine:
                 logger.warning("Exception while destroying cv2 windows: %s", exc)
 
     def run(self):
-        """Start the real-time inference loop."""
+        # Start the real-time inference loop.
         self.prev_time = time.perf_counter()
         logger.info(
             f"MIRA Live Detection active (camera {self.camera_index}, "
@@ -256,36 +244,22 @@ class InferenceEngine:
             self._cleanup()
 
     def _infer(self, frame):
-        """Run model inference or tracking on a single frame."""
+        # Run model inference or tracking on a single frame.
+        options = {
+            "imgsz": self.img_size,
+            "conf": self.conf_threshold,
+            "iou": self.iou_threshold,
+            "verbose": False,
+        }
         if self.is_tflite_int8:
-            return self.model.predict(
-                frame,
-                imgsz=self.img_size,
-                conf=self.conf_threshold,
-                iou=self.iou_threshold,
-                verbose=False,
-            )
-        elif self.enable_tracking:
-            return self.model.track(
-                frame,
-                imgsz=self.img_size,
-                conf=self.conf_threshold,
-                iou=self.iou_threshold,
-                persist=True,
-                verbose=False,
-                tracker=str(BYTE_TRACK_CONFIG_PATH),
-            )
-        else:
-            return self.model.predict(
-                frame,
-                imgsz=self.img_size,
-                conf=self.conf_threshold,
-                iou=self.iou_threshold,
-                verbose=False,
-            )
+            return self.model.predict(frame, **options)
+        if self.enable_tracking:
+            options.update(persist=True, tracker=str(BYTE_TRACK_CONFIG_PATH))
+            return self.model.track(frame, **options)
+        return self.model.predict(frame, **options)
 
     def _update_metrics(self, results):
-        """Track latency history and decide whether to skip the next frame."""
+        # Track latency history and decide whether to skip the next frame.
         curr_time = time.perf_counter()
         frame_time = curr_time - self.prev_time
         self.prev_time = curr_time
@@ -302,7 +276,7 @@ class InferenceEngine:
         self.skip_frame = avg_latency > self.target_latency_ms
 
     def _draw_status(self, frame, results):
-        """Draw status overlay on the annotated frame."""
+        # Draw status overlay on the annotated frame.
         speed = getattr(results[0], "speed", None) or {} if results else {}
         latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
         avg_latency = sum(self.latency_history) / len(self.latency_history) if self.latency_history else 0
@@ -324,7 +298,7 @@ class InferenceEngine:
         )
 
     def __del__(self):
-        """Safety-net finalizer. Warns if resources were not explicitly released."""
+        # Safety-net finalizer. Warns if resources were not explicitly released.
         if getattr(self, "_released", False):
             return
         warnings.warn(
@@ -337,4 +311,3 @@ class InferenceEngine:
             self._cleanup()
         except Exception:
             pass
-
