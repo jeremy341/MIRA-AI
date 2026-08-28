@@ -1,24 +1,4 @@
-"""Dataset registry for MIRA pipeline.
-
-Discovers dataset sources from YAML descriptors in datasets/registry/
-and provides a unified merge interface.
-
-Usage:
-    from pipeline.dataset import DatasetRegistry
-
-    registry = DatasetRegistry()
-    registry.discover()  # scans datasets/registry/*.yaml
-
-    # List available sources
-    for src in registry.list_sources():
-        print(f"{src['key']}: {src['name']}")
-
-    # Merge sources
-    result = registry.merge(
-        sources=["taco_trashnet", "roboflow"],
-        output=Path("datasets/mira_merged"),
-    )
-"""
+# dataset registry - discovers sources from datasets/registry and merges
 
 from __future__ import annotations
 
@@ -34,7 +14,6 @@ logger = get_logger(__name__)
 
 
 def _import_merge_utils():
-    """Lazy-import merge_utils from the project scripts/ directory."""
     import importlib
     import sys
 
@@ -49,11 +28,6 @@ def _import_merge_utils():
 
 
 def _derive_label_path(img_rel: str) -> str:
-    """Derive the label directory path from an image directory path.
-
-    Handles common patterns: 'images/train' -> 'labels/train',
-    'train/images' -> 'train/labels', etc.
-    """
     parts = Path(img_rel).parts
     new_parts = []
     for part in parts:
@@ -64,9 +38,10 @@ def _derive_label_path(img_rel: str) -> str:
     return str(Path(*new_parts)) if new_parts else img_rel
 
 
+# keep simple dataclass - no fancy options
 @dataclass
 class DatasetSource:
-    """Represents a registered dataset source."""
+    # Represents a registered dataset source.
 
     key: str
     name: str
@@ -79,7 +54,7 @@ class DatasetSource:
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> DatasetSource:
-        """Load a dataset source from a YAML descriptor."""
+        # Load a dataset source from a YAML descriptor.
         import yaml
 
         with open(yaml_path, encoding="utf-8") as f:
@@ -90,17 +65,19 @@ class DatasetSource:
         if missing:
             raise ValueError(f"Dataset descriptor {yaml_path.name} missing required fields: {missing}")
 
-        if data["source_format"] not in ("yolo", "coco", "folder-per-class"):
+        if data["source_format"] not in ("yolo", "coco"):
             raise ValueError(f"Unknown source_format '{data['source_format']}' in {yaml_path.name}")
 
-        root = yaml_path.parent.parent.parent  # datasets/registry/ -> project root
+        registry_dir = yaml_path.parent
+        if registry_dir.name == "registry" and registry_dir.parent.name == "datasets":
+            root = registry_dir.parent.parent
+        else:
+            root = registry_dir.parent
         input_path = (root / data["input_path"]).resolve()
         try:
-            is_rel = input_path.is_relative_to(root.resolve())
-        except AttributeError:
-            is_rel = str(input_path.resolve()).startswith(str(root.resolve()))
-        if not is_rel:
-            raise ValueError(f"input_path '{data['input_path']}' escapes project root in {yaml_path.name}")
+            input_path.relative_to(root.resolve())
+        except ValueError:
+            raise ValueError(f"input_path '{data['input_path']}' escapes project root in {yaml_path.name}") from None
 
         # Parse class_mapping (YAML dicts have string keys)
         class_mapping = None
@@ -121,7 +98,7 @@ class DatasetSource:
 
 @dataclass
 class MergeResult:
-    """Result of a dataset merge operation."""
+    # Result of a dataset merge operation.
 
     output_dir: Path
     total_added: int
@@ -130,7 +107,7 @@ class MergeResult:
 
 
 class DatasetRegistry:
-    """Discovers and manages dataset sources from YAML descriptors."""
+    # Discovers and manages dataset sources from YAML descriptors.
 
     def __init__(self, registry_dir: Path | str | None = None):
         if registry_dir is None:
@@ -139,7 +116,8 @@ class DatasetRegistry:
         self.sources: dict[str, DatasetSource] = {}
 
     def discover(self) -> int:
-        """Scan registry dir for *.yaml files. Returns count of sources found."""
+        # Scan registry dir for *.yaml files. Returns count of sources found.
+        self.sources.clear()
         if not self.registry_dir.exists():
             return 0
         count = 0
@@ -153,7 +131,6 @@ class DatasetRegistry:
         return count
 
     def list_sources(self) -> list[dict]:
-        """Return all registered sources with metadata."""
         return [
             {
                 "key": s.key,
@@ -168,7 +145,6 @@ class DatasetRegistry:
         ]
 
     def get_source(self, key: str) -> DatasetSource:
-        """Get a specific source by key."""
         if key not in self.sources:
             available = ", ".join(self.sources.keys())
             raise KeyError(f"Unknown source '{key}'. Available: {available}")
@@ -182,7 +158,7 @@ class DatasetRegistry:
         custom_mapping: dict[int, int] | None = None,
         dry_run: bool = False,
     ) -> MergeResult:
-        """Merge registered sources + optional custom dataset."""
+        # Merge registered sources + optional custom dataset.
         mu = _import_merge_utils()
 
         # Validate and create output directory
@@ -208,7 +184,7 @@ class DatasetRegistry:
             sources_used.append(key)
             logger.info("[%s]", source.name)
 
-            if source.source_format == "yolo" and source.class_mapping is None:
+            if source.source_format == "yolo" and not source.class_mapping:
                 # Passthrough - already in MIRA format
                 added = self._merge_passthrough(source, output, dry_run)
                 total_added += added
@@ -248,7 +224,7 @@ class DatasetRegistry:
         )
 
     def _merge_passthrough(self, source: DatasetSource, output: Path, dry_run: bool) -> int:
-        """Copy data that's already in MIRA 5-class format."""
+        # Copy data that's already in MIRA 5-class format.
         if dry_run:
             print(f"  [DRY] Passthrough: {source.input_path}")
             return 0
@@ -271,7 +247,6 @@ class DatasetRegistry:
         return total
 
     def _merge_remapped(self, source: DatasetSource, output: Path, dry_run: bool) -> tuple[int, int]:
-        """Copy data with class ID remapping."""
         if dry_run:
             if source.class_mapping is not None and len(source.class_mapping) > 0:
                 print(f"  [DRY] Remap: {source.input_path} ({len(source.class_mapping)} mappings)")
@@ -286,7 +261,7 @@ class DatasetRegistry:
             img_src = source.input_path / split_rel
             lbl_src = source.input_path / _derive_label_path(split_rel)
 
-            if not lbl_src.exists():
+            if not img_src.exists() or not lbl_src.exists():
                 continue
 
             dst_split = "val" if split_name in ("valid", "test") else split_name
@@ -325,7 +300,7 @@ class DatasetRegistry:
         output: Path,
         dry_run: bool,
     ) -> tuple[int, int]:
-        """Convert COCO annotations to YOLO format and merge."""
+        # Convert COCO annotations to YOLO format and merge.
         if dry_run:
             print(f"  [DRY] COCO convert: {source.input_path}")
             return 0, 0
@@ -369,14 +344,23 @@ class DatasetRegistry:
 
                 # Locate the image file
                 img_filename = img_info["file_name"]
-                img_path = source.input_path / img_filename
-                if not img_path.exists():
-                    # Try inside an "images" subdirectory
-                    img_path = source.input_path / "images" / Path(img_filename).name
-                if not img_path.exists():
-                    # Try inside split-specific image folder
-                    img_path = source.input_path / "images" / split_name / Path(img_filename).name
-                if not img_path.exists():
+                image_candidates = (
+                    source.input_path / img_filename,
+                    source.input_path / "images" / Path(img_filename).name,
+                    source.input_path / "images" / split_name / Path(img_filename).name,
+                )
+                img_path = None
+                source_root = source.input_path.resolve()
+                for candidate in image_candidates:
+                    candidate = candidate.resolve()
+                    try:
+                        candidate.relative_to(source_root)
+                    except ValueError:
+                        continue
+                    if candidate.exists():
+                        img_path = candidate
+                        break
+                if img_path is None:
                     logger.debug("  Image not found for annotation: %s", img_filename)
                     total_skipped += 1
                     continue
@@ -384,6 +368,9 @@ class DatasetRegistry:
                 # Convert annotations to YOLO format
                 img_w = img_info["width"]
                 img_h = img_info["height"]
+                if img_w <= 0 or img_h <= 0:
+                    total_skipped += 1
+                    continue
                 yolo_lines: list[str] = []
                 for ann in anns:
                     cat_id = ann["category_id"]
@@ -410,10 +397,11 @@ class DatasetRegistry:
                     dst_img_dir.mkdir(parents=True, exist_ok=True)
                     dst_lbl_dir.mkdir(parents=True, exist_ok=True)
 
-                    shutil.copy2(img_path, dst_img_dir / img_path.name)
+                    output_stem = f"{source.key}_{split_name}_{img_id}_{Path(img_filename).stem}"
+                    destination = dst_img_dir / f"{output_stem}{img_path.suffix.lower()}"
+                    shutil.copy2(img_path, destination)
 
-                    stem = Path(img_filename).stem
-                    lbl_path = dst_lbl_dir / f"{stem}.txt"
+                    lbl_path = dst_lbl_dir / f"{output_stem}.txt"
                     with open(lbl_path, "w", encoding="utf-8") as f:
                         f.writelines(yolo_lines)
 
@@ -430,7 +418,7 @@ class DatasetRegistry:
         output: Path,
         dry_run: bool,
     ) -> tuple[int, int]:
-        """Add a custom YOLO-format dataset."""
+        # Add a custom YOLO-format dataset.
         mu = _import_merge_utils()
         path = Path(path)
         if not path.exists():
@@ -444,7 +432,7 @@ class DatasetRegistry:
         print(f"  Adding custom dataset: {path.name}...")
         added = 0
         skipped = 0
-        for split in ["train", "val"]:
+        for split in ("train", "val"):
             img_src = path / "images" / split
             lbl_src = path / "labels" / split
             if not img_src.exists() or not lbl_src.exists():
@@ -469,4 +457,3 @@ class DatasetRegistry:
             added += a
             skipped += s
         return added, skipped
-

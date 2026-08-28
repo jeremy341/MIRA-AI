@@ -1,8 +1,4 @@
-"""Training strategy registry for extensible training pipelines.
-
-Allows registering new training strategies (YOLO, classifier, etc.)
-without modifying the TrainingPipeline class.
-"""
+# Training strategy registry for extensible training pipelines.
 
 from __future__ import annotations
 
@@ -45,7 +41,7 @@ class TrainConfig:
     extra: dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> list[str]:
-        """Validate this configuration and return a list of error messages."""
+        # Validate this configuration and return a list of error messages.
         errors: list[str] = []
 
         if self.epochs < 1:
@@ -86,8 +82,13 @@ class TrainConfig:
         if not isinstance(data, dict):
             raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 
-        known = {f.name for f in dc_fields(cls)}
-        extra = {k: v for k, v in data.items() if k not in known}
+        known = {f.name for f in dc_fields(cls)} - {"extra"}
+        declared_extra = data.get("extra", {})
+        if declared_extra is None:
+            declared_extra = {}
+        if not isinstance(declared_extra, dict):
+            raise ValueError(f"Config field 'extra' must be a mapping, got {type(declared_extra).__name__}")
+        extra = {**declared_extra, **{k: v for k, v in data.items() if k not in known and k != "extra"}}
         if extra:
             unknown_names = list(extra.keys())
             logger.warning("Unknown config keys will be placed in extra dict: %s", unknown_names)
@@ -114,14 +115,12 @@ class TrainResult:
 
 
 class TrainingStrategy(ABC):
-    """Abstract strategy for training a model type."""
-
     @abstractmethod
     def train(self, config: TrainConfig) -> TrainResult: ...
 
 
 class YOLOStrategy(TrainingStrategy):
-    """Train a YOLO detection model via Ultralytics."""
+    # Train a YOLO detection model via Ultralytics.
 
     def train(self, config: TrainConfig) -> TrainResult:
         from ultralytics import YOLO
@@ -249,7 +248,7 @@ class YOLOStrategy(TrainingStrategy):
 
 
 class ClassifierStrategy(TrainingStrategy):
-    """Train a TensorFlow/Keras classifier."""
+    # Train a TensorFlow/Keras classifier.
 
     def train(self, config: TrainConfig) -> TrainResult:
         import tensorflow as tf
@@ -354,19 +353,16 @@ class ClassifierStrategy(TrainingStrategy):
         return train_result
 
 
-# â”€â”€ Strategy Registry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 _STRATEGIES: dict[str, type[TrainingStrategy]] = {}
 _DEFAULTS_LOADED = False
 
 
 def register_strategy(name: str, strategy_cls: type[TrainingStrategy]):
-    """Register a training strategy for a given task name."""
     _STRATEGIES[name] = strategy_cls
 
 
 def get_strategy(name: str) -> TrainingStrategy:
-    """Get a training strategy by name."""
+    # Get a training strategy by name.
     _ensure_defaults()
     cls = _STRATEGIES.get(name)
     if cls is None:
@@ -375,9 +371,9 @@ def get_strategy(name: str) -> TrainingStrategy:
 
 
 def list_strategies() -> list[str]:
-    """List all registered strategy names."""
+    # List all registered strategy names.
     _ensure_defaults()
-    return list(_STRATEGIES.keys())
+    return [*_STRATEGIES]
 
 
 def _ensure_defaults():

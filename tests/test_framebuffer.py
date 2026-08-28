@@ -1,4 +1,4 @@
-"""Tests to verify _FrameBuffer instance isolation."""
+# Tests to verify _FrameBuffer instance isolation.
 
 from src.hardware import _FrameBuffer
 

@@ -1,7 +1,4 @@
-"""Profile detection model performance: FPS, latency percentiles, and memory usage.
-Loads a single YOLO model and runs warmup + benchmark iterations to produce
-a structured summary saved to results/.
-"""
+# Profile a model's performance and save results to a JSON file.
 
 from __future__ import annotations
 
@@ -13,12 +10,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
 
 import numpy as np
 
-from config import ROOT_DIR
-from pipeline.models import ModelRegistry
+from src.config import ROOT_DIR
+from src.pipeline.models import ModelRegistry
 
 try:
     import torch
@@ -30,27 +29,23 @@ except ImportError:
 
 
 def _generate_dummy_image(width: int = 640, height: int = 640) -> Path:
-    """Create a dummy RGB image and return its path."""
+    dummy = ROOT_DIR / "results" / "_dummy_profile.png"
+    dummy.parent.mkdir(parents=True, exist_ok=True)
     try:
         from PIL import Image
 
         img = Image.fromarray(np.random.randint(0, 255, (height, width, 3), dtype=np.uint8))
-        dummy = ROOT_DIR / "results" / "_dummy_profile.png"
-        dummy.parent.mkdir(parents=True, exist_ok=True)
         img.save(str(dummy))
         return dummy
     except ImportError:
         import cv2
 
         img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
-        dummy = ROOT_DIR / "results" / "_dummy_profile.png"
-        dummy.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(dummy), img)
         return dummy
 
 
 def _peak_gpu_memory_mb() -> float | None:
-    """Return peak GPU memory usage in MB, or None if CUDA unavailable."""
     if not _CUDA_AVAILABLE:
         return None
     return torch.cuda.max_memory_allocated() / 1_048_576
@@ -63,7 +58,6 @@ def _current_gpu_memory_mb() -> float | None:
 
 
 def _peak_cpu_memory_mb() -> float | None:
-    """Best-effort peak RSS on current process (cross-platform)."""
     try:
         import resource
 
@@ -80,18 +74,27 @@ def _peak_cpu_memory_mb() -> float | None:
         return None
 
 
-def measure_inference(model, image_path: Path, imgsz: int = 640) -> float:
-    """Run a single inference and return latency in ms."""
+def measure_inference(model, image_path: Path, imgsz: int = 640, batch_size: int = 1) -> float:
     from pipeline.models import letterbox_preprocess, _get_device
     import torch
 
     im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image_path, imgsz)
-    dev = _get_device(model._backend) if hasattr(model, "_backend") else torch.device("cpu")
-    im_tensor = im_tensor.to(dev)
+    backend = getattr(model, "_backend", None)
+    if backend is None:
+        loaded_model = getattr(model, "_model", None)
+        backend = getattr(loaded_model, "model", loaded_model)
+    if backend is None:
+        raise AttributeError(f"Model {model.name} has no inference backend")
+    dev = _get_device(backend)
+    im_tensor = im_tensor.repeat(batch_size, 1, 1, 1).to(dev)
 
+    if getattr(dev, "type", None) == "cuda":
+        torch.cuda.synchronize(dev)
     start = time.perf_counter()
     with torch.no_grad():
-        _ = model._backend(im_tensor)
+        _ = backend(im_tensor)
+    if getattr(dev, "type", None) == "cuda":
+        torch.cuda.synchronize(dev)
     return (time.perf_counter() - start) * 1000
 
 
@@ -102,7 +105,6 @@ def profile_model(
     warmup: int,
     batch_size: int,
 ) -> dict:
-    """Run profiling and return a results dict."""
     registry = ModelRegistry()
     registry.discover()
     model = registry.load_model(model_name)
@@ -118,14 +120,16 @@ def profile_model(
 
     print(f"  Warming up ({warmup} iterations)...")
     for _ in range(warmup):
-        measure_inference(model, image_path, imgsz)
+        measure_inference(model, image_path, imgsz, batch_size)
 
     print(f"  Benchmarking ({iterations} iterations, batch_size={batch_size})...")
     latencies: list[float] = []
+    if _CUDA_AVAILABLE:
+        torch.cuda.reset_peak_memory_stats()
     peak_gpu_before = _peak_gpu_memory_mb()
 
     for _ in range(iterations):
-        lat = measure_inference(model, image_path, imgsz)
+        lat = measure_inference(model, image_path, imgsz, batch_size)
         latencies.append(lat)
 
     peak_gpu_after = _peak_gpu_memory_mb()
@@ -136,8 +140,8 @@ def profile_model(
     p50 = float(np.percentile(lat_arr, 50))
     p90 = float(np.percentile(lat_arr, 90))
     p99 = float(np.percentile(lat_arr, 99))
-    throughput = 1000.0 / mean_lat if mean_lat > 0 else 0.0
-    throughput_batch = throughput * batch_size
+    throughput = 1000.0 * batch_size / mean_lat if mean_lat > 0 else 0.0
+    throughput_batch = throughput
 
     gpu_mem_peak = None
     if peak_gpu_before is not None and peak_gpu_after is not None:
@@ -173,7 +177,6 @@ def profile_model(
 
 
 def print_summary(results: dict) -> None:
-    """Print a formatted summary table."""
     print("\n" + "=" * 60)
     print(f"  Profiling Summary: {results['model']}")
     print("=" * 60)

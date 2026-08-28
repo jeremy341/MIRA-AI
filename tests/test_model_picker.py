@@ -1,6 +1,4 @@
-"""Tests for model_picker interactive CLI component."""
-
-from __future__ import annotations
+# Tests for model_picker interactive CLI component.
 
 import sys
 from unittest.mock import MagicMock, patch

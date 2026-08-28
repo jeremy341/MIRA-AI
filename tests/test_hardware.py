@@ -1,4 +1,4 @@
-"""Tests for MIRA hardware abstraction layer."""
+# Tests for MIRA hardware abstraction layer.
 
 from __future__ import annotations
 

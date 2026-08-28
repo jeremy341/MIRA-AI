@@ -1,12 +1,9 @@
-"""Structured benchmarking module for MIRA detection models.
-
-Runs models against a YOLO-format validation set and produces
-per-class + macro-averaged metrics with exportable results.
-"""
+# Structured benchmarking module for MIRA detection models.
 
 from __future__ import annotations
 
 import json
+import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -17,7 +14,10 @@ import numpy as np
 from ..config import CLASS_NAMES
 from .models import DetectionModel, ModelRegistry
 
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff")
 
+
+# keep simple dataclass - no fancy options
 @dataclass
 class PerClassMetrics:
     tp: int = 0
@@ -51,14 +51,14 @@ class PerClassMetrics:
 
 
 def compute_iou(box_a: list[float], box_b: list[float]) -> float:
-    """Compute IoU between two boxes in xyxy format."""
+    # Compute IoU between two boxes in xyxy format.
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
     x2 = min(box_a[2], box_b[2])
     y2 = min(box_a[3], box_b[3])
     inter = max(0, x2 - x1) * max(0, y2 - y1)
-    area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
-    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
+    area_a = max(0, box_a[2] - box_a[0]) * max(0, box_a[3] - box_a[1])
+    area_b = max(0, box_b[2] - box_b[0]) * max(0, box_b[3] - box_b[1])
     union = area_a + area_b - inter
     return inter / union if union > 0 else 0.0
 
@@ -100,89 +100,108 @@ class BenchmarkResult:
 
 
 def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[dict]]], bool]:
-    """Load images/val + labels/val from a YOLO-format dataset.
-
-    Returns list of (image_path, gt_objects) where gt_objects is a list of
-    dicts with keys: class_id, bbox (xyxy pixel).
-    Falls back to the train split when val is unavailable.
-    """
     from PIL import Image
 
     dataset_path = Path(dataset_path)
+    dataset_config: dict = {}
+    if dataset_path.is_file() and dataset_path.suffix.lower() in (".yaml", ".yml"):
+        import yaml
 
-    if dataset_path.is_file() and dataset_path.suffix in (".yaml", ".yml"):
-        dataset_path = dataset_path.parent
+        dataset_config = yaml.safe_load(dataset_path.read_text(encoding="utf-8")) or {}
+        dataset_root = dataset_path.parent
+        configured_root = dataset_config.get("path")
+        if configured_root:
+            configured_root = Path(configured_root)
+            dataset_root = configured_root if configured_root.is_absolute() else dataset_root / configured_root
+    else:
+        dataset_root = dataset_path
+
+    def split_directories(split_name: str) -> tuple[Path, Path]:
+        configured_split = dataset_config.get(split_name)
+        if isinstance(configured_split, list):
+            configured_split = configured_split[0] if configured_split else None
+        if configured_split:
+            image_dir = Path(configured_split)
+            image_dir = image_dir if image_dir.is_absolute() else dataset_root / image_dir
+            parts = list(image_dir.parts)
+            if "images" in parts:
+                parts[parts.index("images")] = "labels"
+                label_dir = Path(*parts)
+            else:
+                label_dir = dataset_root / "labels" / split_name
+            return image_dir, label_dir
+        return dataset_root / "images" / split_name, dataset_root / "labels" / split_name
 
     split = "val"
     evaluated_on_train = False
-    img_dir = dataset_path / "images" / "val"
-    lbl_dir = dataset_path / "labels" / "val"
-    if not (img_dir.exists() and lbl_dir.exists()):
+    img_dir, lbl_dir = split_directories(split)
+    if not img_dir.exists():
         from ..logger import get_logger as _get_logger
 
         _get_logger(__name__).warning(
             "Validation split not found in %s - falling back to train split. "
             "Metrics may be inflated because the model is evaluated on training data.",
-            dataset_path,
+            dataset_root,
         )
         split = "train"
         evaluated_on_train = True
-        img_dir = dataset_path / "images" / "train"
-        lbl_dir = dataset_path / "labels" / "train"
-        if not (img_dir.exists() and lbl_dir.exists()):
-            raise FileNotFoundError(f"No images/val (or train) directory found in {dataset_path}")
+        img_dir, lbl_dir = split_directories(split)
+        if not img_dir.exists():
+            raise FileNotFoundError(f"No images/val (or train) directory found in {dataset_root}")
 
     samples: list[tuple[Path, list[dict]]] = []
     skipped = 0
 
-    for lbl_path in sorted(lbl_dir.glob("*.txt")):
-        stem = lbl_path.stem
-        img_path = None
-        for ext in (".jpg", ".png", ".jpeg"):
-            candidate = img_dir / f"{stem}{ext}"
-            if candidate.exists():
-                img_path = candidate
-                break
-        if img_path is None:
+    image_paths = sorted(
+        path for path in img_dir.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+    )
+    for img_path in image_paths:
+        lbl_path = lbl_dir / f"{img_path.stem}.txt"
+
+        try:
+            with Image.open(img_path) as img:
+                img_w, img_h = img.size
+        except (OSError, ValueError):
             skipped += 1
             continue
 
-        with Image.open(img_path) as img:
-            img_w, img_h = img.size
-
         objects: list[dict] = []
-        with open(lbl_path, encoding="utf-8") as f:
-            for line in f:
+        if lbl_path.exists():
+            try:
+                lines = lbl_path.read_text(encoding="utf-8").splitlines()
+            except OSError:
+                lines = []
+            for line in lines:
                 parts = line.strip().split()
                 if len(parts) < 5:
                     continue
-                cls_id = int(parts[0])
-                coords = [float(p) for p in parts[1:]]
+                try:
+                    cls_id = int(parts[0])
+                    coords = [float(value) for value in parts[1:]]
+                except ValueError:
+                    continue
+                if cls_id < 0 or not all(math.isfinite(value) for value in coords):
+                    continue
                 if len(coords) == 4:
-                    # Detection format: x_center, y_center, width, height
-                    xc, yc, w, h = coords
-                    x1 = (xc - w / 2) * img_w
-                    y1 = (yc - h / 2) * img_h
-                    x2 = (xc + w / 2) * img_w
-                    y2 = (yc + h / 2) * img_h
-                else:
-                    # Segmentation polygon: x1, y1, x2, y2, ...
-                    xs = [coords[i] for i in range(0, len(coords), 2)]
-                    ys = [coords[i] for i in range(1, len(coords), 2)]
+                    xc, yc, box_width, box_height = coords
+                    x1 = (xc - box_width / 2) * img_w
+                    y1 = (yc - box_height / 2) * img_h
+                    x2 = (xc + box_width / 2) * img_w
+                    y2 = (yc + box_height / 2) * img_h
+                elif len(coords) >= 6 and len(coords) % 2 == 0:
+                    xs = coords[0::2]
+                    ys = coords[1::2]
                     x1 = min(xs) * img_w
                     y1 = min(ys) * img_h
                     x2 = max(xs) * img_w
                     y2 = max(ys) * img_h
-                objects.append(
-                    {
-                        "class_id": cls_id,
-                        "bbox": [x1, y1, x2, y2],
-                    }
-                )
+                else:
+                    continue
+                objects.append({"class_id": cls_id, "bbox": [x1, y1, x2, y2]})
         samples.append((img_path, objects))
 
     print(
-        f"  Loaded {len(samples)} images from {dataset_path.name}/{split}"
+        f"  Loaded {len(samples)} images from {dataset_root.name}/{split}"
         + (f" (skipped {skipped})" if skipped else "")
     )
     return samples, evaluated_on_train
@@ -193,7 +212,7 @@ def _compute_ap_for_class(
     all_gts_for_class: list[dict],
     iou_thresh: float,
 ) -> float:
-    """Compute AP for a single class using 101-point interpolation."""
+    # Compute AP for a single class using 101-point interpolation.
     num_gt = len(all_gts_for_class)
     if num_gt == 0:
         return float("nan")
@@ -236,17 +255,16 @@ def _compute_ap_for_class(
 
 
 def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: float = 0.5) -> float:
-    """Compute mAP at given IoU threshold using 101-point interpolation.
-
-    Averages per-class AP (COCO-style macro-averaged mAP).
-    """
+    # Compute mAP at given IoU threshold using 101-point interpolation. Averages per-class AP (COCO-style macro-averaged mAP).
     class_ids: set[int] = set()
     for img_gts in gts:
         for gt in img_gts:
-            class_ids.add(gt["class_id"])
+            if gt["class_id"] >= 0:
+                class_ids.add(gt["class_id"])
     for img_preds in preds:
         for d in img_preds:
-            class_ids.add(d["class_id"])
+            if d["class_id"] >= 0:
+                class_ids.add(d["class_id"])
 
     if not class_ids:
         return 0.0
@@ -270,7 +288,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
 
 
 class ModelBenchmark:
-    """Run one or more detection models against a validation dataset."""
+    # Run one or more detection models against a validation dataset.
 
     def __init__(
         self,
@@ -298,14 +316,14 @@ class ModelBenchmark:
         iou: float = 0.7,
         max_images: int | None = None,
     ) -> ModelBenchmark:
-        """Create benchmark from model names using ModelRegistry."""
+        # Create benchmark from model names using ModelRegistry.
         registry = ModelRegistry()
         registry.discover()
         models = [registry.load_model(name) for name in model_names]
         return cls(models=models, dataset=dataset_path, conf=conf, iou=iou, max_images=max_images)
 
     def run(self) -> list[BenchmarkResult]:
-        """Evaluate every model and return structured results."""
+        # Evaluate every model and return structured results.
 
         samples = self.samples[: self.max_images] if self.max_images else self.samples
 
@@ -326,13 +344,12 @@ class ModelBenchmark:
             for img_path, gt_objects in samples:
                 try:
                     t0 = time.perf_counter()
-                    result = model.predict(str(img_path), conf=self.conf, iou=self.iou)
+                    result = model.predict(str(img_path), conf=0.0, iou=self.iou)
                     total_latency_ms += (time.perf_counter() - t0) * 1000
                     successful_predictions += 1
 
                     img_preds: list[dict] = []
                     for det in result.detections:
-                        total_detections += 1
                         img_preds.append(
                             {
                                 "class_id": det.class_id,
@@ -341,9 +358,11 @@ class ModelBenchmark:
                             }
                         )
 
+                    eval_preds = [pred for pred in img_preds if pred["confidence"] >= self.conf]
+                    total_detections += len(eval_preds)
                     # Detection-first IoU-based matching (consistent with compute_map)
                     sorted_pred_indices = sorted(
-                        range(len(img_preds)), key=lambda i: img_preds[i]["confidence"], reverse=True
+                        range(len(eval_preds)), key=lambda i: eval_preds[i]["confidence"], reverse=True
                     )
                     gt_used = [False] * len(gt_objects)
 
@@ -351,9 +370,9 @@ class ModelBenchmark:
                     fp_count: defaultdict[str, int] = defaultdict(int)
 
                     for pi in sorted_pred_indices:
-                        pred = img_preds[pi]
+                        pred = eval_preds[pi]
                         pred_cid = pred["class_id"]
-                        pred_cls = CLASS_NAMES[pred_cid] if pred_cid < len(CLASS_NAMES) else f"class_{pred_cid}"
+                        pred_cls = CLASS_NAMES[pred_cid] if 0 <= pred_cid < len(CLASS_NAMES) else f"class_{pred_cid}"
                         best_iou = 0.5
                         best_gi = -1
                         for gi, gt_obj in enumerate(gt_objects):
@@ -375,7 +394,7 @@ class ModelBenchmark:
                     for gi, used in enumerate(gt_used):
                         if not used:
                             cid = gt_objects[gi]["class_id"]
-                            cls_name = CLASS_NAMES[cid] if cid < len(CLASS_NAMES) else f"class_{cid}"
+                            cls_name = CLASS_NAMES[cid] if 0 <= cid < len(CLASS_NAMES) else f"class_{cid}"
                             fn_count[cls_name] += 1
 
                     for cls_name in set(list(tp_count.keys()) + list(fp_count.keys()) + list(fn_count.keys())):
@@ -445,7 +464,7 @@ class ModelBenchmark:
 
     @staticmethod
     def export(results: list[BenchmarkResult], output_path: Path | str) -> None:
-        """Save benchmark results to a JSON file."""
+        # Save benchmark results to a JSON file.
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         data = [r.to_dict() for r in results]
@@ -455,7 +474,7 @@ class ModelBenchmark:
 
     @staticmethod
     def comparison_table(results: list[BenchmarkResult]) -> str:
-        """Return a markdown table comparing models, sorted by F1 descending."""
+        # Return a markdown table comparing models, sorted by F1 descending.
         sorted_res = sorted(results, key=lambda r: r.overall_f1, reverse=True)
 
         header = "| Model | Images | Precision | Recall | F1 | mAP50 | Latency (ms) |"
@@ -474,4 +493,3 @@ class ModelBenchmark:
             )
 
         return "\n".join(rows)
-

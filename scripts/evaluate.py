@@ -1,4 +1,4 @@
-"""Evaluate a detection model and write summary plots."""
+# Evaluate a detection model and write plots
 
 from __future__ import annotations
 
@@ -11,22 +11,19 @@ from datetime import datetime
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
-from config import CLASS_NAMES, DETECTION_DIR, ROOT_DIR
-from pipeline.benchmark import (
-    ModelBenchmark,
-    PerClassMetrics,
-    load_yolo_dataset,
-)
-from pipeline.models import DetectionModel, ModelRegistry
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
 
-_src_dir = str(Path(__file__).resolve().parent.parent / "src")
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
+from src.config import CLASS_NAMES, DETECTION_DIR, ROOT_DIR, resolve_safe_path
+from src.exceptions import ConfigError
+from src.pipeline.benchmark import ModelBenchmark, PerClassMetrics, load_yolo_dataset
+from src.pipeline.models import DetectionModel, ModelRegistry
 
 matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger("evaluate")
 
@@ -74,7 +71,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def discover_default_dataset() -> Path | None:
-    # Return the first dataset YAML found in datasets/ with a val split
     for yaml_path in sorted((ROOT_DIR / "datasets").rglob("dataset.yaml")):
         if yaml_path.exists():
             return yaml_path
@@ -83,9 +79,9 @@ def discover_default_dataset() -> Path | None:
 
 
 def _validate_dataset_path(dataset_path):
-    import sys, pathlib
     if not dataset_path.exists():
-        import sys; sys.exit(1)
+        logger.error("Dataset not found: %s", dataset_path)
+        sys.exit(1)
 
 
 def _iou(box_a: list[float], box_b: list[float]) -> float:
@@ -93,9 +89,11 @@ def _iou(box_a: list[float], box_b: list[float]) -> float:
     y1 = max(box_a[1], box_b[1])
     x2 = min(box_a[2], box_b[2])
     y2 = min(box_a[3], box_b[3])
-    inter = max(0, x2 - x1) * max(0, y2 - y1)
-    area_a = (box_a[2] - box_a[0]) * (box_a[3] - box_a[1])
-    area_b = (box_b[2] - box_b[0]) * (box_b[3] - box_b[1])
+    inter_width = max(0, x2 - x1)
+    inter_height = max(0, y2 - y1)
+    inter = inter_width * inter_height
+    area_a = max(0, box_a[2] - box_a[0]) * max(0, box_a[3] - box_a[1])
+    area_b = max(0, box_b[2] - box_b[0]) * max(0, box_b[3] - box_b[1])
     union = area_a + area_b - inter
     return inter / union if union > 0 else 0.0
 
@@ -107,13 +105,18 @@ def build_confusion_matrix(
 ) -> np.ndarray:
     # Build and return a proper confusion matrix (GT rows, Pred cols)
     n = len(CLASS_NAMES)
-    matrix = np.zeros((n, n), dtype=int)
+    background = n
+    matrix = np.zeros((n + 1, n + 1), dtype=int)
 
     for img_path, gt_objects in samples:
         try:
             result = model.predict(str(img_path), conf=conf, iou=0.5)
         except Exception as exc:
             logger.warning("Prediction failed for %s: %s", img_path.name, exc)
+            for gt in gt_objects:
+                gt_cls = int(gt["class_id"])
+                if 0 <= gt_cls < n:
+                    matrix[gt_cls, background] += 1
             continue
 
         pred_boxes = [list(d.bbox) for d in result.detections]
@@ -139,10 +142,14 @@ def build_confusion_matrix(
             if best_pi >= 0:
                 pred_used[best_pi] = True
                 pc = int(pred_cls[best_pi])
-                if 0 <= pc < len(CLASS_NAMES):
-                    matrix[gt_cls, pc] += 1
+                matrix[gt_cls, pc if 0 <= pc < n else background] += 1
             else:
-                logger.debug("GT class %s at %s not matched (FN)", gt_cls, img_path.name)
+                matrix[gt_cls, background] += 1
+
+        for pi, used in enumerate(pred_used):
+            if not used:
+                pc = int(pred_cls[pi])
+                matrix[background, pc if 0 <= pc < n else background] += 1
 
     return matrix
 
@@ -155,11 +162,12 @@ def plot_confusion_matrix(matrix: np.ndarray, output_dir: Path) -> None:
     cbar = fig.colorbar(im, ax=ax, shrink=0.85)
     cbar.ax.set_ylabel("Count", rotation=-90, va="bottom", fontweight="bold")
 
-    n = len(CLASS_NAMES)
+    n = len(CLASS_NAMES) + 1
     ax.set_xticks(np.arange(n))
     ax.set_yticks(np.arange(n))
-    ax.set_xticklabels(CLASS_NAMES, fontsize=9, fontweight="bold")
-    ax.set_yticklabels(CLASS_NAMES, fontsize=9, fontweight="bold")
+    labels = [*CLASS_NAMES, "background"]
+    ax.set_xticklabels(labels, fontsize=9, fontweight="bold")
+    ax.set_yticklabels(labels, fontsize=9, fontweight="bold")
 
     for i in range(n):
         for j in range(n):
@@ -184,7 +192,7 @@ def compute_per_class_ap(
     class_id: int,
     iou_thresh: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray, float]:
-    """Compute precision, recall and AP for a single class."""
+    # Compute precision, recall and AP for a single class.
     all_dets: list[dict] = []
     gt_by_img: dict[int, list[dict]] = {}
     failed_images: list[str] = []
@@ -195,14 +203,17 @@ def compute_per_class_ap(
         try:
             result = model.predict(str(img_path), conf=0.0, iou=iou_thresh)
         except Exception as exc:
-            logger.warning("Prediction failed for %s (class_id=%s): %s — counting as no detections for AP", img_path.name, class_id, exc)
+            logger.warning(
+                "Prediction failed for %s (class_id=%s): %s — counting as no detections for AP",
+                img_path.name,
+                class_id,
+                exc,
+            )
             failed_images.append(str(img_path))
             continue
 
         for det in result.detections:
             if det.class_id != class_id:
-                continue
-            if det.confidence < conf_thresh:
                 continue
             all_dets.append(
                 {
@@ -213,7 +224,12 @@ def compute_per_class_ap(
             )
 
     if failed_images:
-        logger.warning("Per-class AP class_id=%s: %d/%d images had prediction failures and were counted as missed detections", class_id, len(failed_images), len(samples))
+        logger.warning(
+            "Per-class AP class_id=%s: %d/%d images had prediction failures and were counted as missed detections",
+            class_id,
+            len(failed_images),
+            len(samples),
+        )
 
     all_dets.sort(key=lambda x: x["confidence"], reverse=True)
 
@@ -343,8 +359,17 @@ def main() -> None:
 
     args = parse_args()
 
-    model_path = DETECTION_DIR / args.model
-    if not model_path.exists():
+    raw_model_path = Path(args.model)
+    try:
+        model_path = (
+            (DETECTION_DIR / raw_model_path).resolve()
+            if raw_model_path.parent == Path(".")
+            else resolve_safe_path(raw_model_path, ROOT_DIR)
+        )
+        model_path.relative_to(DETECTION_DIR.resolve())
+    except (ConfigError, ValueError):
+        model_path = None
+    if model_path is None or not model_path.is_file():
         logger.error("Model not found: %s", model_path)
         available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix in (".pt", ".tflite"))
         logger.info("Available models: %s", available)
@@ -377,7 +402,7 @@ def main() -> None:
     logger.info("Loading model %s ...", args.model)
     registry = ModelRegistry()
     registry.discover()
-    model = registry.load_model(args.model)
+    model = registry.load_model(model_path.name)
     logger.info("Model loaded: %s", model.name)
 
     logger.info("Loading validation dataset ...")

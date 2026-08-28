@@ -1,4 +1,4 @@
-"""CLI command to launch the real-time detection dashboard server."""
+# CLI command to launch the real time detection dashboard server.
 
 import sys
 
@@ -12,7 +12,6 @@ def _add_dashboard_args(parser):
 
 @register_command("dashboard", "Launch the real-time detection dashboard", add_args=_add_dashboard_args)
 def cmd_dashboard(args):
-    """Start the MIRA dashboard server."""
     try:
         import uvicorn
     except ImportError:

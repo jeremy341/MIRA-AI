@@ -1,6 +1,5 @@
-"""CLI commands for model evaluation, live webcam inference, and model downloads."""
+# CLI commands for model evaluation, live webcam inference, and model downloads.
 
-import os
 import sys
 from pathlib import Path
 
@@ -83,6 +82,22 @@ AVAILABLE_MODELS = {
 }
 
 
+def _resolve_model_filename(model_name: str) -> str:
+    raw_path = Path(model_name)
+    candidate = (
+        (DETECTION_DIR / raw_path).resolve()
+        if raw_path.parent == Path(".")
+        else resolve_safe_path(raw_path, base_dir=ROOT_DIR)
+    )
+    try:
+        candidate.relative_to(DETECTION_DIR.resolve())
+    except ValueError:
+        raise ConfigError(f"Model path must be inside {DETECTION_DIR}: {model_name}") from None
+    if not candidate.is_file():
+        raise FileNotFoundError(candidate)
+    return candidate.name
+
+
 def resolve_detection_data_yaml(explicit_path=None):
     candidates = []
     if explicit_path:
@@ -113,7 +128,6 @@ def resolve_detection_data_yaml(explicit_path=None):
 
 
 def _pick_model_interactive(title="Available models"):
-    """Show interactive picker for detection models. Returns model name or None."""
     registry = ModelRegistry()
     registry.discover()
     models = registry.list_models()
@@ -135,11 +149,13 @@ def cmd_eval_yolo(args):
         model = _pick_model_interactive("Available detection models")
         if model is None:
             sys.exit(0)
-    if os.sep in model or "/" in model or "\\" in model or ".." in model:
-        print(f"Error: Invalid model name '{model}'. Use a simple filename, not a path.")
+    try:
+        model = _resolve_model_filename(model)
+    except (ConfigError, FileNotFoundError) as exc:
+        print(f"Error: Model file not found: {exc}")
         sys.exit(1)
     model_path = DETECTION_DIR / model
-    if not model_path.exists():
+    if not model_path.is_file():
         from src.logger import get_logger
 
         logger = get_logger(__name__)
@@ -151,7 +167,7 @@ def cmd_eval_yolo(args):
     data_path = resolve_detection_data_yaml(args.data)
     task_type = "detect"  # Always detect for both .pt and .tflite models
     model = YOLO(str(model_path), task=task_type)
-    val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix == ".tflite" else 640
+    val_imgsz = get_tflite_imgsz(model_path) if model_path.suffix.lower() == ".tflite" else 640
     model.val(data=str(data_path), imgsz=val_imgsz)
 
 
@@ -226,9 +242,7 @@ def cmd_live(args):
 def _add_download_args(parser):
     parser.add_argument("model_name", nargs="?", default=None, help="Bundled model filename (e.g. mira_exp014.pt).")
     parser.add_argument("--all", action="store_true", help="List all bundled models.")
-    parser.add_argument(
-        "--list", action="store_true", dest="list_only", help="List bundled models."
-    )
+    parser.add_argument("--list", action="store_true", dest="list_only", help="List bundled models.")
 
 
 @register_command("download", "List models bundled with the installation", add_args=_add_download_args)

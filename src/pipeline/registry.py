@@ -1,14 +1,4 @@
-"""Plugin registry for MIRA pipeline.
-
-Allows registering CLI commands and model adapters without editing existing files.
-
-Usage:
-    from pipeline.registry import register_command
-
-    @register_command("train", "Train a YOLO or classification model")
-    def cmd_train(args):
-        ...
-"""
+# registry for CLI commands and model adapters
 
 from __future__ import annotations
 
@@ -18,7 +8,6 @@ from dataclasses import dataclass
 from ..logger import get_logger
 
 _logging = get_logger(__name__)
-
 
 
 @dataclass
@@ -33,13 +22,6 @@ _COMMANDS: dict[str, CommandEntry] = {}
 
 
 def register_command(name: str, help_text: str, add_args: Callable | None = None):
-    """Decorator to register a CLI command.
-
-    Args:
-        name: Command name (e.g. "train", "benchmark")
-        help_text: Help text shown in `mira --help`
-        add_args: Optional function that adds arguments to the subparser
-    """
 
     def decorator(func):
         if name in _COMMANDS:
@@ -51,10 +33,7 @@ def register_command(name: str, help_text: str, add_args: Callable | None = None
 
 
 def get_commands() -> dict[str, CommandEntry]:
-    """Return all registered commands."""
     return dict(_COMMANDS)
-
-
 
 
 @dataclass
@@ -68,7 +47,7 @@ _MODEL_ADAPTERS: dict[str, ModelAdapterEntry] = {}
 
 
 def init_adapters() -> None:
-    """Register built-in model adapters."""
+    # Register built-in model adapters.
     from .models import YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
 
     for key, desc, cls in [
@@ -81,6 +60,6 @@ def init_adapters() -> None:
 
 
 def get_model_adapters() -> dict[str, ModelAdapterEntry]:
-    """Return all registered model adapters."""
+    # Return all registered model adapters.
     init_adapters()
     return dict(_MODEL_ADAPTERS)

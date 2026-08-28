@@ -1,10 +1,8 @@
-"""
-FastAPI server for MIRA Control Center
-"""
+# Fast Api server for MIRA Dashboard
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
@@ -21,7 +19,6 @@ websocket_handler = WebSocketHandler(camera_service)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown lifecycle"""
     print("MIRA Control Center starting up...")
     camera_service._loop = asyncio.get_running_loop()
     websocket_handler._loop = asyncio.get_running_loop()
@@ -51,7 +48,7 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 
 def _status_payload() -> dict:
-    return {**camera_service.get_status_snapshot(), "timestamp": datetime.now().isoformat()}
+    return {**camera_service.get_status_snapshot(), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 def _missing_prerequisites() -> list[str]:
@@ -116,7 +113,7 @@ def _statistics_payload(period: int) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    """Serve the MIRA Control Center dashboard"""
+    # Serve the MIRA Control Center dashboard
     dashboard_path = FRONTEND_DIR / "dashboard.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path, media_type="text/html")
@@ -125,32 +122,27 @@ async def root():
 
 @app.get("/dashboard.css")
 async def dashboard_css():
-    """Serve the dashboard stylesheet."""
     return FileResponse(FRONTEND_DIR / "dashboard.css", media_type="text/css")
 
 
 @app.get("/dashboard.js")
 async def dashboard_js():
-    """Serve the dashboard client code."""
     return FileResponse(FRONTEND_DIR / "dashboard.js", media_type="application/javascript")
 
 
 @app.get("/api/status")
 async def get_status():
-    """Get current system status"""
     return _status_payload()
 
 
 @app.get("/api/models")
 async def get_models():
-    """Get list of available detection models"""
     models = camera_service.get_available_models()
-    return {"models": models, "count": len(models), "timestamp": datetime.now().isoformat()}
+    return {"models": models, "count": len(models), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.post("/api/camera/initialize")
 async def initialize_camera(config: CameraConfig):
-    """Initialize camera with configuration"""
     success, message = await _set_camera(config)
 
     if success:
@@ -160,7 +152,6 @@ async def initialize_camera(config: CameraConfig):
 
 @app.post("/api/model/load")
 async def load_model(model_config: ModelConfig):
-    """Load detection model"""
     success, message = await _set_model(model_config)
 
     if success:
@@ -174,7 +165,6 @@ async def load_model(model_config: ModelConfig):
 
 @app.post("/api/stream/start")
 async def start_stream():
-    """Start video streaming and inference."""
     success, message, missing = await _start_stream()
     if missing:
         raise HTTPException(
@@ -190,7 +180,7 @@ async def start_stream():
             "success": True,
             "status": camera_service.status.value,
             "message": message,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     raise HTTPException(
@@ -200,7 +190,6 @@ async def start_stream():
 
 @app.post("/api/stream/stop")
 async def stop_stream():
-    """Stop video streaming"""
     stopped, message = await _stop_stream()
     if not stopped:
         raise HTTPException(status_code=500, detail=message)
@@ -209,50 +198,49 @@ async def stop_stream():
         "success": True,
         "status": camera_service.status.value,
         "message": message,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @app.get("/api/statistics")
 async def get_statistics(period: int = 60):
-    """Get detection statistics for the given period."""
     return _statistics_payload(period)
 
 
 @app.get("/api/metrics/history")
 async def get_metrics_history(limit: int = 100):
-    """Get historical system metrics"""
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     history = list(camera_service.metrics_history)[-limit:]
 
     return {
         "metrics": [m.model_dump() for m in history],
         "count": len(history),
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @app.get("/api/detections/recent")
 async def get_recent_detections(limit: int = 50):
-    """Get recent detections"""
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     detections = list(camera_service.detection_history)[-limit:]
 
     return {
         "detections": [d.model_dump() for d in detections],
         "count": len(detections),
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
 @app.websocket("/ws/video")
 async def video_stream(websocket: WebSocket):
-    """WebSocket endpoint for video streaming"""
     await websocket.accept()
     await websocket_handler.handle_video_stream(websocket)
 
 
 @app.websocket("/ws/control")
 async def control_websocket(websocket: WebSocket):
-    """WebSocket endpoint for control commands"""
     await websocket.accept()
 
     try:

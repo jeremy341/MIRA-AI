@@ -1,16 +1,15 @@
-"""Tests for MIRA dataset validators."""
-
 from __future__ import annotations
+
+# Tests for MIRA dataset validators.
 
 import tempfile
 from pathlib import Path
-
 
 from src.pipeline.validators import validate_yolo_dataset, dataset_summary
 
 
 def _make_yolo_dataset(tmp_path: Path, train_labels: list[str], val_labels: list[str] | None = None):
-    """Create a minimal YOLO-format dataset structure."""
+    # Create a minimal YOLO-format dataset structure.
     for split, labels in [("train", train_labels), ("val", val_labels or [])]:
         img_dir = tmp_path / "images" / split
         lbl_dir = tmp_path / "labels" / split

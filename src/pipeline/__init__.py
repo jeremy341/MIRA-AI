@@ -1,4 +1,4 @@
-"""MIRA Research Pipeline - modular ML pipeline for recycling detection."""
+# MIRA Research Pipeline - modular ML pipeline for recycling detection.
 
 from .dataset import DatasetRegistry, DatasetSource, MergeResult
 from .strategies import TrainConfig, TrainResult, register_strategy, get_strategy
@@ -23,4 +23,3 @@ __all__ = [
     "register_strategy",
     "get_strategy",
 ]
-

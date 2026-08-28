@@ -7,14 +7,15 @@ name = "mira-ai"
 dynamic = ["version"]
 description = "Machine Intelligence for Recycling Automation - Jugend Forscht 2027"
 authors = [{name = "Jeremy Darko", email = "jeremy@example.com"}]
-license = {text = "MIT"}
+license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
 keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "ultralytics>=8.3.0",
-    "opencv-python-headless>=4.0",
+    "opencv-python>=4.0",
+    "pyarrow>=10.0",
     "torch>=2.0",
     "torchvision>=0.15",
     "numpy>=1.24",
@@ -50,6 +51,9 @@ mira = "src.cli:main"
 [tool.setuptools.packages.find]
 include = ["src", "src.*"]
 exclude = ["tests*", "scripts*", "src.dashboard.frontend*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "src.version.__version__"}
 
 [tool.setuptools.package-data]
 "src" = ["assets/*.yaml", "assets/models/detection/*.pt", "assets/models/detection/*.yaml"]

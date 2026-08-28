@@ -1,8 +1,6 @@
-"""
-Data models for MIRA Control Center API
-"""
+# Data models for MIRA Control Center API
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 from enum import StrEnum
 
@@ -16,41 +14,33 @@ class WasteClass(StrEnum):
 
 
 class Detection(BaseModel):
-    """Single detection result"""
-
     class_name: WasteClass
     confidence: float = Field(ge=0.0, le=1.0)
     bbox: list[int]  # [x1, y1, x2, y2]
     track_id: int | None = None
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class CameraConfig(BaseModel):
-    """Camera configuration"""
-
-    index: int = 0
-    width: int = 640
-    height: int = 360
-    fps: int = 30
+    index: int = Field(0, ge=0)
+    width: int = Field(640, gt=0, le=8192)
+    height: int = Field(360, gt=0, le=8192)
+    fps: int = Field(30, gt=0, le=240)
     autofocus: bool = False
     auto_exposure: bool = True
 
 
 class ModelConfig(BaseModel):
-    """Model inference configuration"""
-
-    name: str
-    conf_threshold: float = 0.25
-    reject_threshold: float = 0.25
-    iou_threshold: float = 0.45
+    name: str = Field(min_length=1)
+    conf_threshold: float = Field(0.25, ge=0.0, le=1.0)
+    reject_threshold: float = Field(0.25, ge=0.0, le=1.0)
+    iou_threshold: float = Field(0.45, ge=0.0, le=1.0)
     enable_tracking: bool = True
-    target_latency_ms: int = 1000
+    target_latency_ms: int = Field(1000, gt=0)
 
 
 class SystemMetrics(BaseModel):
-    """System performance metrics"""
-
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     fps: float
     inference_latency_ms: float
     avg_latency_ms: float
@@ -62,8 +52,6 @@ class SystemMetrics(BaseModel):
 
 
 class Statistics(BaseModel):
-    """Detection statistics"""
-
     period_start: datetime
     period_end: datetime
     total_detections: int

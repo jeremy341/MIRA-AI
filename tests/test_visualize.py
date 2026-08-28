@@ -1,4 +1,4 @@
-"""Tests for MIRA shared visualization utilities."""
+# Tests for MIRA shared visualization utilities.
 
 from unittest.mock import MagicMock
 
@@ -8,24 +8,16 @@ import pytest
 
 @pytest.fixture
 def sample_frame():
-    """Return a 100x100x3 dummy BGR frame."""
     return np.zeros((100, 100, 3), dtype=np.uint8)
 
 
 def _make_mock_box(conf, xyxy, cls_id):
-    """Create a mock YOLO box with cpu().numpy() chain support.
-
-    The box.xyxy[0] must return a 1D array of 4 values [x1, y1, x2, y2]
-    after the .cpu().numpy() chain, matching the real YOLO output.
-    """
     box = MagicMock()
     box.conf = np.array([conf])
 
     xyxy_array = np.array(xyxy)
 
     class _XYXYProxy(list):
-        """List-like proxy so box.xyxy[0] returns a cpu()-chainable mock."""
-
         def __init__(self, arr):
             super().__init__([arr])
 
@@ -42,7 +34,6 @@ def _make_mock_box(conf, xyxy, cls_id):
 
 
 def _make_mock_results(boxes_list, names=None):
-    """Create mock YOLO results with a list of mock boxes."""
     results = MagicMock()
 
     if names is None:
@@ -112,7 +103,7 @@ def test_draw_boxes_multiple_detections(sample_frame):
 
 
 def test_draw_boxes_reject_tier_uncertain(sample_frame):
-    """Detection between the thresholds draws a yellow uncertain label."""
+    # Detection between the thresholds draws a yellow uncertain label.
     from src.visualize import draw_boxes
 
     box = _make_mock_box(0.40, [10.0, 10.0, 50.0, 50.0], 0)
@@ -123,7 +114,7 @@ def test_draw_boxes_reject_tier_uncertain(sample_frame):
 
 
 def test_draw_boxes_reject_tier_confident(sample_frame):
-    """Detection above reject_threshold draws green labeled box."""
+    # Detection above reject_threshold draws green labeled box.
     from src.visualize import draw_boxes
 
     box = _make_mock_box(0.90, [10.0, 10.0, 50.0, 50.0], 2)
@@ -134,7 +125,6 @@ def test_draw_boxes_reject_tier_confident(sample_frame):
 
 
 def test_draw_boxes_below_conf_threshold_not_drawn(sample_frame):
-    """Detection below conf_threshold is not drawn at all."""
     from src.visualize import draw_boxes
 
     box = _make_mock_box(0.10, [10.0, 10.0, 50.0, 50.0], 4)
@@ -145,7 +135,7 @@ def test_draw_boxes_below_conf_threshold_not_drawn(sample_frame):
 
 
 def test_draw_boxes_empty_results(sample_frame):
-    """Empty results list returns frame unchanged."""
+    # Empty results list returns frame unchanged.
     from src.visualize import draw_boxes
 
     results = MagicMock()

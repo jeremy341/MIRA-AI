@@ -1,4 +1,4 @@
-"""Tests for MIRA research pipeline modules."""
+# Tests for MIRA research pipeline modules.
 
 import tempfile
 from pathlib import Path

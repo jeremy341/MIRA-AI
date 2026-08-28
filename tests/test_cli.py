@@ -1,4 +1,4 @@
-"""Tests for CLI argument parsing, command registry, defaults, and validation."""
+# Tests for CLI argument parsing, command registry, defaults, and validation.
 
 import argparse
 import io
@@ -28,7 +28,6 @@ _MOCK_KEYS = [
 
 
 def _build_parser(add_args_func, extra_subs_for=None):
-    """Create an argparse instance with the given add_args registered."""
     parent = argparse.ArgumentParser()
     subs = parent.add_subparsers(dest="command")
     sub = subs.add_parser("test_cmd")

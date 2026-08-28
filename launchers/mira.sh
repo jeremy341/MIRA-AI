@@ -8,9 +8,9 @@ set -euo pipefail
 if command -v mira >/dev/null 2>&1; then
     # Avoid exec-loop when this wrapper itself is on PATH as 'mira'
     # (e.g. pipx shim vs. repo launcher): compare resolved paths.
-    MIRA_BIN="$(command -v mira)"
+    MIRA_BIN="$(realpath "$(command -v mira)")"
     WRAPPER_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-    if [ "$MIRA_BIN" != "$WRAPPER_PATH" ]; then
+    if [ "$MIRA_BIN" != "$(realpath "$WRAPPER_PATH")" ]; then
         exec mira "$@"
     fi
 fi

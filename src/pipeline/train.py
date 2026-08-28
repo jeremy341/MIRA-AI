@@ -1,11 +1,4 @@
-"""Training pipeline for MIRA - delegates to registered training strategies.
-
-Usage:
-    from pipeline.train import TrainingPipeline, TrainConfig, TrainResult
-
-    config = TrainConfig.from_yaml("experiments/exp014.yaml")
-    result = TrainingPipeline().train("detection", config)
-"""
+# training pipeline - delegates to registered strategies
 
 from __future__ import annotations
 
@@ -19,8 +12,6 @@ from .strategies import TrainConfig, TrainResult, get_strategy, register_strateg
 
 
 class TrainingPipeline:
-    """High-level training pipeline that delegates to registered strategies."""
-
     def train(self, task: str, config: TrainConfig) -> TrainResult:
         try:
             strategy = get_strategy(task)
@@ -51,7 +42,10 @@ class TrainingPipeline:
             fmt_lower = fmt.lower().replace("-", "_")
             try:
                 if fmt_lower == "tflite_int8":
-                    out = model.export(format="tflite", int8=True, data=dataset)
+                    export_kwargs = {"format": "tflite", "int8": True}
+                    if dataset:
+                        export_kwargs["data"] = dataset
+                    out = model.export(**export_kwargs)
                 elif fmt_lower == "tflite_fp32":
                     out = model.export(format="tflite", int8=False)
                 elif fmt_lower == "tflite":
@@ -116,6 +110,4 @@ class TrainingPipeline:
 
     @classmethod
     def register_strategy(cls, task: str, strategy_cls):
-        """Register a custom training strategy."""
         _register_strategy(task, strategy_cls)
-

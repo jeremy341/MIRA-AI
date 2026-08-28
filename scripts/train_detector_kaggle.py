@@ -7,10 +7,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-_src_dir = str(Path(__file__).resolve().parent.parent / "src")
-if _src_dir not in sys.path:
-    sys.path.insert(0, _src_dir)
-from config import CLASS_NAMES, NUM_CLASSES
+_ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
+from src.config import CLASS_NAMES, NUM_CLASSES
 
 
 def parse_args():
@@ -28,6 +28,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+    if args.epochs < 1 or args.batch_size < 1 or args.img_size < 1 or args.patience < 1:
+        raise ValueError("epochs, batch-size, img-size, and patience must be positive")
 
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", "ultralytics"])
 
@@ -36,14 +38,16 @@ def main():
     input_dir = os.environ.get("KAGGLE_INPUT_PATH", "/kaggle/input")
     data_root = None
 
+    normalized_dataset = args.dataset.lower().replace("+", "-")
     for d in Path(input_dir).iterdir():
-        if d.is_dir() and args.dataset.lower().replace("+", "-") in d.name.lower().replace("+", "-").replace(" ", "-"):
+        normalized_name = d.name.lower().replace("+", "-").replace(" ", "-")
+        if d.is_dir() and normalized_dataset in normalized_name and (d / "images" / "train").is_dir():
             data_root = d
             break
 
     if data_root is None:
         for d in Path(input_dir).iterdir():
-            if d.is_dir() and (d / "images").exists():
+            if d.is_dir() and (d / "images" / "train").is_dir():
                 data_root = d
                 break
 
@@ -72,12 +76,10 @@ def main():
 
     work_dir = "/kaggle/working"
     yaml_path = Path(work_dir) / "dataset.yaml"
-    yaml_content = f"""train: {data_root}/images/train
-val: {data_root}/images/val
-nc: {NUM_CLASSES}
-names: {CLASS_NAMES}
-"""
-    yaml_path.write_text(yaml_content)
+    yaml_content = (
+        f"train: {data_root}/images/train\nval: {data_root}/images/val\nnc: {NUM_CLASSES}\nnames: {CLASS_NAMES}\n"
+    )
+    yaml_path.write_text(yaml_content, encoding="utf-8")
     print(f"Written: {yaml_path}")
 
     print(f"\nStarting training: {args.dataset} | Model: {args.model} | Epochs: {args.epochs}")

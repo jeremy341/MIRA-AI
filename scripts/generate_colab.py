@@ -1,11 +1,11 @@
 # Generate a Google Colab training notebook from experiment config.
 
-from __future__ import annotations
 import argparse
 import json
 import sys
 from pathlib import Path
 import yaml
+
 
 def _load_experiment_config(config_path: Path) -> dict:
     try:
@@ -47,27 +47,27 @@ def _build_training_params(exp: dict, project: dict) -> dict:
     }
 
 
-def _md_cell(source: str) -> dict:
+def _cell_lines(source: str) -> list[str]:
     lines = source.split("\n")
     src_lines = [line + "\n" for line in lines[:-1]]
     if lines[-1]:
         src_lines.append(lines[-1])
+    return src_lines
+
+
+def _md_cell(source: str) -> dict:
     return {
         "cell_type": "markdown",
         "metadata": {},
-        "source": src_lines,
+        "source": _cell_lines(source),
     }
 
 
 def _code_cell(source: str) -> dict:
-    lines = source.split("\n")
-    src_lines = [line + "\n" for line in lines[:-1]]
-    if lines[-1]:
-        src_lines.append(lines[-1])
     return {
         "cell_type": "code",
         "metadata": {},
-        "source": src_lines,
+        "source": _cell_lines(source),
         "execution_count": None,
         "outputs": [],
     }
@@ -144,13 +144,13 @@ def generate_colab_notebook(exp: dict, project: dict) -> dict:
                 "DATASET_DIR = Path('/content/dataset')\n"
                 "DATASET_DIR.mkdir(parents=True, exist_ok=True)\n\n"
                 "if DATASET_URL:\n"
-                "    !wget -q -O /tmp/dataset.zip \"$DATASET_URL\"\n"
+                '    !wget -q -O /tmp/dataset.zip "$DATASET_URL"\n'
                 "    !unzip -q /tmp/dataset.zip -d $DATASET_DIR\n"
                 "else:\n"
                 "    # Option 2: Use a dataset from Google Drive\n"
                 "    DRIVE_ZIP = DRIVE_DIR / 'dataset.zip'  # Upload this file\n"
                 "    if DRIVE_ZIP.exists():\n"
-                "        !unzip -q \"$DRIVE_ZIP\" -d $DATASET_DIR\n"
+                '        !unzip -q "$DRIVE_ZIP" -d $DATASET_DIR\n'
                 "    else:\n"
                 "        raise FileNotFoundError(\n"
                 "            'No dataset found. Either set DATASET_URL or upload dataset.zip to Google Drive.'\n"
@@ -172,12 +172,8 @@ def generate_colab_notebook(exp: dict, project: dict) -> dict:
                 "# Write dataset.yaml\n"
                 "yaml_path = Path('/content/dataset.yaml')\n"
                 f'names_yaml = "[" + ", ".join(f"\'{{c}}\'" for c in {class_names}) + "]"\n'
-                'yaml_content = f"""\\\n'
-                "train: {data_root}/images/train\n"
-                "val: {data_root}/images/val\n"
-                f"nc: {num_classes}\n"
-                "names: {names_yaml}\n"
-                '"""\n'
+                # \\\n' "train: {data_root}/images/train\n" "val: {data_root}/images/val\n" f"nc: {num_classes}\n" "names: {names_yaml}\n" '
+                f"yaml_content = f'train: {{data_root}}/images/train\\nval: {{data_root}}/images/val\\nnc: {num_classes}\\nnames: {{names_yaml}}\\n'\n"
                 "yaml_path.write_text(yaml_content.strip())\n"
                 "print(f'Written: {yaml_path}')"
             ),

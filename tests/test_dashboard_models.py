@@ -1,6 +1,6 @@
-"""Tests for MIRA dashboard backend models."""
+# Tests for MIRA dashboard backend models.
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -62,9 +62,9 @@ class TestDetection:
             Detection(class_name=WasteClass.GLASS, confidence=1.1, bbox=[0, 0, 1, 1])
 
     def test_default_timestamp(self):
-        before = datetime.now()
+        before = datetime.now(timezone.utc)
         det = Detection(class_name=WasteClass.GLASS, confidence=0.5, bbox=[0, 0, 10, 10])
-        after = datetime.now()
+        after = datetime.now(timezone.utc)
         assert before <= det.timestamp <= after
 
 

@@ -1,12 +1,11 @@
-"""
-WebSocket handlers for real-time video streaming
-"""
+# WebSocket handlers for real-time video streaming
+
 
 import asyncio
 import base64
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 import cv2
 import numpy as np
 from starlette.websockets import WebSocketDisconnect
@@ -17,8 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class WebSocketHandler:
-    """Handle WebSocket connections for video streaming"""
-
     def __init__(self, camera_service):
         self.camera_service = camera_service
         self._lock = threading.Lock()
@@ -37,11 +34,9 @@ class WebSocketHandler:
         camera_service.on_frame = self.update_frame
 
     async def start(self):
-        """Start the background broadcast task"""
         self._broadcast_task = asyncio.create_task(self._broadcast_consumer())
 
     async def stop(self):
-        """Stop the background broadcast task"""
         if self._broadcast_task:
             self._broadcast_task.cancel()
             try:
@@ -50,7 +45,6 @@ class WebSocketHandler:
                 pass
 
     async def _broadcast_consumer(self):
-        """Consume messages from the broadcast queue and send to all connections"""
         while True:
             try:
                 message = await self._broadcast_queue.get()
@@ -71,39 +65,22 @@ class WebSocketHandler:
                 logger.exception("Broadcast consumer failed")
 
     def _enqueue_message(self, message: dict):
-        """Queue an event without allowing frames to build an unbounded backlog."""
         message_type = message.get("type")
         if self._broadcast_queue.full():
-            if message_type == "frame":
-                # Remove an old frame so the newest frame can be shown.
-                retained = []
-                while self._broadcast_queue.full():
-                    try:
-                        old = self._broadcast_queue.get_nowait()
-                    except asyncio.QueueEmpty:
-                        break
-                    if old.get("type") != "frame":
-                        retained.append(old)
-                for old in retained:
-                    try:
-                        self._broadcast_queue.put_nowait(old)
-                    except asyncio.QueueFull:
-                        break
-            else:
-                # Preserve control/status events by making room only from frames.
-                retained = []
-                while self._broadcast_queue.full():
-                    try:
-                        old = self._broadcast_queue.get_nowait()
-                    except asyncio.QueueEmpty:
-                        break
-                    if old.get("type") != "frame":
-                        retained.append(old)
-                for old in retained:
-                    try:
-                        self._broadcast_queue.put_nowait(old)
-                    except asyncio.QueueFull:
-                        break
+            queued = []
+            while True:
+                try:
+                    queued.append(self._broadcast_queue.get_nowait())
+                except asyncio.QueueEmpty:
+                    break
+
+            frame_index = next((index for index, item in enumerate(queued) if item.get("type") == "frame"), None)
+            if frame_index is None:
+                logger.warning("Dropping full dashboard event: %s", message_type)
+                return
+            queued.pop(frame_index)
+            for item in queued:
+                self._broadcast_queue.put_nowait(item)
 
         try:
             self._broadcast_queue.put_nowait(message)
@@ -111,14 +88,12 @@ class WebSocketHandler:
             logger.warning("Dropping full dashboard event: %s", message_type)
 
     def _publish_from_thread(self, message: dict):
-        """Publish an event from the camera thread onto the FastAPI loop."""
         if self._loop and self._loop.is_running():
             self._loop.call_soon_threadsafe(self._enqueue_message, message)
         else:
             self._enqueue_message(message)
 
     async def handle_video_stream(self, websocket):
-        """Handle video streaming WebSocket connection"""
         self.connections.add(websocket)
         try:
             await websocket.send_json({"type": "status", "status": "connected", "message": "Video stream connected"})
@@ -142,12 +117,10 @@ class WebSocketHandler:
             self.connections.discard(websocket)
 
     async def _on_detections(self, detections: list[Detection]):
-        """Callback when new detections are available"""
         with self._lock:
             self.latest_detections = list(detections)
 
     async def _on_metrics(self, metrics: SystemMetrics):
-        """Callback when system metrics are updated"""
         message = {
             "type": "metrics",
             "fps": round(metrics.fps, 1),
@@ -164,13 +137,16 @@ class WebSocketHandler:
         self._enqueue_message(message)
 
     async def _on_status_change(self, status, message):
-        """Callback when system status changes"""
         self._enqueue_message(
-            {"type": "status", "status": status.value, "message": message, "timestamp": datetime.now().isoformat()}
+            {
+                "type": "status",
+                "status": status.value,
+                "message": message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
         )
 
     def update_frame(self, frame: np.ndarray, detections: list[Detection] | None = None):
-        """Publish one frame together with the detections from that frame."""
         if frame is None:
             return
 
@@ -204,17 +180,18 @@ class WebSocketHandler:
             "frame_id": frame_id,
             "frame": frame_data,
             "detections": serialized_detections,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         self._publish_from_thread(message)
 
     async def _send_frame(self, websocket, frame: np.ndarray, detections=None, frame_id=0):
-        """Send a single frame to a websocket"""
         if frame is None:
             return
 
-        _, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        success, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not success:
+            return
 
         frame_data = base64.b64encode(buffer).decode("utf-8")
 
@@ -233,6 +210,6 @@ class WebSocketHandler:
                     }
                     for det in (detections or [])
                 ],
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )

@@ -1,8 +1,4 @@
-"""Hardware abstraction layer for MIRA.
-
-Provides an abstract camera interface and concrete implementations
-for different camera types (USB, IP, Raspberry Pi).
-"""
+# Hardware abstraction layer for MIRA.
 
 from __future__ import annotations
 
@@ -24,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class AbstractCamera(ABC):
-    """Abstract interface for camera hardware."""
+    # Abstract interface for camera hardware.
 
     WARMUP_FRAMES = 10
     FREEZE_TIMEOUT_SECONDS = 2.0
@@ -51,9 +47,10 @@ class AbstractCamera(ABC):
         self.release()
 
 
+# keep simple dataclass - no fancy options
 @dataclass
 class _FrameBuffer:
-    """Thread-safe single-frame buffer with freeze detection."""
+    # Thread-safe single-frame buffer with freeze detection.
 
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _ret: bool = False
@@ -64,7 +61,7 @@ class _FrameBuffer:
     def update(self, ret: bool, frame: object | None) -> None:
         with self._lock:
             self._ret = ret
-            self._frame = cast(np.ndarray | None, frame)
+            self._frame = cast("np.ndarray | None", frame)
             self._last_update = time.perf_counter()
 
     def get(self) -> tuple[bool, object | None]:
@@ -91,9 +88,15 @@ class _FrameBuffer:
 
 
 class USBCamera(AbstractCamera):
-    """USB camera implementation using OpenCV VideoCapture."""
-
-    def __init__(self, index: int = 0, width: int = 640, height: int = 360):
+    def __init__(
+        self,
+        index: int = 0,
+        width: int = 640,
+        height: int = 360,
+        fps: int = 30,
+        autofocus: bool = False,
+        auto_exposure: bool = True,
+    ):
         self._index = index
         self._cam_width = width
         self._cam_height = height
@@ -104,7 +107,7 @@ class USBCamera(AbstractCamera):
         if not self.cap.isOpened():
             raise CameraError(f"Failed to open USB camera index {index}.")
 
-        setup_camera_properties(self.cap, width, height)
+        setup_camera_properties(self.cap, width, height, fps, autofocus, auto_exposure)
 
         self._buffer = _FrameBuffer()
 
@@ -141,7 +144,7 @@ class USBCamera(AbstractCamera):
         return self._buffer.get()
 
     def release(self) -> None:
-        """Release camera resources. Idempotent."""
+        # Release camera resources. Idempotent.
         if self._released:
             return
         self._released = True
@@ -162,6 +165,9 @@ class USBCamera(AbstractCamera):
         return self._cam_height
 
     def is_alive(self) -> bool:
+        return self._is_buffer_alive()
+
+    def _is_buffer_alive(self) -> bool:
         return self._buffer.running and not self._buffer.is_frozen
 
     @property
@@ -170,7 +176,7 @@ class USBCamera(AbstractCamera):
 
 
 class IPCamera(AbstractCamera):
-    """IP/RTSP camera implementation."""
+    # IP/RTSP camera implementation.
 
     RECONNECT_ATTEMPTS = 3
     RECONNECT_DELAY_SECONDS = 2.0
@@ -204,7 +210,11 @@ class IPCamera(AbstractCamera):
                 # Attempt reconnection
                 logger.warning("IP camera stream lost, attempting reconnection...")
                 for attempt in range(self.RECONNECT_ATTEMPTS):
+                    if not self._buffer.running:
+                        break
                     time.sleep(self.RECONNECT_DELAY_SECONDS)
+                    if not self._buffer.running:
+                        break
                     old_cap = self.cap
                     if old_cap is not None:
                         try:
@@ -225,6 +235,8 @@ class IPCamera(AbstractCamera):
                         except Exception:
                             pass
                         self.cap = None
+                if not self._buffer.running:
+                    break
                 continue
             self._buffer.update(ret, frame)
             time.sleep(0.01)
@@ -251,6 +263,9 @@ class IPCamera(AbstractCamera):
         return self._cam_height
 
     def is_alive(self) -> bool:
+        return self._is_buffer_alive()
+
+    def _is_buffer_alive(self) -> bool:
         return self._buffer.running and not self._buffer.is_frozen
 
     @property
