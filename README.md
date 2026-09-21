@@ -13,7 +13,7 @@ long-term idea is to use the detections to sort objects automatically.
 |---|---|---|---:|
 | EXP-014 baseline | Earlier detector run | Recorded baseline | 60.7% |
 | EXP-018 | YOLO11n | 415-image validation split | 90.6% |
-| EXP-019 repeat | YOLO11n | Repeat validation run | 90.58% |
+| EXP-019 repeat | YOLO11n | 415-image validation split (repeat) | 90.58% |
 
 These are validation metrics from the recorded TrashNet tabletop setup, not real-world sorting accuracy. EXP-019 did not evaluate its 1,375-image independent test split. See [`results/experiments_log.md`](results/experiments_log.md) for the experiment details and limitations.
 
