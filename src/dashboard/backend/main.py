@@ -11,9 +11,11 @@ from fastapi.responses import HTMLResponse, FileResponse
 
 from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.command_service import DashboardCommandService
 from src.dashboard.backend.websocket_handler import WebSocketHandler
 
 camera_service = CameraService()
+command_service = DashboardCommandService(camera_service)
 websocket_handler = WebSocketHandler(camera_service)
 
 
@@ -64,32 +66,23 @@ def _missing_prerequisites() -> list[str]:
 
 
 async def _set_camera(config: CameraConfig) -> tuple[bool, str]:
-    if camera_service.get_status_snapshot()["streaming"]:
-        return False, "Stop the stream before changing camera settings"
-    success = await camera_service.initialize_camera(config)
-    return success, "Camera config updated" if success else "Failed to update camera config"
+    result = await command_service.execute("set_camera_config", config.model_dump())
+    return result.success, result.message
 
 
 async def _set_model(config: ModelConfig) -> tuple[bool, str]:
-    if camera_service.get_status_snapshot()["streaming"]:
-        return False, "Stop the stream before changing models"
-    success = await camera_service.load_model(config.name, config)
-    message = f"Model {config.name} loaded" if success else f"Failed to load model {config.name}"
-    return success, message
+    result = await command_service.execute("load_model", config.model_dump())
+    return result.success, result.message
 
 
 async def _start_stream() -> tuple[bool, str, list[str]]:
-    missing = _missing_prerequisites()
-    if missing:
-        return False, "Configure the camera and load a model before starting the stream.", missing
-    success = await camera_service.start_streaming()
-    message = "Stream starting; waiting for the first frame" if success else "Failed to start stream"
-    return success, message, []
+    result = await command_service.execute("start_stream", {})
+    return result.success, result.message, list(result.missing)
 
 
 async def _stop_stream() -> tuple[bool, str]:
-    success = await camera_service.stop()
-    return success, "Stream stopped" if success else "The streaming worker did not stop cleanly"
+    result = await command_service.execute("stop_stream", {})
+    return result.success, result.message
 
 
 def _statistics_payload(period: int) -> dict:
@@ -211,7 +204,7 @@ async def get_statistics(period: int = 60):
 async def get_metrics_history(limit: int = 100):
     if limit < 1 or limit > 1000:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
-    history = list(camera_service.metrics_history)[-limit:]
+    history = camera_service.get_metrics_snapshot(limit)
 
     return {
         "metrics": [m.model_dump() for m in history],
@@ -224,7 +217,7 @@ async def get_metrics_history(limit: int = 100):
 async def get_recent_detections(limit: int = 50):
     if limit < 1 or limit > 1000:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
-    detections = list(camera_service.detection_history)[-limit:]
+    detections = camera_service.get_detection_snapshot(limit)
 
     return {
         "detections": [d.model_dump() for d in detections],
@@ -250,64 +243,17 @@ async def control_websocket(websocket: WebSocket):
             command = data.get("command")
             params = data.get("params", {})
 
-            if command == "set_camera_config":
-                config = CameraConfig(**params)
-                success, message = await _set_camera(config)
-
+            if command in {"set_camera_config", "load_model", "start_stream", "stop_stream"}:
+                result = await command_service.execute(command, params)
                 await websocket.send_json(
                     {
                         "type": "response",
-                        "command": command,
-                        "success": success,
-                        "message": message,
+                        "command": result.command,
+                        "success": result.success,
+                        "message": result.message,
+                        "missing": list(result.missing),
                     }
                 )
-
-            elif command == "load_model":
-                config = ModelConfig(**params)
-                success, message = await _set_model(config)
-
-                await websocket.send_json(
-                    {
-                        "type": "response",
-                        "command": command,
-                        "success": success,
-                        "message": message,
-                    }
-                )
-
-            elif command == "start_stream":
-                success, message, missing = await _start_stream()
-                if missing:
-                    await websocket.send_json(
-                        {
-                            "type": "error",
-                            "message": message,
-                            "missing": missing,
-                        }
-                    )
-                else:
-                    await websocket.send_json(
-                        {
-                            "type": "response",
-                            "command": command,
-                            "success": success,
-                            "message": message,
-                        }
-                    )
-
-            elif command == "stop_stream":
-                stopped, message = await _stop_stream()
-
-                await websocket.send_json(
-                    {
-                        "type": "response",
-                        "command": command,
-                        "success": stopped,
-                        "message": message,
-                    }
-                )
-
             elif command == "get_status":
                 await websocket.send_json({"type": "status", **_status_payload()})
 

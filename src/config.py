@@ -1,4 +1,4 @@
-# config for MIRA - paths, mira.yaml loading, defaults
+"""Configuration management for MIRA."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ ASSETS_DIR = SRC_DIR / "assets"
 
 
 def _discover_project_root() -> pathlib.Path:
-    # Find project root via MIRA_HOME or nearest mira.yaml.
+    """Find project root via MIRA_HOME or nearest mira.yaml."""
     env_home = os.environ.get("MIRA_HOME")
     if env_home:
         return pathlib.Path(env_home).expanduser().resolve()
@@ -34,21 +34,28 @@ def _discover_project_root() -> pathlib.Path:
 ROOT_DIR = _discover_project_root()
 
 
+def read_yaml_config(path: pathlib.Path) -> dict[str, Any]:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            raw_config = yaml.safe_load(handle)
+    except yaml.YAMLError as exc:
+        raise ConfigError(f"Invalid YAML in {path}: {exc}") from None
+    if not isinstance(raw_config, dict):
+        raise ConfigError(f"Config file {path} must contain a YAML mapping (key-value pairs)")
+    return raw_config
+
 def _load_project_config(root: pathlib.Path) -> tuple[dict[str, Any], pathlib.Path | None]:
     config_path = root / "mira.yaml"
     if config_path.exists():
-        try:
-            with open(config_path, encoding="utf-8") as f:
-                return yaml.safe_load(f), config_path
-        except yaml.YAMLError as e:
-            raise ConfigError(f"Invalid YAML in {config_path}: {e}") from None
+        return read_yaml_config(config_path), config_path
     default_path = ASSETS_DIR / "mira.yaml"
     if default_path.exists():
-        with open(default_path, encoding="utf-8") as f:
-            return yaml.safe_load(f), None
+        return read_yaml_config(default_path), None
     raise ConfigError(
         f"Config file not found: {config_path}. Run MIRA from a directory containing mira.yaml or set MIRA_HOME."
     )
+
+
 
 
 PROJECT_CONFIG, _CONFIG_PATH = _load_project_config(ROOT_DIR)
@@ -56,7 +63,7 @@ _PROJECT_CONFIG_FROZEN: MappingProxyType = MappingProxyType(PROJECT_CONFIG)
 
 
 def _validate_project_config(cfg: dict[str, Any]) -> list[str]:
-    # Validate mira.yaml and return errors.
+    """Validate mira.yaml structure and parameters, returning error messages."""
     errors: list[str] = []
     if not isinstance(cfg, dict):
         errors.append("mira.yaml must contain a YAML mapping (key-value pairs)")
@@ -207,7 +214,20 @@ def setup_camera_properties(
         (cv2.CAP_PROP_AUTO_EXPOSURE, int(auto_exposure)),
     )
     for property_id, value in properties:
-        cap.set(property_id, value)
+        if not cap.set(property_id, value):
+            property_names = {
+                cv2.CAP_PROP_FOURCC: "FOURCC",
+                cv2.CAP_PROP_FRAME_WIDTH: "FRAME_WIDTH",
+                cv2.CAP_PROP_FRAME_HEIGHT: "FRAME_HEIGHT",
+                cv2.CAP_PROP_FPS: "FPS",
+                cv2.CAP_PROP_BUFFERSIZE: "BUFFERSIZE",
+                cv2.CAP_PROP_AUTOFOCUS: "AUTOFOCUS",
+                cv2.CAP_PROP_AUTO_EXPOSURE: "AUTO_EXPOSURE",
+            }
+            name = property_names.get(property_id, str(property_id))
+            raise CameraError(f"Failed to set camera property: {name}")
+
+
 
 
 _TRAINING = PROJECT_CONFIG.get("training", {})

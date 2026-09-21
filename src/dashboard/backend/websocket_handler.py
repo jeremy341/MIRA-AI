@@ -152,6 +152,14 @@ class WebSocketHandler:
 
         to_store = frame.copy()
         detections = list(detections or [])
+
+        with self._lock:
+            if not self.connections:
+                self.frame_buffer = to_store
+                self.latest_detections = detections
+                self._frame_id += 1
+                return
+
         serialized_detections = [
             {
                 "class": det.class_name.value,

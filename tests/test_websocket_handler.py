@@ -67,6 +67,17 @@ class TestOnDetections:
         ts = msg["detections"][0]["timestamp"]
         datetime.fromisoformat(ts)  # Should not raise
 
+    def test_update_frame_does_not_encode_without_viewers(self, handler):
+        frame = np.zeros((8, 8, 3), dtype=np.uint8)
+
+        with patch("cv2.imencode") as encode:
+            handler.update_frame(frame)
+
+        encode.assert_not_called()
+        assert handler.frame_buffer is not None
+        assert handler._frame_id == 1
+        assert handler._broadcast_queue.empty()
+
 
 class TestOnMetrics:
     @pytest.mark.asyncio

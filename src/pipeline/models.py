@@ -78,6 +78,52 @@ def adjust_boxes_to_original(
     return boxes
 
 
+def build_inference_result(
+    *,
+    image,
+    raw_predictions,
+    preprocess_info,
+    confidence,
+    iou,
+    names,
+    model_name,
+    confidence_limit=None,
+):
+    from ultralytics.utils.ops import non_max_suppression
+
+    top, bottom, left, right, scale, width, height = preprocess_info
+    threshold = confidence if confidence_limit is None else min(confidence, confidence_limit)
+    predictions = non_max_suppression(
+        raw_predictions, conf_thres=threshold, iou_thres=iou,
+        max_det=300, multi_label=True
+    )[0]
+    boxes = adjust_boxes_to_original(
+        predictions, left, top, scale, width, height
+    ) if len(predictions) else []
+    detections = []
+    for index in range(len(predictions)):
+        class_id = int(predictions[index, 5].item())
+        class_name = (
+            names.get(class_id, f"class_{class_id}")
+            if isinstance(names, dict)
+            else names[class_id] if 0 <= class_id < len(names) else f"class_{class_id}"
+        )
+        detections.append(Detection(
+            class_id=class_id,
+            class_name=class_name,
+            confidence=float(predictions[index, 4].item()),
+            bbox=tuple(boxes[index].cpu().tolist()),
+        ))
+    return InferenceResult(
+        detections=detections,
+        latency_ms=0.0,
+        model_name=model_name,
+        image_path=image,
+    )
+
+
+
+
 def _get_device(backend: Any):
     import torch
 
@@ -194,8 +240,6 @@ class YOLOAdapter(DetectionModel):
 
         import torch
 
-        from ultralytics.utils.ops import non_max_suppression as _nms
-
         im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, self._imgsz)
         dev = _get_device(self._backend)
         im_tensor = im_tensor.to(dev)
@@ -205,28 +249,17 @@ class YOLOAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = _nms(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
-
-        detections: list[Detection] = []
-        if len(preds) > 0:
-            boxes = adjust_boxes_to_original(preds, left, top, r, w0, h0)
-            for i in range(len(preds)):
-                cid = int(preds[i, 5].item())
-                detections.append(
-                    Detection(
-                        class_id=cid,
-                        class_name=self._names.get(cid, f"class_{cid}"),
-                        confidence=float(preds[i, 4].item()),
-                        bbox=tuple(boxes[i].cpu().tolist()),
-                    )
-                )
-
-        return InferenceResult(
-            detections=detections,
-            latency_ms=latency_ms,
+        result = build_inference_result(
+            image=str(image),
+            raw_predictions=raw_preds,
+            preprocess_info=(top, bottom, left, right, r, w0, h0),
+            confidence=conf,
+            iou=iou,
+            names=self._names,
             model_name=self.name,
-            image_path=str(image),
         )
+        result.latency_ms = latency_ms
+        return result
 
 
 class YOLOTFLiteAdapter(DetectionModel):
@@ -274,11 +307,9 @@ class YOLOTFLiteAdapter(DetectionModel):
             raise ValueError(f"iou must be in [0, 1], got {iou}")
         if not self._loaded:
             self.load()
-        tflite_conf = min(conf, TFLITE_INT8_CONF) if "int8" in self.path.name.lower() else conf
+        confidence_limit = TFLITE_INT8_CONF if "int8" in self.path.name.lower() else None
 
         import torch
-
-        from ultralytics.utils.ops import non_max_suppression as _nms
 
         im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, self._imgsz)
         dev = getattr(self._backend, "device", torch.device("cpu"))
@@ -289,28 +320,18 @@ class YOLOTFLiteAdapter(DetectionModel):
             raw_preds = self._backend(im_tensor)
         latency_ms = (time.perf_counter() - start) * 1000
 
-        preds = _nms(raw_preds, conf_thres=tflite_conf, iou_thres=iou, max_det=300, multi_label=True)[0]
-
-        detections: list[Detection] = []
-        if len(preds) > 0:
-            boxes = adjust_boxes_to_original(preds, left, top, r, w0, h0)
-            for i in range(len(preds)):
-                cid = int(preds[i, 5].item())
-                detections.append(
-                    Detection(
-                        class_id=cid,
-                        class_name=self._names.get(cid, f"class_{cid}"),
-                        confidence=float(preds[i, 4].item()),
-                        bbox=tuple(boxes[i].cpu().tolist()),
-                    )
-                )
-
-        return InferenceResult(
-            detections=detections,
-            latency_ms=latency_ms,
+        result = build_inference_result(
+            image=str(image),
+            raw_predictions=raw_preds,
+            preprocess_info=(top, bottom, left, right, r, w0, h0),
+            confidence=conf,
+            iou=iou,
+            names=self._names,
             model_name=self.name,
-            image_path=str(image),
+            confidence_limit=confidence_limit,
         )
+        result.latency_ms = latency_ms
+        return result
 
 
 class ThirdPartyAdapter(DetectionModel):
@@ -377,8 +398,6 @@ class ThirdPartyAdapter(DetectionModel):
 
         import torch
 
-        from ultralytics.utils.ops import non_max_suppression as _nms
-
         try:
             imgsz = self._model.args.get("imgsz", DEFAULT_IMGSZ) if hasattr(self._model, "args") else DEFAULT_IMGSZ
             im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image, imgsz)
@@ -392,29 +411,17 @@ class ThirdPartyAdapter(DetectionModel):
                 raw_preds = self._model.model(im_tensor)
             latency_ms = (time.perf_counter() - start) * 1000
 
-            preds = _nms(raw_preds, conf_thres=conf, iou_thres=iou, max_det=300, multi_label=True)[0]
-
-            detections: list[Detection] = []
-            if len(preds) > 0:
-                boxes = adjust_boxes_to_original(preds, left, top, r, w0, h0)
-                names = self.class_names
-                for i in range(len(preds)):
-                    cid = int(preds[i, 5].item())
-                    detections.append(
-                        Detection(
-                            class_id=cid,
-                            class_name=names[cid] if 0 <= cid < len(names) else f"class_{cid}",
-                            confidence=float(preds[i, 4].item()),
-                            bbox=tuple(boxes[i].cpu().tolist()),
-                        )
-                    )
-
-            return InferenceResult(
-                detections=detections,
-                latency_ms=latency_ms,
+            result = build_inference_result(
+                image=str(image),
+                raw_predictions=raw_preds,
+                preprocess_info=(top, bottom, left, right, r, w0, h0),
+                confidence=conf,
+                iou=iou,
+                names=self.class_names,
                 model_name=self.name,
-                image_path=str(image),
             )
+            result.latency_ms = latency_ms
+            return result
         except Exception as e:
             log.error(f"Prediction failed: {type(e).__name__}: {e}")
             log.exception("ThirdPartyAdapter.predict failed for %s", image)

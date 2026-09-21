@@ -1,4 +1,4 @@
-# Generate Docker training infrastructure from experiment config.
+"""Generate Docker training infrastructure from experiment config."""
 
 import argparse
 import sys

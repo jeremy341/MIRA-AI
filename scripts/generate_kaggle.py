@@ -1,4 +1,4 @@
-# Generate a Kaggle training notebook from experiment config.
+"""Generate a Kaggle training notebook from experiment config."""
 
 import argparse
 import json

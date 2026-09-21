@@ -1,4 +1,4 @@
-# CLI command for the interactive training setup wizard.
+"""CLI command for the interactive training setup wizard."""
 
 import sys
 
