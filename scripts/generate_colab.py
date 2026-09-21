@@ -1,4 +1,4 @@
-# Generate a Google Colab training notebook from experiment config.
+"""Generate a Google Colab training notebook from experiment config."""
 
 import argparse
 import json

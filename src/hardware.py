@@ -1,4 +1,4 @@
-# Hardware abstraction layer for MIRA.
+"""Hardware abstraction layer for MIRA."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class AbstractCamera(ABC):
-    # Abstract interface for camera hardware.
+    """Abstract interface for camera hardware."""
 
     WARMUP_FRAMES = 10
     FREEZE_TIMEOUT_SECONDS = 2.0
@@ -47,10 +47,9 @@ class AbstractCamera(ABC):
         self.release()
 
 
-# keep simple dataclass - no fancy options
 @dataclass
 class _FrameBuffer:
-    # Thread-safe single-frame buffer with freeze detection.
+    """Thread-safe single-frame buffer with freeze detection."""
 
     _lock: threading.Lock = field(default_factory=threading.Lock)
     _ret: bool = False

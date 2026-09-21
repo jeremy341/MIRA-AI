@@ -470,7 +470,11 @@ function handleVideoMessage(payload) {
 }
 function handleControlMessage(payload) {
   if (payload.type === "status") { handleStatus(payload.status, payload.message); return; }
-  if (payload.type === "statistics" && payload.statistics) { applyStatistics(payload.statistics); return; }
+  if (payload.type === "statistics" && payload.statistics) {
+    applyStatistics(payload.statistics);
+    loadRecentDetections();
+    return;
+  }
   if (payload.type === "error") {
     if (state.busy) {
       setBusy(false);
@@ -527,19 +531,7 @@ function processDetections(items) {
   } else {
     elements.liveConfidenceValue.textContent = "- %";
   }
-  if (!detections.length) { drawBoundingBoxes([]); return; }
-  detections.forEach(detection => {
-    state.history.unshift(detection);
-    state.history = state.history.slice(0, 50);
-    state.classCounts[detection.className] += 1;
-    state.totalDetections += 1;
-    state.confidenceSum += detection.confidence;
-    state.confidenceSamples += 1;
-  });
-  recordTrendPoint();
-  renderRecent();
-  renderSummary();
-  scheduleChartUpdate();
+  drawBoundingBoxes(detections);
 }
 function recordTrendPoint() {
   const time = formatTime(new Date().toISOString());
@@ -645,11 +637,23 @@ function applyStatistics(statistics) {
       ? 0
       : state.backendAverageConfidence * state.confidenceSamples;
   }
-  if (statistics.class_counts && typeof statistics.class_counts === "object") {
-    CLASSES.forEach(name => { if (statistics.class_counts[name] !== undefined) state.classCounts[name] = Number(statistics.class_counts[name]) || 0; });
-  }
+  const counts = statistics.class_counts && typeof statistics.class_counts === "object"
+    ? statistics.class_counts
+    : {};
+  CLASSES.forEach(name => { state.classCounts[name] = Number(counts[name]) || 0; });
+  recordTrendPoint();
   renderSummary();
   scheduleChartUpdate();
+}
+async function loadRecentDetections() {
+  try {
+    const data = await fetchJSON("/api/detections/recent?limit=50", {}, true);
+    if (!Array.isArray(data.detections)) return;
+    state.history = data.detections.map(normalizeDetection).slice(0, 50);
+    renderRecent();
+  } catch (_) {
+    // The statistics message is still useful when the optional history request fails.
+  }
 }
 function drawBoundingBoxes(detections) {
   const canvas = elements.detectionCanvas;
