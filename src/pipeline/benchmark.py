@@ -1,25 +1,25 @@
-# Structured benchmarking module for MIRA detection models.
+"""Structured benchmarking module for MIRA detection models."""
 
 from __future__ import annotations
 
 import json
 import math
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
 from ..config import CLASS_NAMES
-from .models import DetectionModel, ModelRegistry
+from .models import Detection, DetectionModel, ModelRegistry
+
 
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff")
 
 
-# keep simple dataclass - no fancy options
 @dataclass
 class PerClassMetrics:
+    """Per-class detection evaluation metrics."""
     tp: int = 0
     fp: int = 0
     fn: int = 0
@@ -49,9 +49,48 @@ class PerClassMetrics:
             "f1": self.f1,
         }
 
+@dataclass(frozen=True)
+class MatchResult:
+    true_positives: int
+    false_positives: int
+    false_negatives: int
+
+
+def match_predictions(
+    predictions: list[Detection],
+    ground_truth: list[Detection],
+    iou_threshold: float,
+) -> MatchResult:
+    if not 0 <= iou_threshold <= 1:
+        raise ValueError("iou_threshold must be between 0 and 1")
+    used: set[int] = set()
+    true_positives = 0
+    for prediction in sorted(predictions, key=lambda value: value.confidence, reverse=True):
+        best_index = None
+        best_iou = iou_threshold
+        for index, truth in enumerate(ground_truth):
+            if index in used or truth.class_id != prediction.class_id:
+                continue
+            overlap = compute_iou(list(prediction.bbox), list(truth.bbox))
+            if overlap >= best_iou:
+                best_iou = overlap
+                best_index = index
+        if best_index is not None:
+            used.add(best_index)
+            true_positives += 1
+    return MatchResult(
+        true_positives=true_positives,
+        false_positives=len(predictions) - true_positives,
+        false_negatives=len(ground_truth) - true_positives,
+    )
+
+
+
+
+
 
 def compute_iou(box_a: list[float], box_b: list[float]) -> float:
-    # Compute IoU between two boxes in xyxy format.
+    """Compute IoU between two bounding boxes in xyxy format."""
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
     x2 = min(box_a[2], box_b[2])
@@ -273,7 +312,9 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
     for cid in class_ids:
         class_preds = []
         class_gts = []
-        for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts, strict=True)):
+        if len(preds) != len(gts):
+            raise ValueError("preds and gts must contain the same number of images")
+        for img_idx, (img_preds, img_gts) in enumerate(zip(preds, gts)):
             for d in img_preds:
                 if d["class_id"] == cid:
                     class_preds.append({**d, "img_idx": img_idx})
@@ -295,13 +336,15 @@ class ModelBenchmark:
         models: list[DetectionModel] | None = None,
         dataset: Path | str | None = None,
         conf: float = 0.5,
-        iou: float = 0.7,
+        inference_iou: float = 0.7,
+        evaluation_iou: float = 0.5,
         max_images: int | None = None,
     ):
         self.models = models or []
         self.dataset = Path(dataset) if isinstance(dataset, (Path, str)) else None
         self.conf = conf
-        self.iou = iou  # COCO-standard eval threshold (0.7); inference default is typically 0.45
+        self.inference_iou = inference_iou
+        self.evaluation_iou = evaluation_iou
         self.max_images = max_images
         self.evaluated_on_train = False
         if self.dataset:
@@ -313,14 +356,22 @@ class ModelBenchmark:
         model_names: list[str],
         dataset_path: Path | str,
         conf: float = 0.5,
-        iou: float = 0.7,
+        inference_iou: float = 0.7,
+        evaluation_iou: float = 0.5,
         max_images: int | None = None,
     ) -> ModelBenchmark:
         # Create benchmark from model names using ModelRegistry.
         registry = ModelRegistry()
         registry.discover()
         models = [registry.load_model(name) for name in model_names]
-        return cls(models=models, dataset=dataset_path, conf=conf, iou=iou, max_images=max_images)
+        return cls(
+            models=models,
+            dataset=dataset_path,
+            conf=conf,
+            inference_iou=inference_iou,
+            evaluation_iou=evaluation_iou,
+            max_images=max_images,
+        )
 
     def run(self) -> list[BenchmarkResult]:
         # Evaluate every model and return structured results.
@@ -344,7 +395,7 @@ class ModelBenchmark:
             for img_path, gt_objects in samples:
                 try:
                     t0 = time.perf_counter()
-                    result = model.predict(str(img_path), conf=0.0, iou=self.iou)
+                    result = model.predict(str(img_path), conf=0.0, iou=self.inference_iou)
                     total_latency_ms += (time.perf_counter() - t0) * 1000
                     successful_predictions += 1
 
@@ -360,49 +411,51 @@ class ModelBenchmark:
 
                     eval_preds = [pred for pred in img_preds if pred["confidence"] >= self.conf]
                     total_detections += len(eval_preds)
-                    # Detection-first IoU-based matching (consistent with compute_map)
-                    sorted_pred_indices = sorted(
-                        range(len(eval_preds)), key=lambda i: eval_preds[i]["confidence"], reverse=True
-                    )
-                    gt_used = [False] * len(gt_objects)
-
-                    tp_count: defaultdict[str, int] = defaultdict(int)
-                    fp_count: defaultdict[str, int] = defaultdict(int)
-
-                    for pi in sorted_pred_indices:
-                        pred = eval_preds[pi]
-                        pred_cid = pred["class_id"]
-                        pred_cls = CLASS_NAMES[pred_cid] if 0 <= pred_cid < len(CLASS_NAMES) else f"class_{pred_cid}"
-                        best_iou = 0.5
-                        best_gi = -1
-                        for gi, gt_obj in enumerate(gt_objects):
-                            if gt_used[gi]:
-                                continue
-                            if gt_obj["class_id"] != pred_cid:
-                                continue
-                            iou_val = compute_iou(pred["bbox_pixel"], gt_obj["bbox"])
-                            if iou_val >= best_iou:
-                                best_iou = iou_val
-                                best_gi = gi
-                        if best_gi >= 0:
-                            gt_used[best_gi] = True
-                            tp_count[pred_cls] += 1
-                        else:
-                            fp_count[pred_cls] += 1
-
-                    fn_count: defaultdict[str, int] = defaultdict(int)
-                    for gi, used in enumerate(gt_used):
-                        if not used:
-                            cid = gt_objects[gi]["class_id"]
-                            cls_name = CLASS_NAMES[cid] if 0 <= cid < len(CLASS_NAMES) else f"class_{cid}"
-                            fn_count[cls_name] += 1
-
-                    for cls_name in set(list(tp_count.keys()) + list(fp_count.keys()) + list(fn_count.keys())):
-                        if cls_name not in per_class:
-                            per_class[cls_name] = PerClassMetrics()
-                        per_class[cls_name].tp += tp_count.get(cls_name, 0)
-                        per_class[cls_name].fp += fp_count.get(cls_name, 0)
-                        per_class[cls_name].fn += fn_count.get(cls_name, 0)
+                    predictions = [
+                        Detection(
+                            class_id=pred["class_id"],
+                            class_name=(
+                                CLASS_NAMES[pred["class_id"]]
+                                if 0 <= pred["class_id"] < len(CLASS_NAMES)
+                                else f"class_{pred['class_id']}"
+                            ),
+                            confidence=pred["confidence"],
+                            bbox=tuple(pred["bbox_pixel"]),
+                        )
+                        for pred in eval_preds
+                    ]
+                    ground_truth = [
+                        Detection(
+                            class_id=obj["class_id"],
+                            class_name=(
+                                CLASS_NAMES[obj["class_id"]]
+                                if 0 <= obj["class_id"] < len(CLASS_NAMES)
+                                else f"class_{obj['class_id']}"
+                            ),
+                            confidence=1.0,
+                            bbox=tuple(obj["bbox"]),
+                        )
+                        for obj in gt_objects
+                    ]
+                    class_ids = {det.class_id for det in predictions + ground_truth}
+                    for class_id in class_ids:
+                        class_predictions = [det for det in predictions if det.class_id == class_id]
+                        class_ground_truth = [det for det in ground_truth if det.class_id == class_id]
+                        matches = match_predictions(
+                            class_predictions,
+                            class_ground_truth,
+                            self.evaluation_iou,
+                        )
+                        class_name = (
+                            CLASS_NAMES[class_id]
+                            if 0 <= class_id < len(CLASS_NAMES)
+                            else f"class_{class_id}"
+                        )
+                        if class_name not in per_class:
+                            per_class[class_name] = PerClassMetrics()
+                        per_class[class_name].tp += matches.true_positives
+                        per_class[class_name].fp += matches.false_positives
+                        per_class[class_name].fn += matches.false_negatives
 
                     all_preds.append(img_preds)
                     all_gts.append(gt_objects)

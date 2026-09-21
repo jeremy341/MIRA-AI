@@ -21,6 +21,23 @@ def test_initializes_runtime_state():
     assert service._streaming_thread is None
 
 
+def test_history_snapshots_are_available_and_limited():
+    service = CameraService()
+    service.metrics_history.extend(["metric-1", "metric-2"])
+    service.detection_history.extend(["detection-1", "detection-2"])
+
+    assert service.get_metrics_snapshot(1) == ["metric-2"]
+    assert service.get_detection_snapshot(1) == ["detection-2"]
+
+
+@pytest.mark.parametrize("method_name", ["get_metrics_snapshot", "get_detection_snapshot"])
+def test_history_snapshots_reject_invalid_limits(method_name):
+    service = CameraService()
+
+    with pytest.raises(ValueError, match="between 1 and 1000"):
+        getattr(service, method_name)(0)
+
+
 @pytest.mark.asyncio
 async def test_start_streaming_processes_a_frame_without_runtime_state_errors():
     frame_processed = threading.Event()

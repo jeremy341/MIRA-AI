@@ -1,4 +1,4 @@
-# Data models for MIRA Control Center API
+"""Data models for MIRA Control Center API."""
 
 from datetime import datetime, timezone
 from pydantic import BaseModel, Field

@@ -563,3 +563,15 @@ class CameraService:
                 )
 
         return sorted(models, key=lambda x: x["name"])
+
+    def get_metrics_snapshot(self, limit: int = 100):
+        if not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        with self._lock:
+            return list(self.metrics_history)[-limit:]
+
+    def get_detection_snapshot(self, limit: int = 50):
+        if not 1 <= limit <= 1000:
+            raise ValueError("limit must be between 1 and 1000")
+        with self._lock:
+            return list(self.detection_history)[-limit:]

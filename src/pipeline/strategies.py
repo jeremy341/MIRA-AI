@@ -1,4 +1,4 @@
-# Training strategy registry for extensible training pipelines.
+"""Training strategy registry for extensible training pipelines."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class TrainConfig:
     extra: dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> list[str]:
-        # Validate this configuration and return a list of error messages.
+        """Validate configuration parameters and return a list of error messages."""
         errors: list[str] = []
 
         if self.epochs < 1:
@@ -120,7 +120,7 @@ class TrainingStrategy(ABC):
 
 
 class YOLOStrategy(TrainingStrategy):
-    # Train a YOLO detection model via Ultralytics.
+    """Train a YOLO detection model via Ultralytics."""
 
     def train(self, config: TrainConfig) -> TrainResult:
         from ultralytics import YOLO
@@ -248,7 +248,7 @@ class YOLOStrategy(TrainingStrategy):
 
 
 class ClassifierStrategy(TrainingStrategy):
-    # Train a TensorFlow/Keras classifier.
+    """Train a TensorFlow/Keras classifier."""
 
     def train(self, config: TrainConfig) -> TrainResult:
         import tensorflow as tf

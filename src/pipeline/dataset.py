@@ -1,4 +1,4 @@
-# dataset registry - discovers sources from datasets/registry and merges
+"""Dataset registry and dataset merging functionality for MIRA."""
 
 from __future__ import annotations
 
@@ -9,22 +9,9 @@ from typing import Any
 
 from ..config import ROOT_DIR
 from ..logger import get_logger
+from . import merge_utils as mu
 
 logger = get_logger(__name__)
-
-
-def _import_merge_utils():
-    import importlib
-    import sys
-
-    scripts_dir = str(ROOT_DIR / "scripts")
-    saved_path = list(sys.path)
-    try:
-        if scripts_dir not in sys.path:
-            sys.path.insert(0, scripts_dir)
-        return importlib.import_module("merge_utils")
-    finally:
-        sys.path[:] = saved_path
 
 
 def _derive_label_path(img_rel: str) -> str:
@@ -38,10 +25,9 @@ def _derive_label_path(img_rel: str) -> str:
     return str(Path(*new_parts)) if new_parts else img_rel
 
 
-# keep simple dataclass - no fancy options
 @dataclass
 class DatasetSource:
-    # Represents a registered dataset source.
+    """Represents a registered dataset source."""
 
     key: str
     name: str
@@ -54,7 +40,7 @@ class DatasetSource:
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> DatasetSource:
-        # Load a dataset source from a YAML descriptor.
+        """Load a dataset source descriptor from a YAML file."""
         import yaml
 
         with open(yaml_path, encoding="utf-8") as f:
@@ -98,7 +84,7 @@ class DatasetSource:
 
 @dataclass
 class MergeResult:
-    # Result of a dataset merge operation.
+    """Result of a dataset merge operation."""
 
     output_dir: Path
     total_added: int
@@ -107,7 +93,7 @@ class MergeResult:
 
 
 class DatasetRegistry:
-    # Discovers and manages dataset sources from YAML descriptors.
+    """Discovers and manages dataset sources from YAML descriptors."""
 
     def __init__(self, registry_dir: Path | str | None = None):
         if registry_dir is None:
@@ -159,8 +145,6 @@ class DatasetRegistry:
         dry_run: bool = False,
     ) -> MergeResult:
         # Merge registered sources + optional custom dataset.
-        mu = _import_merge_utils()
-
         # Validate and create output directory
         try:
             if not dry_run:
@@ -184,22 +168,24 @@ class DatasetRegistry:
             sources_used.append(key)
             logger.info("[%s]", source.name)
 
-            if source.source_format == "yolo" and not source.class_mapping:
-                # Passthrough - already in MIRA format
-                added = self._merge_passthrough(source, output, dry_run)
-                total_added += added
-            elif source.source_format == "yolo" and source.class_mapping:
-                # Remap classes
-                added, skipped = self._merge_remapped(source, output, dry_run)
-                total_added += added
-                total_skipped += skipped
-            elif source.source_format == "coco":
-                # Convert COCO annotations to YOLO format
-                added, skipped = self._merge_coco(source, output, dry_run)
-                total_added += added
-                total_skipped += skipped
+            handlers = {
+                ("yolo", False): self._merge_passthrough,
+                ("yolo", True): self._merge_remapped,
+                ("coco", False): self._merge_coco,
+                ("coco", True): self._merge_coco,
+            }
+            try:
+                handler = handlers[(source.source_format, bool(source.class_mapping))]
+            except KeyError:
+                raise ValueError(f"Unsupported dataset format: {source.source_format}") from None
+
+            result = handler(source, output, dry_run)
+            if isinstance(result, tuple):
+                added, skipped = result
             else:
-                logger.warning("Unsupported format '%s' for %s", source.source_format, key)
+                added, skipped = result, 0
+            total_added += added
+            total_skipped += skipped
 
         # Process custom dataset
         if custom_path:
@@ -229,7 +215,6 @@ class DatasetRegistry:
             print(f"  [DRY] Passthrough: {source.input_path}")
             return 0
 
-        mu = _import_merge_utils()
         print(f"  Copying {source.name} (passthrough)...")
         total = 0
         for split_name, split_rel in source.splits.items():
@@ -252,7 +237,6 @@ class DatasetRegistry:
                 print(f"  [DRY] Remap: {source.input_path} ({len(source.class_mapping)} mappings)")
             return 0, 0
 
-        mu = _import_merge_utils()
         print(f"  Adding {source.name} (remap {source.source_format})...")
         total_added = 0
         total_skipped = 0
@@ -419,7 +403,6 @@ class DatasetRegistry:
         dry_run: bool,
     ) -> tuple[int, int]:
         # Add a custom YOLO-format dataset.
-        mu = _import_merge_utils()
         path = Path(path)
         if not path.exists():
             logger.error("Custom source not found: %s", path)

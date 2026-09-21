@@ -1,4 +1,3 @@
-/* dashboard tokens — kept close to website but tweaked for dark camera stage */
 :root {
   --bg: #ebe8df;
   --surface: #f8f6ef;
@@ -174,7 +173,7 @@ button {
 }
 
 .stream-dot.streaming {
-  background: #eb4d44; /* was #e8463e, a bit too orange */
+  background: #eb4d44;
   animation: livePulse 1.4s ease-in-out infinite;
 }
 
@@ -185,7 +184,7 @@ button {
   }
 
   50% {
-    opacity: 0.38; /* 0.38 not 0.4 — less flashy on dark stage */
+    opacity: 0.38;
   }
 }
 
@@ -306,7 +305,6 @@ button {
   border: 1px solid var(--line-dark);
   border-radius: 3px;
   background: var(--surface);
-  background: var(--surface); /* keep explicit - safari fallback */
   padding: 0 11px;
   cursor: pointer;
   font-size: 11px;
@@ -382,7 +380,6 @@ button {
   align-items: center;
   justify-content: center;
   color: #aab3ac;
-  /* grid on dark stage - 38px looked best on 1080p */
   background:
     linear-gradient(#1b241e 1px, transparent 1px),
     linear-gradient(90deg, #1b241e 1px, transparent 1px),
