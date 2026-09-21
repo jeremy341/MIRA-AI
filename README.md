@@ -5,6 +5,18 @@
 MIRA is my project for recognizing different types of waste with a camera. The
 long-term idea is to use the detections to sort objects automatically.
 
+> Computer-vision research project exploring reliable waste detection across heterogeneous datasets.
+
+## Results at a glance
+
+| Experiment | Model | Evaluation | mAP50 |
+|---|---|---|---:|
+| EXP-014 baseline | Earlier detector run | Recorded baseline | 60.7% |
+| EXP-018 | YOLO11n | 415-image validation split | 90.6% |
+| EXP-019 repeat | YOLO11n | Repeat validation run | 90.58% |
+
+These are validation metrics from the recorded TrashNet tabletop setup, not real-world sorting accuracy. EXP-019 did not evaluate its 1,375-image independent test split. See [`results/experiments_log.md`](results/experiments_log.md) for the experiment details and limitations.
+
 - Project website: [mira-vision.vercel.app](https://mira-vision.vercel.app/)
 - Additional model files: [Hugging Face - Jeremy341/MIRA-AI](https://huggingface.co/Jeremy341/MIRA-AI)
 - Python package: [mira-ai on PyPI](https://pypi.org/project/mira-ai/)
@@ -114,4 +126,3 @@ part of my own project work.
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE).
-
