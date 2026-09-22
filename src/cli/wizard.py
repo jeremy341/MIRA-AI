@@ -36,13 +36,19 @@ def cmd_wizard(args):
             break
         print("  Please enter 1 or 2.")
 
-    task = "detection" if choice in ("1", "") else "classifier"
+    if choice in ("1", ""):
+        task = "detection"
+    else:
+        task = "classifier"
 
     # Step 2: Dataset selection
     ds_registry = DatasetRegistry()
     ds_registry.discover()
     sources = ds_registry.list_sources()
-    available_keys = [s["key"] for s in sources if s["exists"]]
+    available_keys = []
+    for source in sources:
+        if source["exists"]:
+            available_keys.append(source["key"])
 
     if not available_keys:
         print("\n  No datasets found. Run 'mira merge' first.")
@@ -71,7 +77,10 @@ def cmd_wizard(args):
     # Step 4: Training parameters
     print("\nStep 4: Training parameters")
     hw = detect_hardware()
-    gpu_status = "GPU available" if hw.has_cuda else "CPU only"
+    if hw.has_cuda:
+        gpu_status = "GPU available"
+    else:
+        gpu_status = "CPU only"
     print(f"  Auto-detected: {gpu_status}")
 
     epochs_input = input(f"  Epochs [{default_epochs}]: ").strip()
@@ -83,8 +92,10 @@ def cmd_wizard(args):
 
     if hw.has_cuda:
         default_batch_gpu = default_batch
+        device = "0"
     else:
         default_batch_gpu = 8
+        device = "cpu"
 
     batch_input = input(f"  Batch size [{default_batch_gpu}]: ").strip()
     try:
@@ -92,8 +103,6 @@ def cmd_wizard(args):
     except ValueError:
         print(f"  Invalid number, using default: {default_batch_gpu}")
         batch_size = default_batch_gpu
-
-    device = "0" if hw.has_cuda else "cpu"
 
     # Step 5: Export options
     print("\nStep 5: Export options")

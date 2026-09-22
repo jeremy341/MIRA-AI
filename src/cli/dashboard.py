@@ -41,25 +41,25 @@ def cmd_dashboard(args):
     # Register src.config as "config" so "from config import ..." in camera_service.py works
     import src.config
 
-    _prev_config = sys.modules.get("config")
+    previous_config_module = sys.modules.get("config")
     sys.modules["config"] = src.config
 
     # Load main.py from backend_dir
     try:
-        spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
-        if spec is None or spec.loader is None:
+        backend_spec = importlib.util.spec_from_file_location("dashboard_backend_main", backend_dir / "main.py")
+        if backend_spec is None or backend_spec.loader is None:
             print("Error: Could not load dashboard backend spec")
             sys.exit(1)
-        dashboard_main = importlib.util.module_from_spec(spec)
+        dashboard_main = importlib.util.module_from_spec(backend_spec)
         sys.modules["dashboard_backend_main"] = dashboard_main
-        spec.loader.exec_module(dashboard_main)
+        backend_spec.loader.exec_module(dashboard_main)
     except Exception as e:
         print(f"Error: Failed to load dashboard backend: {e}")
         sys.exit(1)
     finally:
         # Restore original config module to avoid polluting global module cache
-        if _prev_config is not None:
-            sys.modules["config"] = _prev_config
+        if previous_config_module is not None:
+            sys.modules["config"] = previous_config_module
         else:
             sys.modules.pop("config", None)
     app = getattr(dashboard_main, "app", None)

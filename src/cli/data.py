@@ -24,16 +24,18 @@ def cmd_merge(args):
     output_path = Path(args.output).resolve()
     try:
         output_path.relative_to(ROOT_DIR.resolve())
-        is_rel = True
     except ValueError:
-        is_rel = False
-    if not is_rel:
         print("Error: Output path must be within the project directory.")
         sys.exit(1)
+
+    if args.custom:
+        custom_path = Path(args.custom)
+    else:
+        custom_path = None
     result = registry.merge(
         sources=args.sources,
         output=output_path,
-        custom_path=Path(args.custom) if args.custom else None,
+        custom_path=custom_path,
         dry_run=args.dry_run,
     )
     print(f"\nMerge complete: {result.total_added} added, {result.total_skipped} skipped")

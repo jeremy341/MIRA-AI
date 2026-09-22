@@ -9,6 +9,14 @@ from src.pipeline.registry import register_command
 _GENERATE_PARSER = None
 
 
+def _write_notebook(notebook, output_path, success_message):
+    import json
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
+    print(f"{success_message}: {output_path}")
+
+
 def _add_generate_args(parser):
     global _GENERATE_PARSER
     _GENERATE_PARSER = parser
@@ -62,23 +70,17 @@ def cmd_generate(args):
         from scripts.generate_kaggle import generate_kaggle_notebook
 
         notebook = generate_kaggle_notebook(exp_config, project_config)
-        import json
-
-        out = Path(args.output) if args.output else Path(f"{exp_config.get('name', 'mira_exp')}_kaggle.ipynb")
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
-        print(f"Kaggle notebook generated: {out}")
+        default_name = f"{exp_config.get('name', 'mira_exp')}_kaggle.ipynb"
+        output_path = Path(args.output) if args.output else Path(default_name)
+        _write_notebook(notebook, output_path, "Kaggle notebook generated")
 
     elif target == "colab":
         from scripts.generate_colab import generate_colab_notebook
 
         notebook = generate_colab_notebook(exp_config, project_config)
-        import json
-
-        out = Path(args.output) if args.output else Path(f"{exp_config.get('name', 'mira_exp')}_colab.ipynb")
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
-        print(f"Colab notebook generated: {out}")
+        default_name = f"{exp_config.get('name', 'mira_exp')}_colab.ipynb"
+        output_path = Path(args.output) if args.output else Path(default_name)
+        _write_notebook(notebook, output_path, "Colab notebook generated")
 
     elif target == "docker":
         from scripts.generate_docker import (
@@ -90,7 +92,8 @@ def cmd_generate(args):
         )
 
         params = _build_training_params(exp_config, project_config)
-        out_dir = Path(args.output) if args.output else Path(f"docker_{exp_config.get('name', 'mira_exp')}")
+        default_directory = f"docker_{exp_config.get('name', 'mira_exp')}"
+        out_dir = Path(args.output) if args.output else Path(default_directory)
         out_dir.mkdir(parents=True, exist_ok=True)
 
         files = {
