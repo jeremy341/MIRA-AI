@@ -30,52 +30,38 @@ class HardwareInfo:
 
 
 def detect_hardware() -> HardwareInfo:
-    info = HardwareInfo(
+    hardware = HardwareInfo(
         platform=sys.platform,
         arch=platform.machine(),
         python_version=sys.version,
     )
 
-    # CPU info
-    info.cpu_count = _safe_cpu_count()
-
-    # Memory
-    info.memory_mb = _safe_memory_mb()
-
-    # Raspberry Pi detection
-    info.is_raspberry_pi = _detect_raspberry_pi()
-    if info.is_raspberry_pi:
-        info.pi_model = _get_pi_model()
-
-    # Jetson detection
-    info.is_jetson = _detect_jetson()
-
-    # CUDA detection
-    info.has_cuda, info.cuda_version = _detect_cuda()
-
-    # Library availability
-    info.has_torch = _module_available("torch")
-    info.has_tensorflow = _module_available("tensorflow")
-    info.has_tflite_runtime = _module_available("tflite_runtime")
-    info.has_opencv = _module_available("cv2")
-
-    return info
+    hardware.cpu_count = _safe_cpu_count()
+    hardware.memory_mb = _safe_memory_mb()
+    hardware.is_raspberry_pi = _detect_raspberry_pi()
+    if hardware.is_raspberry_pi:
+        hardware.pi_model = _get_pi_model()
+    hardware.is_jetson = _detect_jetson()
+    hardware.has_cuda, hardware.cuda_version = _detect_cuda()
+    hardware.has_torch = _module_available("torch")
+    hardware.has_tensorflow = _module_available("tensorflow")
+    hardware.has_tflite_runtime = _module_available("tflite_runtime")
+    hardware.has_opencv = _module_available("cv2")
+    return hardware
 
 
 def suggest_model(info: HardwareInfo | None = None) -> str:
-    # Suggest the best model type for the current hardware.
-    if info is None:
-        info = detect_hardware()
+    hardware = info if info is not None else detect_hardware()
 
-    if info.is_raspberry_pi:
-        if info.has_tflite_runtime or info.has_tensorflow:
+    if hardware.is_raspberry_pi:
+        if hardware.has_tflite_runtime or hardware.has_tensorflow:
             return "tflite_int8"
         return "tflite_fp32"
-    if info.is_jetson:
+    if hardware.is_jetson:
         return "tensorrt"
-    if info.has_cuda:
+    if hardware.has_cuda:
         return "pt"
-    if info.has_tflite_runtime or info.has_tensorflow:
+    if hardware.has_tflite_runtime or hardware.has_tensorflow:
         return "tflite_fp32"
     return "pt"
 
@@ -122,21 +108,29 @@ def _safe_memory_mb() -> int:
         return psutil.virtual_memory().total // (1024 * 1024)
     except (ImportError, OSError):
         pass
+
+    return _read_system_memory_mb()
+
+
+def _read_system_memory_mb() -> int:
     try:
         if sys.platform == "win32":
-            import ctypes
-
-            kernel32 = ctypes.windll.kernel32
-            mem = ctypes.c_ulonglong()
-            kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(mem))
-            return int(mem.value // 1024)
-        with open("/proc/meminfo", encoding="utf-8") as f:
-            for line in f:
+            return _read_windows_memory_mb()
+        with open("/proc/meminfo", encoding="utf-8") as memory_file:
+            for line in memory_file:
                 if line.startswith("MemTotal:"):
                     return int(line.split()[1]) // 1024
-    except (OSError, ValueError):
-        pass
-    return 0
+    except (ImportError, OSError, ValueError):
+        return 0
+
+
+def _read_windows_memory_mb() -> int:
+    import ctypes
+
+    kernel32 = ctypes.windll.kernel32
+    installed_memory_kb = ctypes.c_ulonglong()
+    kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(installed_memory_kb))
+    return int(installed_memory_kb.value // 1024)
 
 
 def _detect_raspberry_pi() -> bool:

@@ -127,3 +127,19 @@ def test_dataset_summary():
         assert summary["images"] == 1
         assert summary["labels"] == 1
         assert "class_counts" in summary
+
+def test_validation_reports_split_errors_before_label_errors(tmp_path):
+    from src.pipeline.validators import validate_yolo_dataset
+
+    image_dir = tmp_path / "images" / "train"
+    label_dir = tmp_path / "labels" / "train"
+    image_dir.mkdir(parents=True)
+    label_dir.mkdir(parents=True)
+    (image_dir / "broken.jpg").write_text("image", encoding="utf-8")
+    (label_dir / "broken.txt").write_text("-1 0.5 0.5 0.1 0.1\n", encoding="utf-8")
+    (tmp_path / "images" / "val").mkdir()
+
+    result = validate_yolo_dataset(tmp_path)
+
+    assert result.errors == ["Missing labels/val directory", "1 invalid label(s) found"]
+    assert result.invalid_labels[0][1] == "line 1: negative class ID"

@@ -74,7 +74,8 @@ class _FrameBuffer:
         with self._lock:
             if not self._last_update:
                 return False
-            return (time.perf_counter() - self._last_update) > AbstractCamera.FREEZE_TIMEOUT_SECONDS
+            seconds_since_update = time.perf_counter() - self._last_update
+            return seconds_since_update > AbstractCamera.FREEZE_TIMEOUT_SECONDS
 
     def stop(self) -> None:
         with self._lock:
@@ -206,39 +207,44 @@ class IPCamera(AbstractCamera):
                 time.sleep(0.05)
                 continue
             if not ret:
-                # Attempt reconnection
                 logger.warning("IP camera stream lost, attempting reconnection...")
-                for attempt in range(self.RECONNECT_ATTEMPTS):
-                    if not self._buffer.running:
-                        break
-                    time.sleep(self.RECONNECT_DELAY_SECONDS)
-                    if not self._buffer.running:
-                        break
-                    old_cap = self.cap
-                    if old_cap is not None:
-                        try:
-                            old_cap.release()
-                        except Exception:
-                            pass
-                    new_cap = cv2.VideoCapture(self._rtsp_url)
-                    self.cap = new_cap
-                    if new_cap.isOpened():
-                        logger.info(f"IP camera reconnected after {attempt + 1} attempt(s)")
-                        break
-                else:
-                    logger.error(f"IP camera reconnection failed after {self.RECONNECT_ATTEMPTS} attempts")
-                    self._buffer.stop()
-                    if self.cap is not None:
-                        try:
-                            self.cap.release()
-                        except Exception:
-                            pass
-                        self.cap = None
+                self._reconnect()
                 if not self._buffer.running:
                     break
                 continue
             self._buffer.update(ret, frame)
             time.sleep(0.01)
+
+    def _reconnect(self) -> None:
+        for attempt in range(self.RECONNECT_ATTEMPTS):
+            if not self._buffer.running:
+                return
+
+            time.sleep(self.RECONNECT_DELAY_SECONDS)
+            if not self._buffer.running:
+                return
+
+            old_capture = self.cap
+            if old_capture is not None:
+                try:
+                    old_capture.release()
+                except Exception:
+                    pass
+
+            new_capture = cv2.VideoCapture(self._rtsp_url)
+            self.cap = new_capture
+            if new_capture.isOpened():
+                logger.info(f"IP camera reconnected after {attempt + 1} attempt(s)")
+                return
+
+        logger.error(f"IP camera reconnection failed after {self.RECONNECT_ATTEMPTS} attempts")
+        self._buffer.stop()
+        if self.cap is not None:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
 
     def read(self) -> tuple[bool, object | None]:
         return self._buffer.get()
