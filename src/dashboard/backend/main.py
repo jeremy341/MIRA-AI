@@ -5,13 +5,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
-from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.camera_service import CameraService
 from src.dashboard.backend.command_service import DashboardCommandService
+from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.websocket_handler import WebSocketHandler
 
 camera_service = CameraService()
@@ -53,18 +53,6 @@ def _status_payload() -> dict:
     return {**camera_service.get_status_snapshot(), "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
-def _missing_prerequisites() -> list[str]:
-    state = camera_service.get_status_snapshot()
-    return [
-        name
-        for name, ready in (
-            ("camera", state["camera_initialized"]),
-            ("model", state["model_loaded"]),
-        )
-        if not ready
-    ]
-
-
 async def _set_camera(config: CameraConfig) -> tuple[bool, str]:
     result = await command_service.execute("set_camera_config", config.model_dump())
     return result.success, result.message
@@ -102,6 +90,14 @@ def _statistics_payload(period: int) -> dict:
     else:
         stats_dict["average_confidence"] = None
     return {"statistics": stats_dict, "period_seconds": period}
+
+
+def _history_payload(key: str, items) -> dict:
+    return {
+        key: [item.model_dump() for item in items],
+        "count": len(items),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -205,12 +201,7 @@ async def get_metrics_history(limit: int = 100):
     if limit < 1 or limit > 1000:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     history = camera_service.get_metrics_snapshot(limit)
-
-    return {
-        "metrics": [m.model_dump() for m in history],
-        "count": len(history),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    return _history_payload("metrics", history)
 
 
 @app.get("/api/detections/recent")
@@ -218,12 +209,7 @@ async def get_recent_detections(limit: int = 50):
     if limit < 1 or limit > 1000:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     detections = camera_service.get_detection_snapshot(limit)
-
-    return {
-        "detections": [d.model_dump() for d in detections],
-        "count": len(detections),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
+    return _history_payload("detections", detections)
 
 
 @app.websocket("/ws/video")

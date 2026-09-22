@@ -2,6 +2,8 @@
 
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import MagicMock, call
 
 import pytest
 import yaml
@@ -50,6 +52,62 @@ def test_register_command():
         assert commands["test_cmd_pytest"].help_text == "A test command"
     finally:
         _COMMANDS.pop("test_cmd_pytest", None)
+
+
+def test_model_adapters_keep_registration_order():
+    from src.pipeline.registry import get_model_adapters
+
+    assert tuple(get_model_adapters()) == ("yolo_pt", "yolo_tflite", "third_party")
+
+
+def test_training_pipeline_returns_strategy_result_unchanged(monkeypatch):
+    from src.pipeline import train as training_module
+    from src.pipeline.strategies import TrainConfig, TrainResult
+
+    expected = TrainResult(
+        name="run-1",
+        model_path="runs/run-1/weights/last.pt",
+        best_path="runs/run-1/weights/best.pt",
+        epochs=3,
+        metrics={"map50": 0.8},
+        duration_seconds=12.5,
+        exported=["runs/run-1/model.onnx"],
+    )
+
+    class Strategy:
+        def train(self, config):
+            return expected
+
+    monkeypatch.setattr(training_module, "get_strategy", lambda _task: Strategy())
+
+    result = training_module.TrainingPipeline().train("detection", TrainConfig())
+
+    assert result is expected
+    assert result.exported == ["runs/run-1/model.onnx"]
+
+
+def test_model_export_keeps_format_options_and_result_order(monkeypatch):
+    import sys
+
+    from src.pipeline.train import TrainingPipeline
+
+    model = MagicMock()
+    model.export.side_effect = ["first.tflite", "second.tflite", "third.onnx", "fourth.engine"]
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=lambda _path: model))
+
+    exported = TrainingPipeline().export_model(
+        "model.pt",
+        ["tflite-int8", "tflite_fp32", "onnx", "tensorrt", "unknown"],
+        dataset="data.yaml",
+    )
+
+    assert exported == ["first.tflite", "second.tflite", "third.onnx", "fourth.engine"]
+    assert model.export.call_args_list == [
+        call(format="tflite", int8=True, data="data.yaml"),
+        call(format="tflite", int8=False),
+        call(format="onnx"),
+        call(format="engine", quantize=True, imgsz=640, workspace=4),
+    ]
 
 
 def test_discover_loads_yaml_files():

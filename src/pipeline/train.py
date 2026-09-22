@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
+import copy
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 from ..exceptions import PipelineError
 from ..logger import logger
-from .strategies import TrainConfig, TrainResult, get_strategy, register_strategy as _register_strategy
+from .strategies import TrainConfig, TrainResult, get_strategy
+from .strategies import register_strategy as _register_strategy
+
+
+def _prepare_training_config(config: TrainConfig, extra_values: dict | None = None) -> TrainConfig:
+    config = copy.deepcopy(config)
+    if extra_values:
+        config.extra.update(extra_values)
+    if not config.project:
+        config.project = "runs/train"
+    if config.name is None or config.name == "exp":
+        config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    return config
 
 
 class TrainingPipeline:
@@ -37,27 +49,30 @@ class TrainingPipeline:
             logger.error(f"Failed to load model from '{model_path}': {e}")
             raise PipelineError(f"Failed to load model '{model_path}': {e}") from e
 
+        fixed_formats = {
+            "tflite_fp32": {"format": "tflite", "int8": False},
+            "tflite": {"format": "tflite", "int8": False},
+            "onnx": {"format": "onnx"},
+            "tensorrt": {"format": "engine", "quantize": True, "imgsz": 640, "workspace": 4},
+        }
         exported = []
         for fmt in formats:
-            fmt_lower = fmt.lower().replace("-", "_")
+            normalized_format = fmt.lower().replace("-", "_")
             try:
-                if fmt_lower == "tflite_int8":
+                if normalized_format == "tflite_int8":
                     export_kwargs = {"format": "tflite", "int8": True}
                     if dataset:
                         export_kwargs["data"] = dataset
-                    out = model.export(**export_kwargs)
-                elif fmt_lower == "tflite_fp32":
-                    out = model.export(format="tflite", int8=False)
-                elif fmt_lower == "tflite":
-                    out = model.export(format="tflite", int8=False)
-                elif fmt_lower == "onnx":
-                    out = model.export(format="onnx")
-                elif fmt_lower == "tensorrt":
-                    out = model.export(format="engine", quantize=True, imgsz=640, workspace=4)
+                elif normalized_format in fixed_formats:
+                    export_kwargs = fixed_formats[normalized_format]
                 else:
-                    out = None
-                if out is None:
+                    export_kwargs = None
+
+                if export_kwargs is None:
                     logger.warning("Unknown export format '%s', skipping", fmt)
+                    continue
+
+                out = model.export(**export_kwargs)
             except Exception as e:
                 logger.error(f"Export to format '{fmt}' failed: {e}")
                 raise PipelineError(f"Model export to format '{fmt}' failed: {e}") from e
@@ -66,14 +81,7 @@ class TrainingPipeline:
         return exported
 
     def train_yolo(self, config: TrainConfig) -> TrainResult:
-        import copy
-
-        config = copy.deepcopy(config)
-        if not config.project:
-            config.project = "runs/train"
-        if config.name is None or config.name == "exp":
-            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-
+        config = _prepare_training_config(config)
         result = self.train("detection", config)
 
         results_dir = Path(config.project) / config.name
@@ -83,17 +91,7 @@ class TrainingPipeline:
     def train_classifier(
         self, config: TrainConfig, base_model: str = "mobilenetv2", fine_tune: bool = False
     ) -> TrainResult:
-        import copy
-
-        config = copy.deepcopy(config)
-
-        config.extra["base_model"] = base_model
-        config.extra["fine_tune"] = fine_tune
-
-        if not config.project:
-            config.project = "runs/train"
-        if config.name is None or config.name == "exp":
-            config.name = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+        config = _prepare_training_config(config, {"base_model": base_model, "fine_tune": fine_tune})
 
         try:
             result = self.train("classifier", config)

@@ -1,6 +1,7 @@
 # Tests for MIRA dashboard backend models.
 
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import ValidationError
@@ -66,6 +67,17 @@ class TestDetection:
         det = Detection(class_name=WasteClass.GLASS, confidence=0.5, bbox=[0, 0, 10, 10])
         after = datetime.now(timezone.utc)
         assert before <= det.timestamp <= after
+
+    def test_json_dump_preserves_wire_field_names(self):
+        det = Detection(class_name=WasteClass.PAPER, confidence=0.7, bbox=[1, 2, 3, 4], track_id=8)
+
+        payload = det.model_dump(mode="json")
+
+        assert payload["class_name"] == "paper"
+        assert payload["confidence"] == 0.7
+        assert payload["bbox"] == [1, 2, 3, 4]
+        assert payload["track_id"] == 8
+        assert isinstance(payload["timestamp"], str)
 
 
 class TestCameraConfig:
@@ -179,3 +191,48 @@ class TestSystemStatus:
 
     def test_has_five_states(self):
         assert len(SystemStatus) == 5
+
+
+class TestDashboardCommands:
+    @pytest.mark.asyncio
+    async def test_start_stream_reports_missing_camera_then_model(self):
+        from src.dashboard.backend.command_service import DashboardCommandService
+
+        camera_service = MagicMock()
+        camera_service.get_status_snapshot.return_value = {
+            "streaming": False,
+            "camera_initialized": False,
+            "model_loaded": False,
+        }
+
+        result = await DashboardCommandService(camera_service).execute("start_stream", {})
+
+        assert result.success is False
+        assert result.message == "Configure the camera and load a model before starting the stream."
+        assert result.missing == ("camera", "model")
+        camera_service.start_streaming.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stop_stream_preserves_failed_worker_message(self):
+        from src.dashboard.backend.command_service import DashboardCommandService
+
+        camera_service = MagicMock()
+        camera_service.get_status_snapshot.return_value = {"streaming": False}
+        camera_service.stop_streaming = AsyncMock(return_value=False)
+
+        result = await DashboardCommandService(camera_service).execute("stop_stream", {})
+
+        assert result.success is False
+        assert result.message == "The streaming worker did not stop cleanly"
+
+
+def test_history_payload_keeps_collection_key_count_and_timestamp():
+    from src.dashboard.backend.main import _history_payload
+
+    items = [MagicMock(model_dump=MagicMock(return_value={"fps": 30.0}))]
+
+    payload = _history_payload("metrics", items)
+
+    assert payload["metrics"] == [{"fps": 30.0}]
+    assert payload["count"] == 1
+    assert isinstance(payload["timestamp"], str)
