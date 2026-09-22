@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.camera_service import BYTE_TRACK_CONFIG_PATH, CameraService
 from src.dashboard.backend.models import CameraConfig, ModelConfig, SystemStatus
 
 
@@ -57,6 +57,103 @@ async def test_start_streaming_processes_a_frame_without_runtime_state_errors():
 
     assert service.status == SystemStatus.IDLE
     assert service.latency_history
+
+
+@pytest.mark.asyncio
+async def test_tracking_uses_persistent_tracker_and_frame_callback_runs_on_worker():
+    camera = MagicMock()
+    camera.read.return_value = (True, object())
+    model = MagicMock()
+    service = CameraService(loop=asyncio.get_running_loop())
+    service.camera = camera
+    service.model = model
+    service.model_config = ModelConfig(name="mock.pt", enable_tracking=True)
+    callback_thread = []
+    frame_processed = threading.Event()
+
+    def on_frame(_frame, _detections):
+        callback_thread.append(threading.current_thread())
+        with service._lock:
+            service.is_streaming = False
+        frame_processed.set()
+
+    service.on_frame = on_frame
+
+    assert await service.start_streaming() is True
+    worker_thread = service._streaming_thread
+    assert await asyncio.to_thread(frame_processed.wait, 1)
+    await service.stop()
+
+    model.track.assert_called_once()
+    model.predict.assert_not_called()
+    assert model.track.call_args.kwargs["imgsz"] == service.img_size
+    assert model.track.call_args.kwargs["conf"] == service.model_config.conf_threshold
+    assert model.track.call_args.kwargs["iou"] == service.model_config.iou_threshold
+    assert model.track.call_args.kwargs["persist"] is True
+    assert model.track.call_args.kwargs["tracker"] == str(BYTE_TRACK_CONFIG_PATH)
+    assert callback_thread == [worker_thread]
+
+
+@pytest.mark.asyncio
+async def test_int8_model_uses_prediction_even_when_tracking_is_enabled():
+    camera = MagicMock()
+    camera.read.return_value = (True, object())
+    model = MagicMock()
+    model.predict.return_value = []
+    service = CameraService(loop=asyncio.get_running_loop())
+    service.camera = camera
+    service.model = model
+    service.model_config = ModelConfig(name="mock_int8.tflite", enable_tracking=True)
+    service.is_tflite_int8 = True
+    frame_processed = threading.Event()
+
+    def on_frame(_frame, _detections):
+        with service._lock:
+            service.is_streaming = False
+        frame_processed.set()
+
+    service.on_frame = on_frame
+
+    assert await service.start_streaming() is True
+    assert await asyncio.to_thread(frame_processed.wait, 1)
+    await service.stop()
+
+    model.track.assert_not_called()
+    model.predict.assert_called_once_with(
+        camera.read.return_value[1],
+        imgsz=service.img_size,
+        conf=service.model_config.conf_threshold,
+        iou=service.model_config.iou_threshold,
+        verbose=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_frame_skip_discards_one_iteration_before_reading_camera():
+    camera = MagicMock()
+    camera.read.return_value = (True, object())
+    model = MagicMock()
+    model.predict.return_value = []
+    service = CameraService(loop=asyncio.get_running_loop())
+    service.camera = camera
+    service.model = model
+    service.model_config = ModelConfig(name="mock.pt", enable_tracking=False)
+    service.skip_frame = True
+    frame_processed = threading.Event()
+
+    def on_frame(_frame, _detections):
+        with service._lock:
+            service.is_streaming = False
+        frame_processed.set()
+
+    service.on_frame = on_frame
+
+    assert await service.start_streaming() is True
+    assert await asyncio.to_thread(frame_processed.wait, 1)
+    await service.stop()
+
+    camera.read.assert_called_once_with()
+    model.predict.assert_called_once()
 
 
 @pytest.mark.asyncio

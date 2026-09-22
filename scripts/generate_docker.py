@@ -25,27 +25,28 @@ def _load_project_config(project_root: Path) -> dict:
 
 
 def _build_training_params(exp: dict, project: dict) -> dict:
-    train = project.get("training", {})
-    aug = exp.get("augmentation", train.get("augmentation", {}))
+    training_defaults = project.get("training", {})
+    augmentation = exp.get("augmentation", training_defaults.get("augmentation", {}))
     classes = project.get("classes", {})
     class_names = classes.get("names", ["glass", "metal", "paper", "plastic", "trash"])
+    class_count = classes.get("count", len(class_names))
 
     return {
-        "model": exp.get("model", train.get("default_model", "yolo11n.pt")),
-        "epochs": exp.get("epochs", train.get("default_epochs", 120)),
-        "batch_size": exp.get("batch_size", train.get("default_batch_size", 32)),
-        "imgsz": exp.get("imgsz", train.get("default_imgsz", 640)),
-        "lr0": exp.get("lr0", train.get("default_lr", 0.01)),
+        "model": exp.get("model", training_defaults.get("default_model", "yolo11n.pt")),
+        "epochs": exp.get("epochs", training_defaults.get("default_epochs", 120)),
+        "batch_size": exp.get("batch_size", training_defaults.get("default_batch_size", 32)),
+        "imgsz": exp.get("imgsz", training_defaults.get("default_imgsz", 640)),
+        "lr0": exp.get("lr0", training_defaults.get("default_lr", 0.01)),
         "lrf": exp.get("lrf", 0.01),
         "momentum": exp.get("momentum", 0.937),
         "weight_decay": exp.get("weight_decay", 0.0005),
         "warmup_epochs": exp.get("warmup_epochs", 3),
         "warmup_momentum": exp.get("warmup_momentum", 0.8),
-        "patience": exp.get("patience", train.get("early_stopping_patience", 30)),
+        "patience": exp.get("patience", training_defaults.get("early_stopping_patience", 30)),
         "workers": exp.get("workers", 4),
         "amp": exp.get("amp", True),
-        "augmentation": aug,
-        "num_classes": classes.get("count", len(class_names)),
+        "augmentation": augmentation,
+        "num_classes": class_count,
         "class_names": class_names,
     }
 
@@ -284,9 +285,9 @@ def main():
     parser.add_argument("--project-root", type=str, default=None, help="Path to MIRA project root")
     args = parser.parse_args()
 
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"Error: Config not found: {config_path}", file=sys.stderr)
+    experiment_path = Path(args.config)
+    if not experiment_path.exists():
+        print(f"Error: Config not found: {experiment_path}", file=sys.stderr)
         sys.exit(1)
 
     if args.project_root:
@@ -295,23 +296,23 @@ def main():
         project_root = Path(__file__).resolve().parent.parent
 
     project_config = _load_project_config(project_root)
-    exp_config = _load_experiment_config(config_path)
+    experiment_config = _load_experiment_config(experiment_path)
 
-    params = _build_training_params(exp_config, project_config)
+    params = _build_training_params(experiment_config, project_config)
 
     if args.output:
         output_dir = Path(args.output)
     else:
-        exp_name = exp_config.get("name", "mira_exp")
-        output_dir = Path(f"docker_{exp_name}")
+        experiment_name = experiment_config.get("name", "mira_exp")
+        output_dir = Path(f"docker_{experiment_name}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
     files = {
         "Dockerfile": generate_dockerfile(params),
         "docker-compose.yml": generate_docker_compose(),
-        "train.py": generate_train_script(params, exp_config),
-        "entrypoint.sh": generate_entrypoint(params, exp_config),
+        "train.py": generate_train_script(params, experiment_config),
+        "entrypoint.sh": generate_entrypoint(params, experiment_config),
     }
 
     for name, content in files.items():

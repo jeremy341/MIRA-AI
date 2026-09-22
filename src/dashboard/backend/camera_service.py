@@ -201,33 +201,34 @@ class CameraService:
         consecutive_read_failures = 0
 
         with self._lock:
-            local_conf = self.model_config.conf_threshold if self.model_config else 0.5
-            local_reject = self.model_config.reject_threshold if self.model_config else local_conf
-            local_iou = self.model_config.iou_threshold if self.model_config else 0.45
-            local_img_size = self.img_size
-            local_is_tflite_int8 = self.is_tflite_int8
-            local_enable_tracking = self.model_config.enable_tracking if self.model_config else False
-            local_target_latency = self.model_config.target_latency_ms if self.model_config else 50
+            config = self.model_config
+            confidence_threshold = config.conf_threshold if config else 0.5
+            reject_threshold = config.reject_threshold if config else confidence_threshold
+            iou_threshold = config.iou_threshold if config else 0.45
+            image_size = self.img_size
+            use_int8_tflite = self.is_tflite_int8
+            enable_tracking = config.enable_tracking if config else False
+            target_latency_ms = config.target_latency_ms if config else 50
 
         while True:
             try:
                 with self._lock:
                     if not self.is_streaming:
                         break
-                    cam = self.camera
-                    mod = self.model
+                    camera = self.camera
+                    model = self.model
                     if self.skip_frame:
                         self.skip_frame = False
                         continue
 
-                if cam is None or mod is None:
+                if camera is None or model is None:
                     break
 
-                ret, frame = cam.read()
+                frame_received, frame = camera.read()
                 with self._lock:
                     if not self.is_streaming:
                         break
-                if not ret:
+                if not frame_received:
                     consecutive_read_failures += 1
                     if consecutive_read_failures >= 30:
                         self._update_status(SystemStatus.ERROR, "Camera disconnected")
@@ -237,7 +238,7 @@ class CameraService:
                     time.sleep(0.01)
                     continue
                 consecutive_read_failures = 0
-                if hasattr(cam, "is_alive") and not cam.is_alive():
+                if hasattr(camera, "is_alive") and not camera.is_alive():
                     self._update_status(SystemStatus.ERROR, "Camera stream is frozen")
                     with self._lock:
                         self.is_streaming = False
@@ -245,35 +246,27 @@ class CameraService:
 
                 frame_start = time.perf_counter()
 
-                if local_is_tflite_int8:
-                    results = mod.predict(
+                if enable_tracking and not use_int8_tflite:
+                    results = model.track(
                         frame,
-                        imgsz=local_img_size,
-                        conf=local_conf,
-                        iou=local_iou,
-                        verbose=False,
-                    )
-                elif local_enable_tracking:
-                    results = mod.track(
-                        frame,
-                        imgsz=local_img_size,
-                        conf=local_conf,
-                        iou=local_iou,
+                        imgsz=image_size,
+                        conf=confidence_threshold,
+                        iou=iou_threshold,
                         persist=True,
                         verbose=False,
                         tracker=str(BYTE_TRACK_CONFIG_PATH),
                     )
                 else:
-                    results = mod.predict(
+                    results = model.predict(
                         frame,
-                        imgsz=local_img_size,
-                        conf=local_conf,
-                        iou=local_iou,
+                        imgsz=image_size,
+                        conf=confidence_threshold,
+                        iou=iou_threshold,
                         verbose=False,
                     )
 
                 inference_time = (time.perf_counter() - frame_start) * 1000
-                detections = self._process_results(results, local_conf, local_reject)
+                detections = self._process_results(results, confidence_threshold, reject_threshold)
                 self._update_performance_metrics(inference_time, results)
 
                 current_time = time.time()
@@ -290,10 +283,10 @@ class CameraService:
 
                 self._update_history(detections)
 
-                _callback = self.on_frame  # Capture under lock
-                if _callback:
+                frame_callback = self.on_frame
+                if frame_callback:
                     try:
-                        _callback(frame, detections)
+                        frame_callback(frame, detections)
                     except Exception as e:
                         logger.warning("Frame send error: %s", e)
 
@@ -302,7 +295,7 @@ class CameraService:
                         self.skip_frame = False
                     elif self.latency_history:
                         avg_latency = sum(self.latency_history) / len(self.latency_history)
-                        self.skip_frame = avg_latency > local_target_latency
+                        self.skip_frame = avg_latency > target_latency_ms
                     else:
                         self.skip_frame = False
 
