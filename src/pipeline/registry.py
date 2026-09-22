@@ -22,7 +22,6 @@ _COMMANDS: dict[str, CommandEntry] = {}
 
 
 def register_command(name: str, help_text: str, add_args: Callable | None = None):
-
     def decorator(func):
         if name in _COMMANDS:
             _logging.warning("Command '%s' being overwritten", name)
@@ -50,13 +49,18 @@ def init_adapters() -> None:
     # Register built-in model adapters.
     from .models import YOLOAdapter, YOLOTFLiteAdapter, ThirdPartyAdapter
 
-    for key, desc, cls in [
+    built_in_adapters = [
         ("yolo_pt", "Ultralytics YOLO .pt models", YOLOAdapter),
         ("yolo_tflite", "YOLO-exported TFLite models", YOLOTFLiteAdapter),
         ("third_party", "Third-party models", ThirdPartyAdapter),
-    ]:
-        if key not in _MODEL_ADAPTERS:
-            _MODEL_ADAPTERS[key] = ModelAdapterEntry(model_type=key, adapter_class=cls, description=desc)
+    ]
+    for model_type, description, adapter_class in built_in_adapters:
+        if model_type not in _MODEL_ADAPTERS:
+            _MODEL_ADAPTERS[model_type] = ModelAdapterEntry(
+                model_type=model_type,
+                adapter_class=adapter_class,
+                description=description,
+            )
 
 
 def get_model_adapters() -> dict[str, ModelAdapterEntry]:

@@ -1,8 +1,9 @@
 """Data models for MIRA Control Center API."""
 
 from datetime import datetime, timezone
-from pydantic import BaseModel, Field
 from enum import StrEnum
+
+from pydantic import BaseModel, Field
 
 
 class WasteClass(StrEnum):

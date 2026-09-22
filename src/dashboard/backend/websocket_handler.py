@@ -6,6 +6,7 @@ import base64
 import logging
 import threading
 from datetime import datetime, timezone
+
 import cv2
 import numpy as np
 from starlette.websockets import WebSocketDisconnect
@@ -52,13 +53,15 @@ class WebSocketHandler:
                     continue
 
                 connections = list(self.connections)
-                tasks = [websocket.send_json(message) for websocket in connections]
+                sends = [websocket.send_json(message) for websocket in connections]
 
-                if tasks:
-                    results = await asyncio.gather(*tasks, return_exceptions=True)
-                    for websocket, result in zip(connections, results, strict=True):
-                        if isinstance(result, Exception):
-                            self.connections.discard(websocket)
+                if not sends:
+                    continue
+
+                results = await asyncio.gather(*sends, return_exceptions=True)
+                for websocket, result in zip(connections, results, strict=True):
+                    if isinstance(result, Exception):
+                        self.connections.discard(websocket)
             except asyncio.CancelledError:
                 break
             except Exception:
@@ -67,20 +70,28 @@ class WebSocketHandler:
     def _enqueue_message(self, message: dict):
         message_type = message.get("type")
         if self._broadcast_queue.full():
-            queued = []
+            queued_messages = []
             while True:
                 try:
-                    queued.append(self._broadcast_queue.get_nowait())
+                    queued_messages.append(self._broadcast_queue.get_nowait())
                 except asyncio.QueueEmpty:
                     break
 
-            frame_index = next((index for index, item in enumerate(queued) if item.get("type") == "frame"), None)
-            if frame_index is None:
+            oldest_frame = next(
+                (
+                    index
+                    for index, queued_message in enumerate(queued_messages)
+                    if queued_message.get("type") == "frame"
+                ),
+                None,
+            )
+            if oldest_frame is None:
                 logger.warning("Dropping full dashboard event: %s", message_type)
                 return
-            queued.pop(frame_index)
-            for item in queued:
-                self._broadcast_queue.put_nowait(item)
+
+            queued_messages.pop(oldest_frame)
+            for queued_message in queued_messages:
+                self._broadcast_queue.put_nowait(queued_message)
 
         try:
             self._broadcast_queue.put_nowait(message)
@@ -146,6 +157,19 @@ class WebSocketHandler:
             }
         )
 
+    @staticmethod
+    def _serialize_detections(detections: list[Detection] | None) -> list[dict]:
+        return [
+            {
+                "class": detection.class_name.value,
+                "confidence": detection.confidence,
+                "bbox": detection.bbox,
+                "track_id": detection.track_id,
+                "timestamp": detection.timestamp.isoformat(),
+            }
+            for detection in detections or []
+        ]
+
     def update_frame(self, frame: np.ndarray, detections: list[Detection] | None = None):
         if frame is None:
             return
@@ -160,16 +184,7 @@ class WebSocketHandler:
                 self._frame_id += 1
                 return
 
-        serialized_detections = [
-            {
-                "class": det.class_name.value,
-                "confidence": det.confidence,
-                "bbox": det.bbox,
-                "track_id": det.track_id,
-                "timestamp": det.timestamp.isoformat(),
-            }
-            for det in detections
-        ]
+        serialized_detections = self._serialize_detections(detections)
 
         with self._lock:
             self.frame_buffer = to_store
@@ -208,16 +223,7 @@ class WebSocketHandler:
                 "type": "frame",
                 "frame_id": frame_id,
                 "frame": frame_data,
-                "detections": [
-                    {
-                        "class": det.class_name.value,
-                        "confidence": det.confidence,
-                        "bbox": det.bbox,
-                        "track_id": det.track_id,
-                        "timestamp": det.timestamp.isoformat(),
-                    }
-                    for det in (detections or [])
-                ],
+                "detections": self._serialize_detections(detections),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
