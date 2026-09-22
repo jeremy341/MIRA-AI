@@ -81,7 +81,12 @@ class InferenceEngine:
 
     def _load_model(self, imgsz: int | None):
         # Load YOLO model with TFLite/INT8-specific configuration.
-        available = sorted(p.name for p in DETECTION_DIR.glob("*") if p.suffix.lower() in (".pt", ".tflite", ".keras"))
+        available = []
+        supported_suffixes = (".pt", ".tflite", ".keras")
+        for model_file in DETECTION_DIR.glob("*"):
+            if model_file.suffix.lower() in supported_suffixes:
+                available.append(model_file.name)
+        available.sort()
 
         logger.info("\nAvailable models in models/:")
         for name in available:
@@ -91,12 +96,15 @@ class InferenceEngine:
         logger.info("")
 
         if not self.model_path.exists():
+            available_names = ", ".join(available)
+            error_message = (
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
+                f"Available models: {available_names}"
+            )
             logger.error(
-                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\nAvailable models: {', '.join(available)}"
+                error_message
             )
-            raise FileNotFoundError(
-                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\nAvailable models: {', '.join(available)}"
-            )
+            raise FileNotFoundError(error_message)
 
         if "classifier" in self.model_name.lower():
             logger.error(f"\nERROR: '{self.model_name}' is a CLASSIFIER model, not a detector.")
@@ -126,8 +134,11 @@ class InferenceEngine:
                 logger.info(f"TFLite INT8 model: input {self.img_size}x{self.img_size}")
             else:
                 logger.info(f"TFLite model: input {self.img_size}x{self.img_size}")
+        elif not imgsz:
+            self.img_size = DEFAULT_IMGSZ
+            logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
         else:
-            self.img_size = imgsz or DEFAULT_IMGSZ
+            self.img_size = imgsz
             logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
         if self.is_tflite_int8 and not self._conf_was_explicit:
@@ -264,22 +275,40 @@ class InferenceEngine:
         frame_time = curr_time - self.prev_time
         self.prev_time = curr_time
 
-        self._current_fps = 1.0 / max(frame_time, 1e-6)
+        shortest_frame_time = 1e-6
+        self._current_fps = 1.0 / max(frame_time, shortest_frame_time)
         if not results or len(results) == 0:
             self.skip_frame = False
             return
-        speed = getattr(results[0], "speed", None) or {}
-        latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
+        speed = getattr(results[0], "speed", None)
+        if not speed:
+            speed = {}
+        if isinstance(speed, dict):
+            latency_ms = speed.get("inference", 0)
+        else:
+            latency_ms = 0
         self.latency_history.append(latency_ms)
         avg_latency = sum(self.latency_history) / len(self.latency_history)
-
         self.skip_frame = avg_latency > self.target_latency_ms
 
     def _draw_status(self, frame, results):
         # Draw status overlay on the annotated frame.
-        speed = getattr(results[0], "speed", None) or {} if results else {}
-        latency_ms = speed.get("inference", 0) if isinstance(speed, dict) else 0
-        avg_latency = sum(self.latency_history) / len(self.latency_history) if self.latency_history else 0
+        if results:
+            speed = getattr(results[0], "speed", None)
+            if not speed:
+                speed = {}
+        else:
+            speed = {}
+
+        if isinstance(speed, dict):
+            latency_ms = speed.get("inference", 0)
+        else:
+            latency_ms = 0
+
+        if self.latency_history:
+            avg_latency = sum(self.latency_history) / len(self.latency_history)
+        else:
+            avg_latency = 0
         fps = self._current_fps
 
         status_text = (
