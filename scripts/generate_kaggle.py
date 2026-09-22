@@ -1,252 +1,34 @@
-"""Generate a Kaggle training notebook from experiment config."""
-
-import argparse
-import json
-import sys
 from pathlib import Path
+import sys
 
-import yaml
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
+from src.notebooks.kaggle import generate_kaggle_notebook, main as _generate_main
+from src.notebooks.common import (
+    build_training_params as _build_training_params,
+    code_cell as _code_cell,
+    load_experiment_config as _load_experiment_config,
+    load_project_config as _load_project_config,
+    markdown_cell as _md_cell,
+    notebook_cell_lines as _cell_lines,
+)
 
-def _load_experiment_config(config_path: Path) -> dict:
-    try:
-        with open(config_path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(f"Error: invalid YAML in {config_path}: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-def _load_project_config(project_root: Path) -> dict:
-    try:
-        with open(project_root / "mira.yaml", encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        print(f"Error: invalid YAML in mira.yaml: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-def _build_training_params(exp: dict, project: dict) -> dict:
-    train = project.get("training", {})
-    aug = exp.get("augmentation", train.get("augmentation", {}))
-
-    return {
-        "model": exp.get("model", train.get("default_model", "yolo11n.pt")),
-        "epochs": exp.get("epochs", train.get("default_epochs", 120)),
-        "batch_size": exp.get("batch_size", train.get("default_batch_size", 32)),
-        "imgsz": exp.get("imgsz", train.get("default_imgsz", 640)),
-        "lr0": exp.get("lr0", train.get("default_lr", 0.01)),
-        "lrf": exp.get("lrf", 0.01),
-        "momentum": exp.get("momentum", 0.937),
-        "weight_decay": exp.get("weight_decay", 0.0005),
-        "warmup_epochs": exp.get("warmup_epochs", 3),
-        "warmup_momentum": exp.get("warmup_momentum", 0.8),
-        "patience": exp.get("patience", train.get("early_stopping_patience", 30)),
-        "workers": exp.get("workers", 4),
-        "amp": exp.get("amp", True),
-        "augmentation": aug,
-    }
-
-
-def _cell_lines(source: str) -> list[str]:
-    source_lines = source.split("\n")
-    notebook_lines = []
-    for line in source_lines[:-1]:
-        notebook_lines.append(line + "\n")
-    if source_lines[-1]:
-        notebook_lines.append(source_lines[-1])
-    return notebook_lines
-
-
-def _md_cell(source: str) -> dict:
-    return {
-        "cell_type": "markdown",
-        "metadata": {},
-        "source": _cell_lines(source),
-    }
-
-
-def _code_cell(source: str) -> dict:
-    return {
-        "cell_type": "code",
-        "metadata": {},
-        "source": _cell_lines(source),
-        "execution_count": None,
-        "outputs": [],
-    }
-
-
-def generate_kaggle_notebook(exp: dict, project: dict) -> dict:
-    params = _build_training_params(exp, project)
-    classes = project.get("classes", {})
-    class_names = classes.get("names", ["glass", "metal", "paper", "plastic", "trash"])
-    num_classes = classes.get("count", len(class_names))
-    exp_name = exp.get("name", "mira_exp")
-    export_formats = exp.get("export", {}).get("formats", ["tflite_int8", "onnx"])
-
-    augmentation = params["augmentation"]
-    augmentation_arguments = []
-    for argument_name, argument_value in augmentation.items():
-        augmentation_arguments.append(f"{argument_name}={argument_value}")
-    aug_lines = ",\n        ".join(augmentation_arguments)
-
-    export_cells = ""
-    if "tflite_int8" in export_formats:
-        export_cells += (
-            f'print("\\nExporting to TFLite INT8...")\n'
-            f'model.export(format="tflite", int8=True, imgsz={params["imgsz"]})\n'
-            'print("  TFLite INT8 exported")\n'
-        )
-    if "onnx" in export_formats:
-        export_cells += f'model.export(format="onnx", imgsz={params["imgsz"]})\nprint("  ONNX exported")\n'
-
-    notebook = {
-        "nbformat": 4,
-        "nbformat_minor": 5,
-        "metadata": {
-            "kaggle": {
-                "accelerator": "GPU",
-                "dataSources": [],
-                "isGpuEnabled": True,
-                "isInternetEnabled": True,
-                "language": "python",
-            },
-            "kernelspec": {
-                "display_name": "Python 3",
-                "language": "python",
-                "name": "python3",
-            },
-            "language_info": {
-                "name": "python",
-                "version": "3.11.0",
-            },
-        },
-        "cells": [
-            _md_cell(
-                f"# MIRA Training - {exp_name}\n\n"
-                f"YOLO11 training notebook for Kaggle GPU.\n\n"
-                f"**Classes:** {class_names}\n"
-                f"**Model:** {params['model']}\n"
-                f"**Epochs:** {params['epochs']}"
-            ),
-            _code_cell(
-                "# Install dependencies\n"
-                "!pip install -q ultralytics\n\n"
-                "import yaml\n"
-                "from pathlib import Path\n"
-                "from ultralytics import YOLO"
-            ),
-            _md_cell("## Dataset Setup"),
-            _code_cell(
-                "# Detect dataset in /kaggle/input\n"
-                "input_dir = Path('/kaggle/input')\n"
-                "data_root = None\n"
-                "for d in input_dir.iterdir():\n"
-                "    if d.is_dir() and (d / 'images').exists():\n"
-                "        data_root = d\n"
-                "        break\n"
-                "if data_root is None:\n"
-                "    # Search deeper\n"
-                "    for d in input_dir.iterdir():\n"
-                "        if d.is_dir():\n"
-                "            for sub in d.rglob('images/train'):\n"
-                "                if sub.is_dir():\n"
-                "                    data_root = sub.parent.parent\n"
-                "                    break\n"
-                "        if data_root:\n"
-                "            break\n"
-                "assert data_root is not None, 'No dataset found in /kaggle/input'\n"
-                "print(f'Using dataset: {data_root}')"
-            ),
-            _code_cell(
-                "# Write dataset.yaml\n"
-                "work_dir = Path('/kaggle/working')\n"
-                "yaml_path = work_dir / 'dataset.yaml'\n"
-                f'names_yaml = "[" + ", ".join(f"\'{{c}}\'" for c in {class_names}) + "]"\n'
-                # \n" "train: {data_root}/images/train\n" "val: {data_root}/images/val\n" f"nc: {num_classes}\n" "names: {names_yaml}\n" "
-                f"yaml_content = f'train: {{data_root}}/images/train\\nval: {{data_root}}/images/val\\nnc: {num_classes}\\nnames: {{names_yaml}}\\n'\n"
-                "yaml_path.write_text(yaml_content.strip())\n"
-                "print(f'Written: {yaml_path}')"
-            ),
-            _md_cell("## Training"),
-            _code_cell(
-                f"model = YOLO('{params['model']}')\n\n"
-                f"model.train(\n"
-                f"    data=str(yaml_path),\n"
-                f"    epochs={params['epochs']},\n"
-                f"    batch={params['batch_size']},\n"
-                f"    imgsz={params['imgsz']},\n"
-                f"    patience={params['patience']},\n"
-                "    device='0',\n"
-                f"    project=str(work_dir / 'runs'),\n"
-                f"    name='{exp_name}',\n"
-                "    exist_ok=True,\n"
-                f"    amp={params['amp']},\n"
-                f"    workers={params['workers']},\n"
-                f"    lr0={params['lr0']},\n"
-                f"    lrf={params['lrf']},\n"
-                f"    momentum={params['momentum']},\n"
-                f"    weight_decay={params['weight_decay']},\n"
-                f"    warmup_epochs={params['warmup_epochs']},\n"
-                f"    warmup_momentum={params['warmup_momentum']},\n"
-                "    box=7.5,\n"
-                "    cls=0.5,\n"
-                "    dfl=1.5,\n"
-                f"    {aug_lines},\n"
-                ")"
-            ),
-            _md_cell("## Evaluation"),
-            _code_cell(
-                "metrics = model.val()\n"
-                "print(f'mAP50:    {metrics.box.map50:.3f}')\n"
-                "print(f'mAP50-95: {metrics.box.map:.3f}')"
-            ),
-            _md_cell("## Export"),
-            _code_cell(export_cells.strip()),
-            _md_cell("## Download from Kaggle"),
-            _code_cell(
-                "# The trained model is saved to /kaggle/working/runs/\n"
-                "# Enable 'Internet' and 'GPU' in notebook settings.\n"
-                "# After training, download the weights from the Output panel."
-            ),
-        ],
-    }
-    return notebook
+__all__ = [
+    "_build_training_params",
+    "_cell_lines",
+    "_code_cell",
+    "_load_experiment_config",
+    "_load_project_config",
+    "_md_cell",
+    "generate_kaggle_notebook",
+    "main",
+]
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate a Kaggle training notebook")
-    parser.add_argument("--config", type=str, required=True, help="Path to experiment YAML config")
-    parser.add_argument(
-        "--output", type=str, default=None, help="Output .ipynb path (default: <exp_name>_kaggle.ipynb)"
-    )
-    parser.add_argument("--project-root", type=str, default=None, help="Path to MIRA project root")
-    args = parser.parse_args()
-
-    config_path = Path(args.config)
-    if not config_path.exists():
-        print(f"Error: Config not found: {config_path}", file=sys.stderr)
-        sys.exit(1)
-
-    if args.project_root:
-        project_root = Path(args.project_root)
-    else:
-        project_root = Path(__file__).resolve().parent.parent
-
-    project_config = _load_project_config(project_root)
-    experiment_config = _load_experiment_config(config_path)
-
-    notebook = generate_kaggle_notebook(experiment_config, project_config)
-
-    if args.output:
-        output_path = Path(args.output)
-    else:
-        experiment_name = experiment_config.get("name", "mira_exp")
-        output_path = Path(f"{experiment_name}_kaggle.ipynb")
-
-    notebook_json = json.dumps(notebook, indent=1)
-    output_path.write_text(notebook_json, encoding="utf-8")
-    print(f"Kaggle notebook generated: {output_path}")
+    _generate_main(_PROJECT_ROOT)
 
 
 if __name__ == "__main__":
