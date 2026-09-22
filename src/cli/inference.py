@@ -84,11 +84,10 @@ AVAILABLE_MODELS = {
 
 def _resolve_model_filename(model_name: str) -> str:
     raw_path = Path(model_name)
-    candidate = (
-        (DETECTION_DIR / raw_path).resolve()
-        if raw_path.parent == Path(".")
-        else resolve_safe_path(raw_path, base_dir=ROOT_DIR)
-    )
+    if raw_path.parent == Path("."):
+        candidate = (DETECTION_DIR / raw_path).resolve()
+    else:
+        candidate = resolve_safe_path(raw_path, base_dir=ROOT_DIR)
     try:
         candidate.relative_to(DETECTION_DIR.resolve())
     except ValueError:
@@ -130,9 +129,16 @@ def resolve_detection_data_yaml(explicit_path=None):
 def _pick_model_interactive(title="Available models"):
     registry = ModelRegistry()
     registry.discover()
-    models = registry.list_models()
-    labels = {m["name"]: m["label"] for m in models}
-    return pick_model([m["name"] for m in models], labels=labels, title=title)
+    available_models = registry.list_models()
+
+    model_names = []
+    model_labels = {}
+    for model_info in available_models:
+        model_name = model_info["name"]
+        model_names.append(model_name)
+        model_labels[model_name] = model_info["label"]
+
+    return pick_model(model_names, labels=model_labels, title=title)
 
 
 def _add_eval_yolo_args(parser):
@@ -222,15 +228,17 @@ def cmd_live(args):
     from src.inference_engine import InferenceEngine
 
     try:
-        w, h = map(int, args.resolution.split("x"))
+        width_text, height_text = args.resolution.split("x")
+        width = int(width_text)
+        height = int(height_text)
     except (ValueError, AttributeError):
         print(f"Error: Invalid resolution format '{args.resolution}'. Use WIDTHxHEIGHT (e.g., 640x480)")
         sys.exit(1)
     engine = InferenceEngine(
         model_name=model,
         camera_index=args.camera,
-        cam_width=w,
-        cam_height=h,
+        cam_width=width,
+        cam_height=height,
         target_latency_ms=args.target_latency,
         conf_threshold=args.conf,
         reject_threshold=args.reject,
@@ -249,7 +257,9 @@ def _add_download_args(parser):
 def cmd_download(args):
     registry = ModelRegistry()
     registry.discover()
-    bundled = {model["name"]: model for model in registry.list_models()}
+    bundled = {}
+    for model_info in registry.list_models():
+        bundled[model_info["name"]] = model_info
 
     if args.model_name and not args.all and not args.list_only:
         if args.model_name not in bundled:

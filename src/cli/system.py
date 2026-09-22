@@ -56,7 +56,10 @@ def cmd_doctor(args):
     print("\n  [5/5] Datasets")
     ds_registry = DatasetRegistry()
     ds_count = ds_registry.discover()
-    available = [s for s in ds_registry.list_sources() if s["exists"]]
+    available = []
+    for source in ds_registry.list_sources():
+        if source["exists"]:
+            available.append(source)
     if available:
         print(f"    [OK] {len(available)}/{ds_count} dataset source(s) available")
         for s in available:
@@ -95,9 +98,9 @@ def cmd_config(args):
 
         print("\n  mira.yaml is valid")
 
-        classes = PROJECT_CONFIG.get("classes", {})
-        names = classes.get("names", [])
-        print(f"  Classes: {', '.join(names)}")
+        class_config = PROJECT_CONFIG.get("classes", {})
+        class_names = class_config.get("names", [])
+        print(f"  Classes: {', '.join(class_names)}")
 
         training = PROJECT_CONFIG.get("training", {})
         model = training.get("default_model", "yolo11n.pt")
@@ -107,11 +110,13 @@ def cmd_config(args):
 
         datasets_dir = ROOT_DIR / "datasets"
         if datasets_dir.exists():
-            found = [
-                d.name
-                for d in datasets_dir.iterdir()
-                if d.is_dir() and not d.name.startswith(".") and d.name != "registry"
-            ]
+            found = []
+            for dataset_dir in datasets_dir.iterdir():
+                if not dataset_dir.is_dir():
+                    continue
+                if dataset_dir.name.startswith(".") or dataset_dir.name == "registry":
+                    continue
+                found.append(dataset_dir.name)
             if found:
                 print(f"  Datasets: {', '.join(found)}")
             else:
@@ -120,8 +125,11 @@ def cmd_config(args):
             print("  Datasets: directory missing")
 
         if MODELS_DIR.exists():
-            pt_count = len(list(DETECTION_DIR.glob("*.pt"))) if DETECTION_DIR.exists() else 0
-            tflite_count = len(list(DETECTION_DIR.glob("*.tflite"))) if DETECTION_DIR.exists() else 0
+            pt_count = 0
+            tflite_count = 0
+            if DETECTION_DIR.exists():
+                pt_count = len(list(DETECTION_DIR.glob("*.pt")))
+                tflite_count = len(list(DETECTION_DIR.glob("*.tflite")))
             print(f"  Models: {pt_count} .pt, {tflite_count} .tflite")
         else:
             print("  Models: directory missing")
@@ -150,7 +158,10 @@ def cmd_models(args):
     print("-" * 76)
     for m in models:
         size = m.get("size_mb")
-        size_str = f"{size:.1f} MB" if isinstance(size, (int, float)) else ""
+        if isinstance(size, (int, float)):
+            size_str = f"{size:.1f} MB"
+        else:
+            size_str = ""
         print(f"{m['label']:<50} {m['model_type']:<16} {size_str:<10}")
 
 
@@ -175,7 +186,8 @@ def cmd_experiments(args):
             except _yaml.YAMLError as e:
                 print(f"  Warning: Could not parse {p.name}: {e}")
                 continue
-        desc = (data or {}).get("name", (data or {}).get("model", ""))
+        experiment_data = data or {}
+        desc = experiment_data.get("name", experiment_data.get("model", ""))
         print(f"{p.name:<50} {desc}")
 
 

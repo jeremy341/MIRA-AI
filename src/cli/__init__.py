@@ -31,7 +31,8 @@ def main():
     parser.add_argument("--version", action="version", version=f"MIRA {__version__}")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
-    for name, entry in get_commands().items():
+    registered_commands = get_commands()
+    for name, entry in registered_commands.items():
         sub = subparsers.add_parser(name, help=entry.help_text)
         if entry.add_args:
             entry.add_args(sub)
@@ -42,10 +43,9 @@ def main():
         parser.print_help()
         return
 
-    commands = get_commands()
-    if args.command in commands:
+    if args.command in registered_commands:
         try:
-            commands[args.command].fn(args)
+            registered_commands[args.command].fn(args)
         except MiraError as e:
             logger.error(str(e))
             print(f"\nError: {e}")

@@ -77,6 +77,51 @@ def test_all_commands_registered():
     assert len(found) >= 16, f"Expected >= 16 commands, got {len(found)}"
 
 
+def test_command_registration_order_is_stable():
+    from src.pipeline.registry import get_commands
+
+    assert list(get_commands()) == [
+        "train",
+        "export",
+        "eval-yolo",
+        "live",
+        "download",
+        "merge",
+        "datasets",
+        "validate",
+        "doctor",
+        "config",
+        "models",
+        "experiments",
+        "benchmark",
+        "generate",
+        "dashboard",
+        "wizard",
+    ]
+
+
+def test_main_dispatches_registered_command_and_preserves_error_exit(capsys, monkeypatch):
+    from types import SimpleNamespace
+
+    import src.cli as cli
+    from src.exceptions import MiraError
+
+    def fail(_args):
+        raise MiraError("expected failure")
+
+    monkeypatch.setattr(sys, "argv", ["mira", "sample"])
+    monkeypatch.setattr(
+        cli,
+        "get_commands",
+        lambda: {"sample": SimpleNamespace(help_text="sample command", add_args=None, fn=fail)},
+    )
+    with pytest.raises(SystemExit) as exit_error:
+        cli.main()
+
+    assert exit_error.value.code == 1
+    assert "Error: expected failure" in capsys.readouterr().out
+
+
 def test_commands_have_help_text():
     from src.pipeline.registry import get_commands
 
