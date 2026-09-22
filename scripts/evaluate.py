@@ -266,7 +266,6 @@ def compute_per_class_ap(
     ground_truth_count = sum(len(objects) for objects in ground_truth_by_image.values())
     if ground_truth_count == 0:
         logger.warning("Per-class AP class_id=%s: no ground-truth boxes for this class (AP=0.0)", class_id)
-    if ground_truth_count == 0:
         return np.array([0.0]), np.array([0.0]), 0.0
 
     true_positive_flags = np.zeros(len(all_detections))

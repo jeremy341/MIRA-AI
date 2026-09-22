@@ -137,9 +137,8 @@ def serialize_config(config: Any, path: str | Path) -> Path:
         data["__serialized_at__"] = datetime.now(timezone.utc).isoformat()
 
     _backup_if_exists(path)
-    converted_data = _dataclass_to_dict(data)
     serialized_text = yaml.safe_dump(
-        converted_data,
+        data,
         default_flow_style=False,
         sort_keys=False,
     )

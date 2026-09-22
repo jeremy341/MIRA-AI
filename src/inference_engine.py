@@ -80,14 +80,32 @@ class InferenceEngine:
         self._current_fps = 0.0
 
     def _load_model(self, imgsz: int | None):
-        # Load YOLO model with TFLite/INT8-specific configuration.
+        available = self._available_model_names()
+        self._log_available_models(available)
+        self._validate_model(available)
+
+        task_type = "detect"
+        try:
+            self.model = YOLO(str(self.model_path), task=task_type)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model {self.model_name}: {e}") from e
+
+        self.is_tflite_int8 = self.model_path.suffix.lower() == ".tflite" and "int8" in self.model_name.lower()
+        self._configure_image_size(imgsz)
+        self._configure_int8_confidence()
+        self._configure_tracking_support()
+
+    @staticmethod
+    def _available_model_names() -> list[str]:
         available = []
         supported_suffixes = (".pt", ".tflite", ".keras")
         for model_file in DETECTION_DIR.glob("*"):
             if model_file.suffix.lower() in supported_suffixes:
                 available.append(model_file.name)
         available.sort()
+        return available
 
+    def _log_available_models(self, available: list[str]) -> None:
         logger.info("\nAvailable models in models/:")
         for name in available:
             marker = "  <-- selected" if name == self.model_name else ""
@@ -95,15 +113,14 @@ class InferenceEngine:
             logger.info(f"  {name}{marker}{int8_marker}")
         logger.info("")
 
+    def _validate_model(self, available: list[str]) -> None:
         if not self.model_path.exists():
             available_names = ", ".join(available)
             error_message = (
                 f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
                 f"Available models: {available_names}"
             )
-            logger.error(
-                error_message
-            )
+            logger.error(error_message)
             raise FileNotFoundError(error_message)
 
         if "classifier" in self.model_name.lower():
@@ -113,14 +130,7 @@ class InferenceEngine:
                 f"Model '{self.model_name}' is a classifier, not a detector. Use a detection model for live detection."
             )
 
-        task_type = "detect"
-        try:
-            self.model = YOLO(str(self.model_path), task=task_type)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load model {self.model_name}: {e}") from e
-
-        self.is_tflite_int8 = self.model_path.suffix.lower() == ".tflite" and "int8" in self.model_name.lower()
-
+    def _configure_image_size(self, imgsz: int | None) -> None:
         if self.model_path.suffix.lower() == ".tflite":
             native_img_size = get_tflite_imgsz(self.model_path)
             if imgsz is not None and imgsz != native_img_size:
@@ -141,6 +151,7 @@ class InferenceEngine:
             self.img_size = imgsz
             logger.info(f"PyTorch model: input {self.img_size}x{self.img_size}")
 
+    def _configure_int8_confidence(self) -> None:
         if self.is_tflite_int8 and not self._conf_was_explicit:
             # INT8 quantization compresses confidence scores toward 0.5;
             # use 0.25 so low-confidence detections are still visible.
@@ -149,7 +160,7 @@ class InferenceEngine:
         elif self.is_tflite_int8:
             logger.info(f"Using requested confidence threshold {self.conf_threshold} for INT8 model.")
 
-        # TFLite models don't support ByteTrack; disable tracking
+    def _configure_tracking_support(self) -> None:
         if self.model_path.suffix.lower() == ".tflite" and self.enable_tracking:
             self.enable_tracking = False
             logger.info("Tracking disabled - not supported for TFLite models.")
