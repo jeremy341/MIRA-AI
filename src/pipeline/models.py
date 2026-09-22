@@ -468,6 +468,12 @@ class ModelRegistry:
         if not self.detection_dir.exists():
             return 0
 
+        sidecar_meta = self._discover_sidecar_metadata()
+        self._register_sidecar_models(sidecar_meta)
+        self._register_standalone_models()
+        return len(self._models)
+
+    def _discover_sidecar_metadata(self) -> dict[str, dict]:
         sidecar_meta: dict[str, dict] = {}
 
         for p in sorted(self.detection_dir.iterdir()):
@@ -478,7 +484,9 @@ class ModelRegistry:
                     meta = self._load_sidecar_meta(p)
                     if meta:
                         sidecar_meta[name] = meta
+        return sidecar_meta
 
+    def _register_sidecar_models(self, sidecar_meta: dict[str, dict]) -> None:
         for name, meta in sidecar_meta.items():
             pt_path = self.detection_dir / f"{name}.pt"
             if pt_path.exists():
@@ -508,6 +516,7 @@ class ModelRegistry:
                         "is_third_party": False,
                     }
 
+    def _register_standalone_models(self) -> None:
         for p in sorted(self.detection_dir.iterdir()):
             if not p.is_file():
                 continue
@@ -538,8 +547,6 @@ class ModelRegistry:
                     "label": p.stem,
                     "is_third_party": False,
                 }
-
-        return len(self._models)
 
     def _load_sidecar_meta(self, yaml_path: Path) -> dict | None:
         import yaml

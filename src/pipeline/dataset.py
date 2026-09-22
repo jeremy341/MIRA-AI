@@ -278,6 +278,79 @@ class DatasetRegistry:
 
         return total_added, total_skipped
 
+    @staticmethod
+    def _find_coco_image(
+        source_path: Path,
+        split_name: str,
+        image_filename: str,
+    ) -> Path | None:
+        image_name = Path(image_filename).name
+        image_candidates = [source_path / image_filename]
+        image_candidates.append(source_path / "images" / image_name)
+        image_candidates.append(source_path / "images" / split_name / image_name)
+        source_root = source_path.resolve()
+        for candidate_path in image_candidates:
+            candidate = candidate_path.resolve()
+            try:
+                candidate.relative_to(source_root)
+            except ValueError:
+                continue
+            if candidate.exists():
+                return candidate
+        return None
+
+    @staticmethod
+    def _coco_annotations_to_yolo_lines(
+        annotations: list[dict],
+        class_mapping: dict[int, int] | None,
+        image_width: int,
+        image_height: int,
+    ) -> list[str]:
+        yolo_lines: list[str] = []
+        for annotation in annotations:
+            category_id = annotation["category_id"]
+            if class_mapping:
+                if category_id not in class_mapping:
+                    continue
+                target_category_id = class_mapping[category_id]
+            else:
+                target_category_id = category_id
+
+            x, y, box_width, box_height = annotation["bbox"]
+            center_x = (x + box_width / 2.0) / image_width
+            center_y = (y + box_height / 2.0) / image_height
+            normalized_width = box_width / image_width
+            normalized_height = box_height / image_height
+            yolo_lines.append(
+                f"{target_category_id} {center_x:.6f} {center_y:.6f} "
+                f"{normalized_width:.6f} {normalized_height:.6f}\n"
+            )
+        return yolo_lines
+
+    @staticmethod
+    def _write_coco_image(
+        output: Path,
+        source_key: str,
+        split_name: str,
+        image_id: int,
+        image_filename: str,
+        image_path: Path,
+        yolo_lines: list[str],
+        destination_split: str,
+    ) -> None:
+        destination_image_dir = output / "images" / destination_split
+        destination_label_dir = output / "labels" / destination_split
+        destination_image_dir.mkdir(parents=True, exist_ok=True)
+        destination_label_dir.mkdir(parents=True, exist_ok=True)
+
+        output_stem = f"{source_key}_{split_name}_{image_id}_{Path(image_filename).stem}"
+        destination_image = destination_image_dir / f"{output_stem}{image_path.suffix.lower()}"
+        shutil.copy2(image_path, destination_image)
+
+        label_path = destination_label_dir / f"{output_stem}.txt"
+        with open(label_path, "w", encoding="utf-8") as label_file:
+            label_file.writelines(yolo_lines)
+
     def _merge_coco(
         self,
         source: DatasetSource,
@@ -326,71 +399,40 @@ class DatasetRegistry:
                     total_skipped += 1
                     continue
 
-                # Locate the image file
                 img_filename = img_info["file_name"]
-                image_name = Path(img_filename).name
-                image_candidates = [source.input_path / img_filename]
-                image_candidates.append(source.input_path / "images" / image_name)
-                image_candidates.append(source.input_path / "images" / split_name / image_name)
-                img_path = None
-                source_root = source.input_path.resolve()
-                for candidate_path in image_candidates:
-                    candidate = candidate_path.resolve()
-                    try:
-                        candidate.relative_to(source_root)
-                    except ValueError:
-                        continue
-                    if candidate.exists():
-                        img_path = candidate
-                        break
+                img_path = self._find_coco_image(
+                    source.input_path,
+                    split_name,
+                    img_filename,
+                )
                 if img_path is None:
                     logger.debug("  Image not found for annotation: %s", img_filename)
                     total_skipped += 1
                     continue
 
-                # Convert annotations to YOLO format
                 image_width = img_info["width"]
                 image_height = img_info["height"]
                 if image_width <= 0 or image_height <= 0:
                     total_skipped += 1
                     continue
-                yolo_lines: list[str] = []
-                for ann in anns:
-                    cat_id = ann["category_id"]
-
-                    # Apply class mapping if provided
-                    if source.class_mapping:
-                        if cat_id not in source.class_mapping:
-                            continue
-                        target_cat_id = source.class_mapping[cat_id]
-                    else:
-                        target_cat_id = cat_id
-
-                    # COCO bbox: [x, y, width, height] -> YOLO: [class x_center y_center w h] (normalized)
-                    x, y, box_width, box_height = ann["bbox"]
-                    center_x = (x + box_width / 2.0) / image_width
-                    center_y = (y + box_height / 2.0) / image_height
-                    normalized_width = box_width / image_width
-                    normalized_height = box_height / image_height
-                    yolo_line = (
-                        f"{target_cat_id} {center_x:.6f} {center_y:.6f} "
-                        f"{normalized_width:.6f} {normalized_height:.6f}\n"
-                    )
-                    yolo_lines.append(yolo_line)
+                yolo_lines = self._coco_annotations_to_yolo_lines(
+                    anns,
+                    source.class_mapping,
+                    image_width,
+                    image_height,
+                )
 
                 if yolo_lines:
-                    dst_img_dir = output / "images" / dst_split
-                    dst_lbl_dir = output / "labels" / dst_split
-                    dst_img_dir.mkdir(parents=True, exist_ok=True)
-                    dst_lbl_dir.mkdir(parents=True, exist_ok=True)
-
-                    output_stem = f"{source.key}_{split_name}_{img_id}_{Path(img_filename).stem}"
-                    destination = dst_img_dir / f"{output_stem}{img_path.suffix.lower()}"
-                    shutil.copy2(img_path, destination)
-
-                    lbl_path = dst_lbl_dir / f"{output_stem}.txt"
-                    with open(lbl_path, "w", encoding="utf-8") as f:
-                        f.writelines(yolo_lines)
+                    self._write_coco_image(
+                        output,
+                        source.key,
+                        split_name,
+                        img_id,
+                        img_filename,
+                        img_path,
+                        yolo_lines,
+                        dst_split,
+                    )
 
                     total_added += 1
                 else:

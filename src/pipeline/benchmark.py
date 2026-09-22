@@ -100,10 +100,6 @@ def match_predictions(
     )
 
 
-
-
-
-
 def compute_iou(box_a: list[float], box_b: list[float]) -> float:
     """Compute IoU between two bounding boxes in xyxy format."""
     intersection_left = max(box_a[0], box_b[0])
@@ -156,6 +152,27 @@ class BenchmarkResult:
             "errors": self.errors,
             "evaluated_on_train": self.evaluated_on_train,
         }
+
+
+@dataclass
+class _CollectedModelEvaluation:
+    per_class: dict[str, PerClassMetrics]
+    total_detections: int
+    total_latency_ms: float
+    successful_predictions: int
+    errors: list[str]
+    map_predictions: list[list[dict]]
+    ground_truths: list[list[dict]]
+
+
+@dataclass(frozen=True)
+class _ModelSummaryMetrics:
+    avg_latency_ms: float
+    overall_f1: float
+    overall_precision: float
+    overall_recall: float
+    map50: float
+    map50_95: float
 
 
 def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[dict]]], bool]:
@@ -432,174 +449,218 @@ class ModelBenchmark:
 
         for model in self.models:
             print(f"  Running {model.name}... ", end="", flush=True)
-
-            per_class: dict[str, PerClassMetrics] = {name: PerClassMetrics() for name in CLASS_NAMES}
-            total_detections = 0
-            total_latency_ms = 0.0
-            successful_predictions = 0
-            errors: list[str] = []
-            all_preds: list[list[dict]] = []
-            all_gts: list[list[dict]] = []
-
-            for img_path, gt_objects in samples:
-                try:
-                    start_time = time.perf_counter()
-                    result = model.predict(str(img_path), conf=0.0, iou=self.inference_iou)
-                    elapsed_seconds = time.perf_counter() - start_time
-                    total_latency_ms += elapsed_seconds * 1000
-                    successful_predictions += 1
-
-                    image_predictions: list[dict] = []
-                    for det in result.detections:
-                        prediction = {
-                            "class_id": det.class_id,
-                            "confidence": det.confidence,
-                            "bbox_pixel": list(det.bbox),
-                        }
-                        image_predictions.append(prediction)
-
-                    predictions_for_metrics = [
-                        prediction
-                        for prediction in image_predictions
-                        if prediction["confidence"] >= self.conf
-                    ]
-                    total_detections += len(predictions_for_metrics)
-
-                    prediction_objects: list[Detection] = []
-                    for prediction in predictions_for_metrics:
-                        class_id = prediction["class_id"]
-                        if 0 <= class_id < len(CLASS_NAMES):
-                            class_name = CLASS_NAMES[class_id]
-                        else:
-                            class_name = f"class_{class_id}"
-                        prediction_objects.append(
-                            Detection(
-                                class_id=class_id,
-                                class_name=class_name,
-                                confidence=prediction["confidence"],
-                                bbox=tuple(prediction["bbox_pixel"]),
-                            )
-                        )
-
-                    ground_truth_objects: list[Detection] = []
-                    for ground_truth in gt_objects:
-                        class_id = ground_truth["class_id"]
-                        if 0 <= class_id < len(CLASS_NAMES):
-                            class_name = CLASS_NAMES[class_id]
-                        else:
-                            class_name = f"class_{class_id}"
-                        ground_truth_objects.append(
-                            Detection(
-                                class_id=class_id,
-                                class_name=class_name,
-                                confidence=1.0,
-                                bbox=tuple(ground_truth["bbox"]),
-                            )
-                        )
-
-                    class_ids = {
-                        detection.class_id
-                        for detection in prediction_objects + ground_truth_objects
-                    }
-                    for class_id in class_ids:
-                        class_predictions = [
-                            detection
-                            for detection in prediction_objects
-                            if detection.class_id == class_id
-                        ]
-                        class_ground_truth = [
-                            detection
-                            for detection in ground_truth_objects
-                            if detection.class_id == class_id
-                        ]
-                        match_result = match_predictions(
-                            class_predictions,
-                            class_ground_truth,
-                            self.evaluation_iou,
-                        )
-                        if 0 <= class_id < len(CLASS_NAMES):
-                            class_name = CLASS_NAMES[class_id]
-                        else:
-                            class_name = f"class_{class_id}"
-                        if class_name not in per_class:
-                            per_class[class_name] = PerClassMetrics()
-                        metrics = per_class[class_name]
-                        metrics.tp += match_result.true_positives
-                        metrics.fp += match_result.false_positives
-                        metrics.fn += match_result.false_negatives
-
-                    all_preds.append(image_predictions)
-                    all_gts.append(gt_objects)
-
-                except (
-                    RuntimeError,
-                    ValueError,
-                    OSError,
-                    FileNotFoundError,
-                    ImportError,
-                    AttributeError,
-                    KeyError,
-                ) as exc:
-                    errors.append(f"{img_path.name}: {exc}")
-                    all_preds.append([])
-                    all_gts.append(gt_objects)
-
-            total_images = len(samples)
-            if successful_predictions > 0:
-                average_latency_ms = total_latency_ms / successful_predictions
-            else:
-                average_latency_ms = 0.0
-
-            total_true_positives = sum(metrics.tp for metrics in per_class.values())
-            total_false_positives = sum(metrics.fp for metrics in per_class.values())
-            total_false_negatives = sum(metrics.fn for metrics in per_class.values())
-
-            precision_denominator = total_true_positives + total_false_positives
-            if precision_denominator > 0:
-                overall_precision = total_true_positives / precision_denominator
-            else:
-                overall_precision = 0.0
-
-            recall_denominator = total_true_positives + total_false_negatives
-            if recall_denominator > 0:
-                overall_recall = total_true_positives / recall_denominator
-            else:
-                overall_recall = 0.0
-
-            combined_score = overall_precision + overall_recall
-            if combined_score > 0:
-                overall_f1 = 2 * overall_precision * overall_recall / combined_score
-            else:
-                overall_f1 = 0.0
-
-            map_thresholds = np.linspace(0.5, 0.95, 10)
-            map_scores = np.array(
-                [compute_map(all_preds, all_gts, iou_thresh=threshold) for threshold in map_thresholds]
-            )
-            map50 = float(map_scores[0])
-            map50_95 = float(np.mean(map_scores))
-
-            model_type = getattr(model, "model_type", str(model.path.suffix))
-            benchmark_result = BenchmarkResult(
-                model_name=model.name,
-                model_path=str(model.path),
-                model_type=model_type,
-                total_images=total_images,
-                per_class=per_class,
-                overall_f1=overall_f1,
-                overall_precision=overall_precision,
-                overall_recall=overall_recall,
-                avg_latency_ms=average_latency_ms,
-                total_detections=total_detections,
-                map50=map50,
-                map50_95=map50_95,
-                errors=errors,
-                evaluated_on_train=self.evaluated_on_train,
+            evaluation = self._collect_per_image_results(model, samples)
+            summary = self._calculate_summary_metrics(evaluation)
+            benchmark_result = self._build_benchmark_result(
+                model,
+                len(samples),
+                evaluation,
+                summary,
             )
             results.append(benchmark_result)
             print("done")
 
         return results
+
+    def _collect_per_image_results(
+        self,
+        model: DetectionModel,
+        samples: list[tuple[Path, list[dict]]],
+    ) -> _CollectedModelEvaluation:
+        per_class: dict[str, PerClassMetrics] = {name: PerClassMetrics() for name in CLASS_NAMES}
+        total_detections = 0
+        total_latency_ms = 0.0
+        successful_predictions = 0
+        errors: list[str] = []
+        map_predictions_by_image: list[list[dict]] = []
+        ground_truths_by_image: list[list[dict]] = []
+
+        for img_path, gt_objects in samples:
+            try:
+                start_time = time.perf_counter()
+                result = model.predict(str(img_path), conf=0.0, iou=self.inference_iou)
+                elapsed_seconds = time.perf_counter() - start_time
+                total_latency_ms += elapsed_seconds * 1000
+                successful_predictions += 1
+
+                predictions_for_map: list[dict] = []
+                for det in result.detections:
+                    prediction = {
+                        "class_id": det.class_id,
+                        "confidence": det.confidence,
+                        "bbox_pixel": list(det.bbox),
+                    }
+                    predictions_for_map.append(prediction)
+
+                predictions_for_f1 = [
+                    prediction
+                    for prediction in predictions_for_map
+                    if prediction["confidence"] >= self.conf
+                ]
+                total_detections += len(predictions_for_f1)
+
+                prediction_objects: list[Detection] = []
+                for prediction in predictions_for_f1:
+                    class_id = prediction["class_id"]
+                    if 0 <= class_id < len(CLASS_NAMES):
+                        class_name = CLASS_NAMES[class_id]
+                    else:
+                        class_name = f"class_{class_id}"
+                    prediction_objects.append(
+                        Detection(
+                            class_id=class_id,
+                            class_name=class_name,
+                            confidence=prediction["confidence"],
+                            bbox=tuple(prediction["bbox_pixel"]),
+                        )
+                    )
+
+                ground_truth_objects: list[Detection] = []
+                for ground_truth in gt_objects:
+                    class_id = ground_truth["class_id"]
+                    if 0 <= class_id < len(CLASS_NAMES):
+                        class_name = CLASS_NAMES[class_id]
+                    else:
+                        class_name = f"class_{class_id}"
+                    ground_truth_objects.append(
+                        Detection(
+                            class_id=class_id,
+                            class_name=class_name,
+                            confidence=1.0,
+                            bbox=tuple(ground_truth["bbox"]),
+                        )
+                    )
+
+                class_ids = {
+                    detection.class_id
+                    for detection in prediction_objects + ground_truth_objects
+                }
+                for class_id in class_ids:
+                    class_predictions = [
+                        detection
+                        for detection in prediction_objects
+                        if detection.class_id == class_id
+                    ]
+                    class_ground_truth = [
+                        detection
+                        for detection in ground_truth_objects
+                        if detection.class_id == class_id
+                    ]
+                    match_result = match_predictions(
+                        class_predictions,
+                        class_ground_truth,
+                        self.evaluation_iou,
+                    )
+                    if 0 <= class_id < len(CLASS_NAMES):
+                        class_name = CLASS_NAMES[class_id]
+                    else:
+                        class_name = f"class_{class_id}"
+                    if class_name not in per_class:
+                        per_class[class_name] = PerClassMetrics()
+                    metrics = per_class[class_name]
+                    metrics.tp += match_result.true_positives
+                    metrics.fp += match_result.false_positives
+                    metrics.fn += match_result.false_negatives
+
+                map_predictions_by_image.append(predictions_for_map)
+                ground_truths_by_image.append(gt_objects)
+
+            except (
+                RuntimeError,
+                ValueError,
+                OSError,
+                FileNotFoundError,
+                ImportError,
+                AttributeError,
+                KeyError,
+            ) as exc:
+                errors.append(f"{img_path.name}: {exc}")
+                map_predictions_by_image.append([])
+                ground_truths_by_image.append(gt_objects)
+
+        return _CollectedModelEvaluation(
+            per_class=per_class,
+            total_detections=total_detections,
+            total_latency_ms=total_latency_ms,
+            successful_predictions=successful_predictions,
+            errors=errors,
+            map_predictions=map_predictions_by_image,
+            ground_truths=ground_truths_by_image,
+        )
+
+    def _calculate_summary_metrics(
+        self,
+        evaluation: _CollectedModelEvaluation,
+    ) -> _ModelSummaryMetrics:
+        if evaluation.successful_predictions > 0:
+            average_latency_ms = evaluation.total_latency_ms / evaluation.successful_predictions
+        else:
+            average_latency_ms = 0.0
+
+        total_true_positives = sum(metrics.tp for metrics in evaluation.per_class.values())
+        total_false_positives = sum(metrics.fp for metrics in evaluation.per_class.values())
+        total_false_negatives = sum(metrics.fn for metrics in evaluation.per_class.values())
+
+        precision_denominator = total_true_positives + total_false_positives
+        if precision_denominator > 0:
+            overall_precision = total_true_positives / precision_denominator
+        else:
+            overall_precision = 0.0
+
+        recall_denominator = total_true_positives + total_false_negatives
+        if recall_denominator > 0:
+            overall_recall = total_true_positives / recall_denominator
+        else:
+            overall_recall = 0.0
+
+        combined_score = overall_precision + overall_recall
+        if combined_score > 0:
+            overall_f1 = 2 * overall_precision * overall_recall / combined_score
+        else:
+            overall_f1 = 0.0
+
+        map_thresholds = np.linspace(0.5, 0.95, 10)
+        map_scores = np.array(
+            [
+                compute_map(evaluation.map_predictions, evaluation.ground_truths, iou_thresh=threshold)
+                for threshold in map_thresholds
+            ]
+        )
+        map50 = float(map_scores[0])
+        map50_95 = float(np.mean(map_scores))
+        return _ModelSummaryMetrics(
+            avg_latency_ms=average_latency_ms,
+            overall_f1=overall_f1,
+            overall_precision=overall_precision,
+            overall_recall=overall_recall,
+            map50=map50,
+            map50_95=map50_95,
+        )
+
+    def _build_benchmark_result(
+        self,
+        model: DetectionModel,
+        total_images: int,
+        evaluation: _CollectedModelEvaluation,
+        summary: _ModelSummaryMetrics,
+    ) -> BenchmarkResult:
+        model_type = getattr(model, "model_type", str(model.path.suffix))
+        return BenchmarkResult(
+            model_name=model.name,
+            model_path=str(model.path),
+            model_type=model_type,
+            total_images=total_images,
+            per_class=evaluation.per_class,
+            overall_f1=summary.overall_f1,
+            overall_precision=summary.overall_precision,
+            overall_recall=summary.overall_recall,
+            avg_latency_ms=summary.avg_latency_ms,
+            total_detections=evaluation.total_detections,
+            map50=summary.map50,
+            map50_95=summary.map50_95,
+            errors=evaluation.errors,
+            evaluated_on_train=self.evaluated_on_train,
+        )
 
     @staticmethod
     def export(results: list[BenchmarkResult], output_path: Path | str) -> None:
