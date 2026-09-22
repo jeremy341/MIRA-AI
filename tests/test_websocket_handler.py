@@ -58,6 +58,7 @@ class TestOnDetections:
     async def test_detections_are_attached_to_frame_events(self, handler):
         det = Detection(class_name=WasteClass.PAPER, confidence=0.7, bbox=[0, 0, 5, 5])
         frame = np.zeros((8, 8, 3), dtype=np.uint8)
+        handler.connections.add(object())
         with patch("cv2.imencode", return_value=(True, np.array([1, 2, 3], dtype=np.uint8))):
             handler.update_frame(frame, [det])
         msg = handler._broadcast_queue.get_nowait()
@@ -155,6 +156,7 @@ class TestUpdateFrame:
     def test_queues_frame_message(self, mock_imencode, handler):
         mock_imencode.return_value = (True, np.array([1, 2, 3], dtype=np.uint8))
         frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        handler.connections.add(object())
         handler.update_frame(frame)
         msg = handler._broadcast_queue.get_nowait()
         assert msg["type"] == "frame"
@@ -166,12 +168,24 @@ class TestUpdateFrame:
     def test_frame_queue_is_bounded(self, mock_imencode, handler):
         mock_imencode.return_value = (True, np.array([1, 2, 3], dtype=np.uint8))
         frame = np.zeros((8, 8, 3), dtype=np.uint8)
+        handler.connections.add(object())
 
         for _ in range(handler._broadcast_queue.maxsize + 10):
             handler.update_frame(frame)
 
         assert handler._broadcast_queue.qsize() == handler._broadcast_queue.maxsize
         assert all(item["type"] == "frame" for item in list(handler._broadcast_queue._queue))
+
+    def test_full_queue_discards_oldest_frame_before_control_event(self, handler):
+        for frame_id in range(handler._broadcast_queue.maxsize):
+            handler._enqueue_message({"type": "frame", "frame_id": frame_id})
+
+        handler._enqueue_message({"type": "status", "status": "running"})
+
+        queued = list(handler._broadcast_queue._queue)
+        assert len(queued) == handler._broadcast_queue.maxsize
+        assert queued[0]["frame_id"] == 1
+        assert queued[-1] == {"type": "status", "status": "running"}
 
 
 class TestSendFrame:
