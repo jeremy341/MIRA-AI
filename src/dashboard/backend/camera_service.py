@@ -3,7 +3,7 @@ import asyncio
 import threading
 import time
 from typing import Any
-from collections import deque, defaultdict
+from collections import deque
 from datetime import datetime, timedelta, timezone
 import psutil
 
@@ -39,7 +39,6 @@ class CameraService:
         self.img_size = 640
 
         self.detection_history = deque(maxlen=1000)
-        self.class_history = defaultdict(list)
         self.metrics_history = deque(maxlen=100)
 
         self.latency_history = deque(maxlen=30)
@@ -420,7 +419,6 @@ class CameraService:
                     if last.class_name == detection.class_name and last.bbox == detection.bbox:
                         continue
                 self.detection_history.append(detection)
-                self.class_history[detection.class_name].append(detection)
 
     def _update_status(self, status: SystemStatus, message: str):
         with self._lock:
