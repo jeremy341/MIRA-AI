@@ -17,6 +17,18 @@ def _write_notebook(notebook, output_path, success_message):
     print(f"{success_message}: {output_path}")
 
 
+def _generate_notebook(args, experiment, project, generator, platform):
+    notebook = generator(experiment, project)
+    default_name = f"{experiment.get('name', 'mira_exp')}_{platform}.ipynb"
+    output_path = Path(args.output) if args.output else Path(default_name)
+    _write_notebook(notebook, output_path, f"{platform.capitalize()} notebook generated")
+
+
+def _load_yaml(path, yaml_module):
+    with open(path, encoding="utf-8") as file:
+        return yaml_module.safe_load(file)
+
+
 def _add_generate_args(parser):
     global _GENERATE_PARSER
     _GENERATE_PARSER = parser
@@ -54,36 +66,29 @@ def cmd_generate(args):
 
     import yaml
 
-    if not config_path.exists():
+    try:
+        exp_config = _load_yaml(config_path, yaml)
+    except FileNotFoundError:
         print(f"Error: Config file not found: {config_path}")
         sys.exit(1)
-    with open(config_path, encoding="utf-8") as f:
-        exp_config = yaml.safe_load(f)
     mira_yaml_path = project_root / "mira.yaml"
     if not mira_yaml_path.exists():
         print(f"Error: Project config not found: {mira_yaml_path}")
         sys.exit(1)
-    with open(mira_yaml_path, encoding="utf-8") as f:
-        project_config = yaml.safe_load(f)
+    project_config = _load_yaml(mira_yaml_path, yaml)
 
     if target == "kaggle":
-        from scripts.generate_kaggle import generate_kaggle_notebook
+        from src.notebooks.kaggle import generate_kaggle_notebook
 
-        notebook = generate_kaggle_notebook(exp_config, project_config)
-        default_name = f"{exp_config.get('name', 'mira_exp')}_kaggle.ipynb"
-        output_path = Path(args.output) if args.output else Path(default_name)
-        _write_notebook(notebook, output_path, "Kaggle notebook generated")
+        _generate_notebook(args, exp_config, project_config, generate_kaggle_notebook, "kaggle")
 
     elif target == "colab":
-        from scripts.generate_colab import generate_colab_notebook
+        from src.notebooks.colab import generate_colab_notebook
 
-        notebook = generate_colab_notebook(exp_config, project_config)
-        default_name = f"{exp_config.get('name', 'mira_exp')}_colab.ipynb"
-        output_path = Path(args.output) if args.output else Path(default_name)
-        _write_notebook(notebook, output_path, "Colab notebook generated")
+        _generate_notebook(args, exp_config, project_config, generate_colab_notebook, "colab")
 
     elif target == "docker":
-        from scripts.generate_docker import (
+        from src.notebooks.docker import (
             _build_training_params,
             generate_docker_compose,
             generate_dockerfile,
