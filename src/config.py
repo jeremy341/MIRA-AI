@@ -36,13 +36,14 @@ ROOT_DIR = _discover_project_root()
 
 def read_yaml_config(path: pathlib.Path) -> dict[str, Any]:
     try:
-        with open(path, encoding="utf-8") as handle:
-            raw_config = yaml.safe_load(handle)
+        with open(path, encoding="utf-8") as config_file:
+            config_data = yaml.safe_load(config_file)
     except yaml.YAMLError as exc:
         raise ConfigError(f"Invalid YAML in {path}: {exc}") from None
-    if not isinstance(raw_config, dict):
+    if not isinstance(config_data, dict):
         raise ConfigError(f"Config file {path} must contain a YAML mapping (key-value pairs)")
-    return raw_config
+    return config_data
+
 
 def _load_project_config(root: pathlib.Path) -> tuple[dict[str, Any], pathlib.Path | None]:
     config_path = root / "mira.yaml"
@@ -54,8 +55,6 @@ def _load_project_config(root: pathlib.Path) -> tuple[dict[str, Any], pathlib.Pa
     raise ConfigError(
         f"Config file not found: {config_path}. Run MIRA from a directory containing mira.yaml or set MIRA_HOME."
     )
-
-
 
 
 PROJECT_CONFIG, _CONFIG_PATH = _load_project_config(ROOT_DIR)
@@ -142,54 +141,70 @@ def get_project_config() -> dict:
 
 
 def get_tflite_imgsz(model_path: pathlib.Path) -> int:
-    # Get imgsize from TFLite tensor shape.
-    interp = None
-    for import_path, cls_name in [
+    interpreter = _create_tflite_interpreter(model_path)
+    try:
+        input_details = interpreter.get_input_details()[0]
+        tensor_shape = _get_tflite_input_shape(input_details)
+        return _image_size_from_tensor_shape(tensor_shape)
+    finally:
+        try:
+            del interpreter
+        except Exception:
+            pass
+
+
+def _create_tflite_interpreter(model_path: pathlib.Path):
+    interpreter = None
+    candidates = (
         ("ai_edge_litert.interpreter", "Interpreter"),
         ("tflite_runtime.interpreter", "Interpreter"),
         ("tensorflow.lite.python.interpreter", "Interpreter"),
-    ]:
+    )
+    for module_name, class_name in candidates:
         try:
-            mod = __import__(import_path, fromlist=[cls_name])
-            interp = getattr(mod, cls_name)(model_path=str(model_path))
-            interp.allocate_tensors()
+            module = __import__(module_name, fromlist=[class_name])
+            interpreter_class = getattr(module, class_name)
+            interpreter = interpreter_class(model_path=str(model_path))
+            interpreter.allocate_tensors()
             break
         except (ImportError, AttributeError, RuntimeError, OSError):
             continue
-    if interp is None:
+    if interpreter is None:
         raise ImportError("No TFLite interpreter found (install tflite_runtime or tensorflow).")
-    try:
-        input_details = interp.get_input_details()[0]
-        shape_raw = input_details.get("shape")
-        if shape_raw is None:
-            shape_raw = input_details.get("shape_signature", [])
-        shape = list(map(int, shape_raw))
-        if any(d <= 0 for d in shape):
-            signature = input_details.get("shape_signature")
-            if signature is not None:
-                signature_shape = list(map(int, signature))
-                if all(d > 0 for d in signature_shape):
-                    shape = signature_shape
-            if any(d <= 0 for d in shape):
-                raise ValueError(f"Dynamic or invalid tensor shape in TFLite model: {shape}")
-        if not shape:
-            raise ValueError("Empty tensor shape in TFLite model")
-        if len(shape) == 4:
-            if shape[1] in (1, 3):
-                h, w = shape[2], shape[3]
-            elif shape[3] in (1, 3):
-                h, w = shape[1], shape[2]
-            else:
-                h, w = shape[1], shape[2]
-            return int(max(h, w))
-        elif len(shape) == 3:
-            return int(max(shape[1], shape[2]))
-        return int(max(shape))
-    finally:
-        try:
-            del interp
-        except Exception:
-            pass
+    return interpreter
+
+
+def _get_tflite_input_shape(input_details: dict[str, Any]) -> list[int]:
+    shape_data = input_details.get("shape")
+    if shape_data is None:
+        shape_data = input_details.get("shape_signature", [])
+    shape = list(map(int, shape_data))
+
+    if any(dimension <= 0 for dimension in shape):
+        signature = input_details.get("shape_signature")
+        if signature is not None:
+            signature_shape = list(map(int, signature))
+            if all(dimension > 0 for dimension in signature_shape):
+                shape = signature_shape
+        if any(dimension <= 0 for dimension in shape):
+            raise ValueError(f"Dynamic or invalid tensor shape in TFLite model: {shape}")
+
+    if not shape:
+        raise ValueError("Empty tensor shape in TFLite model")
+    return shape
+
+
+def _image_size_from_tensor_shape(shape: list[int]) -> int:
+    if len(shape) == 4:
+        if shape[1] in (1, 3):
+            height, width = shape[2], shape[3]
+        else:
+            height, width = shape[1], shape[2]
+        return int(max(height, width))
+
+    if len(shape) == 3:
+        return int(max(shape[1], shape[2]))
+    return int(max(shape))
 
 
 def setup_camera_properties(
@@ -213,19 +228,20 @@ def setup_camera_properties(
         (cv2.CAP_PROP_AUTOFOCUS, int(autofocus)),
         (cv2.CAP_PROP_AUTO_EXPOSURE, int(auto_exposure)),
     )
+    property_names = {
+        cv2.CAP_PROP_FOURCC: "FOURCC",
+        cv2.CAP_PROP_FRAME_WIDTH: "FRAME_WIDTH",
+        cv2.CAP_PROP_FRAME_HEIGHT: "FRAME_HEIGHT",
+        cv2.CAP_PROP_FPS: "FPS",
+        cv2.CAP_PROP_BUFFERSIZE: "BUFFERSIZE",
+        cv2.CAP_PROP_AUTOFOCUS: "AUTOFOCUS",
+        cv2.CAP_PROP_AUTO_EXPOSURE: "AUTO_EXPOSURE",
+    }
     for property_id, value in properties:
-        if not cap.set(property_id, value):
-            property_names = {
-                cv2.CAP_PROP_FOURCC: "FOURCC",
-                cv2.CAP_PROP_FRAME_WIDTH: "FRAME_WIDTH",
-                cv2.CAP_PROP_FRAME_HEIGHT: "FRAME_HEIGHT",
-                cv2.CAP_PROP_FPS: "FPS",
-                cv2.CAP_PROP_BUFFERSIZE: "BUFFERSIZE",
-                cv2.CAP_PROP_AUTOFOCUS: "AUTOFOCUS",
-                cv2.CAP_PROP_AUTO_EXPOSURE: "AUTO_EXPOSURE",
-            }
-            name = property_names.get(property_id, str(property_id))
-            raise CameraError(f"Failed to set camera property: {name}")
+        if cap.set(property_id, value):
+            continue
+        property_name = property_names.get(property_id, str(property_id))
+        raise CameraError(f"Failed to set camera property: {property_name}")
 
 
 
@@ -249,15 +265,14 @@ def validate_config() -> list[str]:
 
 
 def resolve_safe_path(user_path: str | pathlib.Path, base_dir: pathlib.Path | None = None) -> pathlib.Path:
-    # Resolve user path inside base_dir, block traversal.
-    base = base_dir or ROOT_DIR
-    path = pathlib.Path(user_path).expanduser()
-    if not path.is_absolute():
-        path = (base / path).resolve()
+    base_path = (base_dir or ROOT_DIR).resolve()
+    requested_path = pathlib.Path(user_path).expanduser()
+    if requested_path.is_absolute():
+        resolved_path = requested_path.resolve()
     else:
-        path = path.resolve()
+        resolved_path = (base_path / requested_path).resolve()
     try:
-        path.relative_to(base.resolve())
+        resolved_path.relative_to(base_path)
     except ValueError:
         raise ConfigError(f"Path traversal detected: '{user_path}' resolves outside the project directory.") from None
-    return path
+    return resolved_path

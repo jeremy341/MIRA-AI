@@ -45,3 +45,37 @@ def test_get_tflite_imgsz_max_of_dims():
         result = get_tflite_imgsz(pathlib.Path("/fake/model.tflite"))
 
     assert result == 224
+import pathlib
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from src.config import get_tflite_imgsz
+
+
+@pytest.mark.parametrize(
+    ("shape", "expected"),
+    [
+        ([1, 3, 224, 320], 320),
+        ([1, 224, 320, 3], 320),
+        ([1, 8, 20], 20),
+    ],
+)
+def test_tflite_imgsz_preserves_layout_dimension_choice(shape, expected):
+    interpreter = MagicMock()
+    interpreter.get_input_details.return_value = [{"shape": shape}]
+    module = MagicMock(Interpreter=MagicMock(return_value=interpreter))
+
+    with patch.dict("sys.modules", {"ai_edge_litert.interpreter": module}):
+        assert get_tflite_imgsz(pathlib.Path("/fake/model.tflite")) == expected
+
+
+def test_tflite_imgsz_uses_positive_dynamic_signature():
+    interpreter = MagicMock()
+    interpreter.get_input_details.return_value = [
+        {"shape": [1, -1, 224, 224], "shape_signature": [1, 3, 160, 160]}
+    ]
+    module = MagicMock(Interpreter=MagicMock(return_value=interpreter))
+
+    with patch.dict("sys.modules", {"ai_edge_litert.interpreter": module}):
+        assert get_tflite_imgsz(pathlib.Path("/fake/model.tflite")) == 160

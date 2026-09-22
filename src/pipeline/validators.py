@@ -52,13 +52,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
             result.is_valid = False
             continue
 
-        images: dict[str, Path] = {}
-        for p in img_dir.glob("*"):
-            if p.suffix.lower() in IMAGE_EXTENSIONS:
-                stem = p.stem
-                if stem in images:
-                    result.warnings.append(f"Duplicate image stem '{stem}' in {img_dir}: {images[stem]} and {p}")
-                images[stem] = p
+        images = _collect_images(img_dir, result)
         labels = {p.stem: p for p in lbl_dir.glob("*.txt")}
 
         for stem in labels:
@@ -70,35 +64,7 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
                 continue
 
             result.total_labels += 1
-
-            # Validate label content
-            with open(lbl_path, encoding="utf-8") as f:
-                for line_num, line in enumerate(f, 1):
-                    parts = line.strip().split()
-                    if len(parts) < 5:
-                        result.invalid_labels.append((str(lbl_path), f"line {line_num}: < 5 values"))
-                        continue
-                    if len(parts) != 5 and (len(parts) < 7 or (len(parts) - 1) % 2 != 0):
-                        result.invalid_labels.append((str(lbl_path), f"line {line_num}: invalid coordinate count"))
-                        continue
-                    try:
-                        cls_id = int(parts[0])
-                        if cls_id < 0:
-                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: negative class ID"))
-                            continue
-                        if cls_id >= NUM_CLASSES:
-                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: class ID out of range"))
-                            continue
-                        coords = [float(p) for p in parts[1:]]
-                        if not all(math.isfinite(c) and 0.0 <= c <= 1.0 for c in coords):
-                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: coords out of [0,1]"))
-                            continue
-                        if len(coords) == 4 and (coords[2] <= 0.0 or coords[3] <= 0.0):
-                            result.invalid_labels.append((str(lbl_path), f"line {line_num}: non-positive box size"))
-                            continue
-                        result.class_counts[cls_id] = result.class_counts.get(cls_id, 0) + 1
-                    except (ValueError, IndexError):
-                        result.invalid_labels.append((str(lbl_path), f"line {line_num}: parse error"))
+            _validate_label_file(lbl_path, result)
 
         for stem in images:
             if stem not in labels:
@@ -125,6 +91,57 @@ def validate_yolo_dataset(dataset_path: str | Path) -> ValidationResult:
         result.is_valid = False
 
     return result
+
+
+def _collect_images(image_directory: Path, result: ValidationResult) -> dict[str, Path]:
+    images: dict[str, Path] = {}
+    for image_path in image_directory.glob("*"):
+        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            continue
+
+        stem = image_path.stem
+        if stem in images:
+            result.warnings.append(
+                f"Duplicate image stem '{stem}' in {image_directory}: {images[stem]} and {image_path}"
+            )
+        images[stem] = image_path
+    return images
+
+
+def _validate_label_file(label_path: Path, result: ValidationResult) -> None:
+    with open(label_path, encoding="utf-8") as label_file:
+        for line_number, line in enumerate(label_file, 1):
+            parts = line.strip().split()
+            if len(parts) < 5:
+                result.invalid_labels.append((str(label_path), f"line {line_number}: < 5 values"))
+                continue
+            if len(parts) != 5 and (len(parts) < 7 or (len(parts) - 1) % 2 != 0):
+                result.invalid_labels.append((str(label_path), f"line {line_number}: invalid coordinate count"))
+                continue
+
+            try:
+                class_id = int(parts[0])
+                if class_id < 0:
+                    result.invalid_labels.append((str(label_path), f"line {line_number}: negative class ID"))
+                    continue
+                if class_id >= NUM_CLASSES:
+                    result.invalid_labels.append((str(label_path), f"line {line_number}: class ID out of range"))
+                    continue
+
+                coordinates = [float(value) for value in parts[1:]]
+                all_coordinates_are_valid = all(
+                    math.isfinite(coordinate) and 0.0 <= coordinate <= 1.0 for coordinate in coordinates
+                )
+                if not all_coordinates_are_valid:
+                    result.invalid_labels.append((str(label_path), f"line {line_number}: coords out of [0,1]"))
+                    continue
+                if len(coordinates) == 4 and (coordinates[2] <= 0.0 or coordinates[3] <= 0.0):
+                    result.invalid_labels.append((str(label_path), f"line {line_number}: non-positive box size"))
+                    continue
+
+                result.class_counts[class_id] = result.class_counts.get(class_id, 0) + 1
+            except (ValueError, IndexError):
+                result.invalid_labels.append((str(label_path), f"line {line_number}: parse error"))
 
 
 def dataset_summary(dataset_path: str | Path) -> dict[str, Any]:
