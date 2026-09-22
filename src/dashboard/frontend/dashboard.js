@@ -828,10 +828,10 @@ function loadModelOptions() {
     .catch(() => {});
 }
 
-async function prepareDefaults() {
+function readCameraConfig() {
   const resVal = document.querySelector('input[name="cameraRes"]:checked')?.value || "640x360";
   const resolution = resVal.split("x");
-  const cameraConfig = {
+  return {
     index: parseInt(document.getElementById("cameraIndex").value, 10),
     width: parseInt(resolution[0], 10),
     height: parseInt(resolution[1], 10),
@@ -839,6 +839,21 @@ async function prepareDefaults() {
     autofocus: document.getElementById("cameraAutofocus").checked,
     auto_exposure: document.getElementById("cameraAutoExposure").checked
   };
+}
+
+function readModelConfig(name) {
+  return {
+    name,
+    conf_threshold: parseFloat(document.getElementById("modelConf").value),
+    reject_threshold: parseFloat(document.getElementById("modelReject").value),
+    iou_threshold: parseFloat(document.getElementById("modelIou").value),
+    enable_tracking: document.getElementById("modelTracking").checked,
+    target_latency_ms: parseInt(document.getElementById("modelLatency").value, 10)
+  };
+}
+
+async function prepareDefaults() {
+  const cameraConfig = readCameraConfig();
 
   try {
     await fetchJSON("/api/camera/initialize", { method: "POST", body: JSON.stringify(cameraConfig) }, true);
@@ -849,14 +864,7 @@ async function prepareDefaults() {
 
   const modelName = document.getElementById("modelSelect").value;
   if (modelName) {
-    const modelConfig = {
-      name: modelName,
-      conf_threshold: parseFloat(document.getElementById("modelConf").value),
-      reject_threshold: parseFloat(document.getElementById("modelReject").value),
-      iou_threshold: parseFloat(document.getElementById("modelIou").value),
-      enable_tracking: document.getElementById("modelTracking").checked,
-      target_latency_ms: parseInt(document.getElementById("modelLatency").value, 10)
-    };
+    const modelConfig = readModelConfig(modelName);
     try {
       await fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(modelConfig) }, true);
       state.modelReady = true;
@@ -876,16 +884,7 @@ if (cameraForm) {
       showToast("Stop the stream before changing camera settings.", "warning");
       return;
     }
-    const resVal = document.querySelector('input[name="cameraRes"]:checked')?.value || "640x360";
-    const resolution = resVal.split("x");
-    const config = {
-      index: parseInt(document.getElementById("cameraIndex").value, 10),
-      width: parseInt(resolution[0], 10),
-      height: parseInt(resolution[1], 10),
-      fps: parseInt(document.getElementById("cameraFps").value, 10),
-      autofocus: document.getElementById("cameraAutofocus").checked,
-      auto_exposure: document.getElementById("cameraAutoExposure").checked
-    };
+    const config = readCameraConfig();
     const sent = sendControl({ command: "set_camera_config", params: config });
     if (!sent) {
       fetchJSON("/api/camera/initialize", { method: "POST", body: JSON.stringify(config) })
@@ -907,14 +906,7 @@ if (modelForm) {
       showToast("Stop the stream before changing models.", "warning");
       return;
     }
-    const config = {
-      name: document.getElementById("modelSelect").value,
-      conf_threshold: parseFloat(document.getElementById("modelConf").value),
-      reject_threshold: parseFloat(document.getElementById("modelReject").value),
-      iou_threshold: parseFloat(document.getElementById("modelIou").value),
-      enable_tracking: document.getElementById("modelTracking").checked,
-      target_latency_ms: parseInt(document.getElementById("modelLatency").value, 10)
-    };
+    const config = readModelConfig(document.getElementById("modelSelect").value);
     const sent = sendControl({ command: "load_model", params: config });
     if (!sent) {
       fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(config) })
