@@ -25,7 +25,8 @@ def main() -> None:
         "data for models trained on that resolution.",
     )
     args = parser.parse_args()
-    cam_w, cam_h = (int(v) for v in args.resolution.split("x"))
+    resolution_parts = args.resolution.split("x")
+    cam_w, cam_h = (int(value) for value in resolution_parts)
 
     # Use DirectShow on Windows for lower latency; default backend elsewhere
     backend = cv2.CAP_DSHOW if platform.system() == "Windows" else 0
@@ -41,8 +42,13 @@ def main() -> None:
     for _ in range(warmup):
         cap.read()
 
-    classes = {str(i + 1): (name, DATA_DIR / name) for i, name in enumerate(CLASS_NAMES)}
-    for _, folder in classes.values():
+    classes = {}
+    for class_index, class_name in enumerate(CLASS_NAMES):
+        key = str(class_index + 1)
+        folder = DATA_DIR / class_name
+        classes[key] = (class_name, folder)
+
+    for class_name, folder in classes.values():
         folder.mkdir(parents=True, exist_ok=True)
 
     logger.info("MIRA Camera Frame Capture Active.")
@@ -51,8 +57,8 @@ def main() -> None:
 
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
+            read_succeeded, frame = cap.read()
+            if not read_succeeded:
                 logger.warning("Camera read failed; retrying...")
                 continue
 
@@ -85,11 +91,12 @@ def main() -> None:
             key_char = chr(key)
             if key_char not in classes:
                 continue
-            label, folder = classes[key_char]
-            filename = f"{label}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-            filepath = folder / filename
-            cv2.imwrite(str(filepath), frame)
-            logger.info("Saved: %s", filepath)
+            class_name, folder = classes[key_char]
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            filename = f"{class_name}_{timestamp}.jpg"
+            image_path = folder / filename
+            cv2.imwrite(str(image_path), frame)
+            logger.info("Saved: %s", image_path)
     finally:
         cap.release()
         cv2.destroyAllWindows()

@@ -47,9 +47,17 @@ def _dataclass_to_dict(obj: Any) -> Any:
     if isinstance(obj, set):
         return sorted(obj)
     if isinstance(obj, dict):
-        return {_dataclass_to_dict(k): _dataclass_to_dict(v) for k, v in obj.items()}
+        converted_values = {}
+        for key, value in obj.items():
+            converted_key = _dataclass_to_dict(key)
+            converted_value = _dataclass_to_dict(value)
+            converted_values[converted_key] = converted_value
+        return converted_values
     if isinstance(obj, (list, tuple)):
-        return list(map(_dataclass_to_dict, obj))
+        converted_items = []
+        for item in obj:
+            converted_items.append(_dataclass_to_dict(item))
+        return converted_items
     return obj
 
 
@@ -57,21 +65,23 @@ def _atomic_write(path: Path, data: str) -> None:
     # Write data atomically using a temporary file and rename.
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = None
-    fd, tmp_path = tempfile.mkstemp(dir=str(path.parent), prefix=f".{path.name}")
+    file_descriptor, temporary_path = tempfile.mkstemp(
+        dir=str(path.parent),
+        prefix=f".{path.name}",
+    )
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(data)
+        with os.fdopen(file_descriptor, "w", encoding="utf-8") as temporary_file:
+            temporary_file.write(data)
         try:
-            os.replace(tmp_path, path)
+            os.replace(temporary_path, path)
         except OSError:
             import shutil
 
-            shutil.copy2(tmp_path, path)
-            os.unlink(tmp_path)
+            shutil.copy2(temporary_path, path)
+            os.unlink(temporary_path)
     except Exception:
         try:
-            os.unlink(tmp_path)
+            os.unlink(temporary_path)
         except OSError:
             pass
         raise
@@ -80,9 +90,9 @@ def _atomic_write(path: Path, data: str) -> None:
 def _backup_if_exists(path: Path) -> None:
     # Create a .bak backup if the file already exists.
     if path.exists():
-        bak = path.with_suffix(path.suffix + ".bak")
+        backup_path = path.with_suffix(path.suffix + ".bak")
         try:
-            bak.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+            backup_path.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
         except Exception as exc:
             logger.warning(f"Failed to create backup of {path}: {exc}")
 
@@ -91,13 +101,12 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
     # Serialize a result object to JSON or YAML file atomically. Handles dataclasses, dicts, lists, Path objects, and datetime. Creates parent directories if they don't exist. Returns the path to the saved file.
     path = Path(path)
 
-    data = (
-        asdict(result)
-        if hasattr(result, "__dataclass_fields__")
-        else dict(result)
-        if isinstance(result, dict)
-        else {"value": result}
-    )
+    if hasattr(result, "__dataclass_fields__"):
+        data = asdict(result)
+    elif isinstance(result, dict):
+        data = dict(result)
+    else:
+        data = {"value": result}
 
     # Inject schema version
     if isinstance(data, dict):
@@ -106,9 +115,15 @@ def serialize_result(result: Any, path: str | Path, fmt: str = "json") -> Path:
     _backup_if_exists(path)
 
     if fmt == "yaml":
-        _atomic_write(path, yaml.safe_dump(_dataclass_to_dict(data), default_flow_style=False, sort_keys=False))
+        yaml_data = _dataclass_to_dict(data)
+        serialized_text = yaml.safe_dump(
+            yaml_data,
+            default_flow_style=False,
+            sort_keys=False,
+        )
     else:
-        _atomic_write(path, json.dumps(data, indent=2, cls=_MiraEncoder))
+        serialized_text = json.dumps(data, indent=2, cls=_MiraEncoder)
+    _atomic_write(path, serialized_text)
 
     logger.debug(f"Serialized result to {path}")
     return path
@@ -122,7 +137,13 @@ def serialize_config(config: Any, path: str | Path) -> Path:
         data["__serialized_at__"] = datetime.now(timezone.utc).isoformat()
 
     _backup_if_exists(path)
-    _atomic_write(path, yaml.safe_dump(_dataclass_to_dict(data), default_flow_style=False, sort_keys=False))
+    converted_data = _dataclass_to_dict(data)
+    serialized_text = yaml.safe_dump(
+        converted_data,
+        default_flow_style=False,
+        sort_keys=False,
+    )
+    _atomic_write(path, serialized_text)
     logger.debug(f"Serialized config to {path}")
     return path
 
