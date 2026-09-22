@@ -174,8 +174,12 @@ def remap_lines(lines: list[str], mapping: dict[int, int]) -> tuple[str, ...]:
             coords = [float(value) for value in fields[1:5]]
         except ValueError:
             continue
-        if old_id in mapping and all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords):
-            result.append(f"{mapping[old_id]} {' '.join(fields[1:5])}")
+        coordinates_are_valid = all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords)
+        if old_id not in mapping or not coordinates_are_valid:
+            continue
+        mapped_id = mapping[old_id]
+        coordinate_text = " ".join(fields[1:5])
+        result.append(f"{mapped_id} {coordinate_text}")
     return tuple(result)
 
 
@@ -190,7 +194,8 @@ def valid_lines(lines: list[str]) -> tuple[str, ...]:
             coords = [float(value) for value in fields[1:5]]
         except ValueError:
             continue
-        if class_id < 0 or not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords):
+        coordinates_are_valid = all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in coords)
+        if class_id < 0 or not coordinates_are_valid:
             continue
         result.append(" ".join(fields))
     return tuple(result)
@@ -209,7 +214,10 @@ def yolo_records(
         if not label.exists():
             continue
         lines = label.read_text(encoding="utf-8").splitlines()
-        labels = remap_lines(lines, mapping) if mapping is not None else valid_lines(lines)
+        if mapping is None:
+            labels = valid_lines(lines)
+        else:
+            labels = remap_lines(lines, mapping)
         if labels:
             records.append(Record(source, split, image.name, image, labels))
     return records
@@ -219,11 +227,20 @@ def coco_records(
     source: str, split: str, annotation_file: Path, image_root: Path, name_map: dict[str, int]
 ) -> list[Record]:
     data = json.loads(annotation_file.read_text(encoding="utf-8"))
-    categories = {item["id"]: item["name"] for item in data["categories"]}
-    image_info = {item["id"]: item for item in data["images"]}
+    categories = {}
+    for category in data["categories"]:
+        categories[category["id"]] = category["name"]
+
+    image_info = {}
+    for image in data["images"]:
+        image_info[image["id"]] = image
+
     annotations: dict[int, list[dict]] = {}
     for annotation in data["annotations"]:
-        annotations.setdefault(annotation["image_id"], []).append(annotation)
+        image_id = annotation["image_id"]
+        if image_id not in annotations:
+            annotations[image_id] = []
+        annotations[image_id].append(annotation)
 
     records = []
     for image_id, info in image_info.items():
@@ -231,24 +248,33 @@ def coco_records(
         if not image.exists():
             continue
         labels = []
-        for annotation in annotations.get(image_id, []):
-            target = name_map.get(categories.get(annotation["category_id"], ""))
+        image_width = info["width"]
+        image_height = info["height"]
+        image_annotations = annotations.get(image_id, [])
+        for annotation in image_annotations:
+            category_id = annotation["category_id"]
+            category_name = categories.get(category_id, "")
+            target = name_map.get(category_name)
             if target is None:
                 continue
             x, y, width, height = annotation["bbox"]
             if (
-                info["width"] <= 0
-                or info["height"] <= 0
+                image_width <= 0
+                or image_height <= 0
                 or not all(math.isfinite(float(value)) for value in (x, y, width, height))
                 or width <= 0
                 or height <= 0
             ):
                 continue
-            labels.append(
-                f"{target} {(x + width / 2) / info['width']:.6f} "
-                f"{(y + height / 2) / info['height']:.6f} "
-                f"{width / info['width']:.6f} {height / info['height']:.6f}"
+            center_x = (x + width / 2) / image_width
+            center_y = (y + height / 2) / image_height
+            normalized_width = width / image_width
+            normalized_height = height / image_height
+            label = (
+                f"{target} {center_x:.6f} {center_y:.6f} "
+                f"{normalized_width:.6f} {normalized_height:.6f}"
             )
+            labels.append(label)
         if labels:
             records.append(Record(source, split, str(image_id), image, tuple(labels)))
     return records
@@ -262,10 +288,18 @@ def load_taco() -> list[Record]:
     records = coco_records("taco", "unsplit", annotation_file, root, TACO_MAP)
     random.Random(42).shuffle(records)
     n = len(records)
-    return [
-        Record(r.source, "train" if i < n * 0.70 else "val" if i < n * 0.85 else "test", r.source_id, r.image, r.labels)
-        for i, r in enumerate(records)
-    ]
+    records_with_splits = []
+    for index, record in enumerate(records):
+        if index < n * 0.70:
+            split = "train"
+        elif index < n * 0.85:
+            split = "val"
+        else:
+            split = "test"
+        records_with_splits.append(
+            Record(record.source, split, record.source_id, record.image, record.labels)
+        )
+    return records_with_splits
 
 
 def load_dmedhi() -> list[Record]:
@@ -338,8 +372,13 @@ def balance_training(records: list[Record]) -> tuple[list[Record], dict[int, int
     rng = random.Random(42)
     selected_by_id: dict[int, Record] = {}
     counts = Counter()
-    for class_id in (0, 4, 2, 1, 3):
-        candidates = [record for record in records if class_id in record.counts and id(record) not in selected_by_id]
+    class_priority = (0, 4, 2, 1, 3)
+    for class_id in class_priority:
+        candidates = []
+        for record in records:
+            if class_id in record.counts:
+                if id(record) not in selected_by_id:
+                    candidates.append(record)
         rng.shuffle(candidates)
         candidates.sort(key=lambda record: (record.counts[class_id], sum(record.counts.values())))
         for record in candidates:
@@ -365,8 +404,14 @@ def write_dataset(records_by_split: dict[str, list[Record]], requested_train_cou
     # dedup tracking
     dropped_per_split = {split: 0 for split in records_by_split}
     copied_boxes = {split: Counter() for split in records_by_split}
-    priority = ["val", "test", "train"]
-    ordered_splits = [s for s in priority if s in records_by_split] + [s for s in records_by_split if s not in priority]
+    split_priority = ["val", "test", "train"]
+    ordered_splits = []
+    for split in split_priority:
+        if split in records_by_split:
+            ordered_splits.append(split)
+    for split in records_by_split:
+        if split not in split_priority:
+            ordered_splits.append(split)
     for split in ordered_splits:
         recs = records_by_split[split]
         for index, record in enumerate(recs):
@@ -410,10 +455,18 @@ def main() -> None:
     by_source = Counter(record.source for record in records)
     print("Loaded records:", dict(by_source))
 
-    train_candidates = [r for r in records if r.split == "train"]
+    train_candidates = []
+    for record in records:
+        if record.split == "train":
+            train_candidates.append(record)
     # TrashNet val is the tabletop gold standard. Everything else is test.
-    val_records = [r for r in records if r.split == "val" and r.source == "trashnet"]
-    test_records = [r for r in records if r.split in ("val", "test") and r.source != "trashnet"]
+    val_records = []
+    test_records = []
+    for record in records:
+        if record.split == "val" and record.source == "trashnet":
+            val_records.append(record)
+        elif record.split in ("val", "test") and record.source != "trashnet":
+            test_records.append(record)
     selected, counts, target = balance_training(train_candidates)
     print("Selected training sources:", dict(Counter(r.source for r in selected)))
     write_dataset({"train": selected, "val": val_records, "test": test_records}, counts, target)

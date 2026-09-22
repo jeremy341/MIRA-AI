@@ -47,7 +47,10 @@ class DatasetSource:
             data = yaml.safe_load(f)
 
         required = ["key", "name", "source_format", "input_path"]
-        missing = [f for f in required if f not in data]
+        missing = []
+        for field_name in required:
+            if field_name not in data:
+                missing.append(field_name)
         if missing:
             raise ValueError(f"Dataset descriptor {yaml_path.name} missing required fields: {missing}")
 
@@ -117,18 +120,20 @@ class DatasetRegistry:
         return count
 
     def list_sources(self) -> list[dict]:
-        return [
-            {
-                "key": s.key,
-                "name": s.name,
-                "description": s.description,
-                "format": s.source_format,
-                "path": str(s.input_path),
-                "exists": s.input_path.exists(),
-                "stats": s.stats,
-            }
-            for s in self.sources.values()
-        ]
+        source_rows = []
+        for source in self.sources.values():
+            source_rows.append(
+                {
+                    "key": source.key,
+                    "name": source.name,
+                    "description": source.description,
+                    "format": source.source_format,
+                    "path": str(source.input_path),
+                    "exists": source.input_path.exists(),
+                    "stats": source.stats,
+                }
+            )
+        return source_rows
 
     def get_source(self, key: str) -> DatasetSource:
         if key not in self.sources:
@@ -168,22 +173,16 @@ class DatasetRegistry:
             sources_used.append(key)
             logger.info("[%s]", source.name)
 
-            handlers = {
-                ("yolo", False): self._merge_passthrough,
-                ("yolo", True): self._merge_remapped,
-                ("coco", False): self._merge_coco,
-                ("coco", True): self._merge_coco,
-            }
-            try:
-                handler = handlers[(source.source_format, bool(source.class_mapping))]
-            except KeyError:
-                raise ValueError(f"Unsupported dataset format: {source.source_format}") from None
-
-            result = handler(source, output, dry_run)
-            if isinstance(result, tuple):
-                added, skipped = result
+            has_mapping = bool(source.class_mapping)
+            if source.source_format == "yolo" and not has_mapping:
+                added = self._merge_passthrough(source, output, dry_run)
+                skipped = 0
+            elif source.source_format == "yolo":
+                added, skipped = self._merge_remapped(source, output, dry_run)
+            elif source.source_format == "coco":
+                added, skipped = self._merge_coco(source, output, dry_run)
             else:
-                added, skipped = result, 0
+                raise ValueError(f"Unsupported dataset format: {source.source_format}")
             total_added += added
             total_skipped += skipped
 
@@ -252,13 +251,14 @@ class DatasetRegistry:
 
             if split_name == "train" and "val" not in source.splits:
                 train_stems, val_stems = mu.create_split_from_train(img_src)
-                for ds, stems in [("train", train_stems), ("val", val_stems)]:
+                split_stems = [("train", train_stems), ("val", val_stems)]
+                for output_split, stems in split_stems:
                     a, s = mu.copy_remapped_images(
                         stems,
                         img_src,
                         lbl_src,
-                        output / "images" / ds,
-                        output / "labels" / ds,
+                        output / "images" / output_split,
+                        output / "labels" / output_split,
                         source.class_mapping,
                     )
                     total_added += a
@@ -328,15 +328,14 @@ class DatasetRegistry:
 
                 # Locate the image file
                 img_filename = img_info["file_name"]
-                image_candidates = (
-                    source.input_path / img_filename,
-                    source.input_path / "images" / Path(img_filename).name,
-                    source.input_path / "images" / split_name / Path(img_filename).name,
-                )
+                image_name = Path(img_filename).name
+                image_candidates = [source.input_path / img_filename]
+                image_candidates.append(source.input_path / "images" / image_name)
+                image_candidates.append(source.input_path / "images" / split_name / image_name)
                 img_path = None
                 source_root = source.input_path.resolve()
-                for candidate in image_candidates:
-                    candidate = candidate.resolve()
+                for candidate_path in image_candidates:
+                    candidate = candidate_path.resolve()
                     try:
                         candidate.relative_to(source_root)
                     except ValueError:
@@ -350,9 +349,9 @@ class DatasetRegistry:
                     continue
 
                 # Convert annotations to YOLO format
-                img_w = img_info["width"]
-                img_h = img_info["height"]
-                if img_w <= 0 or img_h <= 0:
+                image_width = img_info["width"]
+                image_height = img_info["height"]
+                if image_width <= 0 or image_height <= 0:
                     total_skipped += 1
                     continue
                 yolo_lines: list[str] = []
@@ -368,12 +367,16 @@ class DatasetRegistry:
                         target_cat_id = cat_id
 
                     # COCO bbox: [x, y, width, height] -> YOLO: [class x_center y_center w h] (normalized)
-                    x, y, w, h = ann["bbox"]
-                    x_center = (x + w / 2.0) / img_w
-                    y_center = (y + h / 2.0) / img_h
-                    w_norm = w / img_w
-                    h_norm = h / img_h
-                    yolo_lines.append(f"{target_cat_id} {x_center:.6f} {y_center:.6f} {w_norm:.6f} {h_norm:.6f}\n")
+                    x, y, box_width, box_height = ann["bbox"]
+                    center_x = (x + box_width / 2.0) / image_width
+                    center_y = (y + box_height / 2.0) / image_height
+                    normalized_width = box_width / image_width
+                    normalized_height = box_height / image_height
+                    yolo_line = (
+                        f"{target_cat_id} {center_x:.6f} {center_y:.6f} "
+                        f"{normalized_width:.6f} {normalized_height:.6f}\n"
+                    )
+                    yolo_lines.append(yolo_line)
 
                 if yolo_lines:
                     dst_img_dir = output / "images" / dst_split

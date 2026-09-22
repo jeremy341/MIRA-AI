@@ -41,19 +41,34 @@ def letterbox_preprocess(
     h0, w0 = img_bgr.shape[:2]
     if h0 == 0 or w0 == 0:
         raise ValueError(f"Image has zero dimension ({w0}x{h0}): {image_path}")
-    r = min(imgsz / h0, imgsz / w0)
-    new_h, new_w = int(h0 * r), int(w0 * r)
-    dh = imgsz - new_h
-    dw = imgsz - new_w
-    top = dh // 2
-    bottom = dh - top
-    left = dw // 2
-    right = dw - left
-    im = cv2.resize(img_bgr, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
-    im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
-    im_tensor = torch.from_numpy(im.transpose(2, 0, 1)[::-1].copy()).float() / 255.0
-    im_tensor = im_tensor.unsqueeze(0)
-    return im_tensor, top, bottom, left, right, r, w0, h0
+    scale = min(imgsz / h0, imgsz / w0)
+    resized_height = int(h0 * scale)
+    resized_width = int(w0 * scale)
+    vertical_padding = imgsz - resized_height
+    horizontal_padding = imgsz - resized_width
+    top = vertical_padding // 2
+    bottom = vertical_padding - top
+    left = horizontal_padding // 2
+    right = horizontal_padding - left
+
+    resized_image = cv2.resize(
+        img_bgr,
+        (resized_width, resized_height),
+        interpolation=cv2.INTER_LINEAR,
+    )
+    padded_image = cv2.copyMakeBorder(
+        resized_image,
+        top,
+        bottom,
+        left,
+        right,
+        cv2.BORDER_CONSTANT,
+        value=(114, 114, 114),
+    )
+    rgb_image = padded_image.transpose(2, 0, 1)[::-1].copy()
+    image_tensor = torch.from_numpy(rgb_image).float() / 255.0
+    image_tensor = image_tensor.unsqueeze(0)
+    return image_tensor, top, bottom, left, right, scale, w0, h0
 
 
 def adjust_boxes_to_original(
@@ -68,13 +83,13 @@ def adjust_boxes_to_original(
     import torch
 
     boxes = preds[:, :4].clone()
-    boxes[:, 0] -= left
-    boxes[:, 1] -= top
-    boxes[:, 2] -= left
-    boxes[:, 3] -= top
-    boxes = torch.clamp(boxes / r, 0)
-    boxes[:, 0::2] = torch.clamp(boxes[:, 0::2], 0, w0 - 1)
-    boxes[:, 1::2] = torch.clamp(boxes[:, 1::2], 0, h0 - 1)
+    boxes[:, 0] = boxes[:, 0] - left
+    boxes[:, 1] = boxes[:, 1] - top
+    boxes[:, 2] = boxes[:, 2] - left
+    boxes[:, 3] = boxes[:, 3] - top
+    boxes = torch.clamp(boxes / r, min=0)
+    boxes[:, 0::2] = torch.clamp(boxes[:, 0::2], min=0, max=w0 - 1)
+    boxes[:, 1::2] = torch.clamp(boxes[:, 1::2], min=0, max=h0 - 1)
     return boxes
 
 
@@ -94,26 +109,35 @@ def build_inference_result(
     top, bottom, left, right, scale, width, height = preprocess_info
     threshold = confidence if confidence_limit is None else min(confidence, confidence_limit)
     predictions = non_max_suppression(
-        raw_predictions, conf_thres=threshold, iou_thres=iou,
-        max_det=300, multi_label=True
+        raw_predictions,
+        conf_thres=threshold,
+        iou_thres=iou,
+        max_det=300,
+        multi_label=True,
     )[0]
-    boxes = adjust_boxes_to_original(
-        predictions, left, top, scale, width, height
-    ) if len(predictions) else []
+    if len(predictions):
+        boxes = adjust_boxes_to_original(predictions, left, top, scale, width, height)
+    else:
+        boxes = []
+
     detections = []
     for index in range(len(predictions)):
         class_id = int(predictions[index, 5].item())
-        class_name = (
-            names.get(class_id, f"class_{class_id}")
-            if isinstance(names, dict)
-            else names[class_id] if 0 <= class_id < len(names) else f"class_{class_id}"
-        )
-        detections.append(Detection(
+        fallback_name = f"class_{class_id}"
+        if isinstance(names, dict):
+            class_name = names.get(class_id, fallback_name)
+        elif 0 <= class_id < len(names):
+            class_name = names[class_id]
+        else:
+            class_name = fallback_name
+
+        detection = Detection(
             class_id=class_id,
             class_name=class_name,
             confidence=float(predictions[index, 4].item()),
             bbox=tuple(boxes[index].cpu().tolist()),
-        ))
+        )
+        detections.append(detection)
     return InferenceResult(
         detections=detections,
         latency_ms=0.0,
@@ -130,8 +154,8 @@ def _get_device(backend: Any):
     if hasattr(backend, "device"):
         return backend.device
     if hasattr(backend, "parameters"):
-        params = list(backend.parameters())
-        if params:
+        parameters = list(backend.parameters())
+        if parameters:
             return next(backend.parameters()).device
     return torch.device("cpu")
 
@@ -178,8 +202,11 @@ class DetectionModel(ABC):
     ) -> InferenceResult: ...
 
     def __repr__(self) -> str:
-        state = "loaded" if self._loaded else "not loaded"
-        return f"{type(self).__name__}({self.name!r}, {state})"
+        if self._loaded:
+            load_state = "loaded"
+        else:
+            load_state = "not loaded"
+        return f"{type(self).__name__}({self.name!r}, {load_state})"
 
 
 class YOLOAdapter(DetectionModel):
