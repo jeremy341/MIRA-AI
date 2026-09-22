@@ -10,38 +10,13 @@ import pytest
 
 import src.cli  # noqa: F401
 
-_MOCK_KEYS = [
-    "ultralytics",
-    "ultralytics.nn",
-    "ultralytics.nn.autobackend",
-    "ultralytics.utils",
-    "ultralytics.utils.ops",
-    "ultralytics.utils.torch_utils",
-    "torchvision",
-    "tensorflow",
-    "tensorflow.keras",
-    "uvicorn",
-    "psutil",
-    "torch",
-    "cv2",
-]
-
-
-def _build_parser(add_args_func, extra_subs_for=None):
-    parent = argparse.ArgumentParser()
-    subs = parent.add_subparsers(dest="command")
-    sub = subs.add_parser("test_cmd")
-    if extra_subs_for:
-        inner = sub.add_subparsers(dest=extra_subs_for)
-        return parent, sub, inner
+def _parse(add_args_func, cmd_args):
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest="command")
+    command = subparsers.add_parser("test_cmd")
     if add_args_func:
-        add_args_func(sub)
-    return parent, sub, None
-
-
-def _parse(add_args_func, cmd_args, extra_subs_for=None):
-    parent, _, _ = _build_parser(add_args_func, extra_subs_for=extra_subs_for)
-    return parent.parse_args(["test_cmd"] + cmd_args)
+        add_args_func(command)
+    return parser.parse_args(["test_cmd"] + cmd_args)
 
 
 EXPECTED_COMMANDS = {

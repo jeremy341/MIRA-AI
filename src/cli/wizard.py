@@ -10,6 +10,15 @@ def _add_wizard_args(parser):
     parser.add_argument("--auto-start", action="store_true", help="Skip confirmation and start training immediately.")
 
 
+def _read_integer(prompt, default):
+    value = input(prompt).strip()
+    try:
+        return int(value) if value else default
+    except ValueError:
+        print(f"  Invalid number, using default: {default}")
+        return default
+
+
 @register_command("wizard", "Interactive training setup wizard", add_args=_add_wizard_args)
 def cmd_wizard(args):
     from src.deploy import detect_hardware
@@ -45,10 +54,7 @@ def cmd_wizard(args):
     ds_registry = DatasetRegistry()
     ds_registry.discover()
     sources = ds_registry.list_sources()
-    available_keys = []
-    for source in sources:
-        if source["exists"]:
-            available_keys.append(source["key"])
+    available_keys = [source["key"] for source in sources if source["exists"]]
 
     if not available_keys:
         print("\n  No datasets found. Run 'mira merge' first.")
@@ -83,12 +89,7 @@ def cmd_wizard(args):
         gpu_status = "CPU only"
     print(f"  Auto-detected: {gpu_status}")
 
-    epochs_input = input(f"  Epochs [{default_epochs}]: ").strip()
-    try:
-        epochs = int(epochs_input) if epochs_input else default_epochs
-    except ValueError:
-        print(f"  Invalid number, using default: {default_epochs}")
-        epochs = default_epochs
+    epochs = _read_integer(f"  Epochs [{default_epochs}]: ", default_epochs)
 
     if hw.has_cuda:
         default_batch_gpu = default_batch
@@ -97,12 +98,7 @@ def cmd_wizard(args):
         default_batch_gpu = 8
         device = "cpu"
 
-    batch_input = input(f"  Batch size [{default_batch_gpu}]: ").strip()
-    try:
-        batch_size = int(batch_input) if batch_input else default_batch_gpu
-    except ValueError:
-        print(f"  Invalid number, using default: {default_batch_gpu}")
-        batch_size = default_batch_gpu
+    batch_size = _read_integer(f"  Batch size [{default_batch_gpu}]: ", default_batch_gpu)
 
     # Step 5: Export options
     print("\nStep 5: Export options")
