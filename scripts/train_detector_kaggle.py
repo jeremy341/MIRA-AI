@@ -26,6 +26,34 @@ def parse_args():
     return p.parse_args()
 
 
+def _find_dataset_root(kaggle_input_dir: Path, dataset_name: str) -> Path | None:
+    requested_dataset_name = dataset_name.lower().replace("+", "-")
+    for candidate_dir in kaggle_input_dir.iterdir():
+        if not candidate_dir.is_dir():
+            continue
+        normalized_candidate_name = candidate_dir.name.lower().replace("+", "-").replace(" ", "-")
+        if requested_dataset_name not in normalized_candidate_name:
+            continue
+        has_training_images = (candidate_dir / "images" / "train").is_dir()
+        if has_training_images:
+            return candidate_dir
+
+    for candidate_dir in kaggle_input_dir.iterdir():
+        if candidate_dir.is_dir():
+            has_training_images = (candidate_dir / "images" / "train").is_dir()
+            if has_training_images:
+                return candidate_dir
+
+    for candidate_dir in kaggle_input_dir.iterdir():
+        if not candidate_dir.is_dir():
+            continue
+        for image_train_dir in candidate_dir.rglob("images/train"):
+            if image_train_dir.is_dir():
+                return image_train_dir.parent.parent
+
+    return None
+
+
 def main():
     args = parse_args()
     if args.epochs < 1 or args.batch_size < 1 or args.img_size < 1 or args.patience < 1:
@@ -36,37 +64,8 @@ def main():
     from ultralytics import YOLO
 
     input_dir = os.environ.get("KAGGLE_INPUT_PATH", "/kaggle/input")
-    data_root = None
-
-    requested_dataset_name = args.dataset.lower().replace("+", "-")
     kaggle_input_dir = Path(input_dir)
-    for candidate_dir in kaggle_input_dir.iterdir():
-        normalized_candidate_name = candidate_dir.name.lower().replace("+", "-").replace(" ", "-")
-        if candidate_dir.is_dir():
-            name_matches = requested_dataset_name in normalized_candidate_name
-            has_training_images = (candidate_dir / "images" / "train").is_dir()
-            if name_matches and has_training_images:
-                data_root = candidate_dir
-                break
-
-    if data_root is None:
-        for candidate_dir in kaggle_input_dir.iterdir():
-            if candidate_dir.is_dir():
-                has_training_images = (candidate_dir / "images" / "train").is_dir()
-                if has_training_images:
-                    data_root = candidate_dir
-                    break
-
-    if data_root is None:
-        for candidate_dir in kaggle_input_dir.iterdir():
-            if candidate_dir.is_dir():
-                nested_image_dirs = candidate_dir.rglob("images/train")
-                for image_train_dir in nested_image_dirs:
-                    if image_train_dir.is_dir():
-                        data_root = image_train_dir.parent.parent
-                        break
-                if data_root:
-                    break
+    data_root = _find_dataset_root(kaggle_input_dir, args.dataset)
 
     if data_root is None:
         raise FileNotFoundError(

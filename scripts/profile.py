@@ -52,12 +52,6 @@ def _peak_gpu_memory_mb() -> float | None:
     return torch.cuda.max_memory_allocated() / 1_048_576
 
 
-def _current_gpu_memory_mb() -> float | None:
-    if not _CUDA_AVAILABLE:
-        return None
-    return torch.cuda.memory_allocated() / 1_048_576
-
-
 def _peak_cpu_memory_mb() -> float | None:
     try:
         import resource
