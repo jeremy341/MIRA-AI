@@ -23,7 +23,11 @@ import matplotlib.pyplot as plt
 
 
 def _model_size_mb(path: Path) -> float:
-    return path.stat().st_size / 1_048_576 if path.exists() else 0.0
+    if not path.exists():
+        return 0.0
+    size_bytes = path.stat().st_size
+    size_megabytes = size_bytes / 1_048_576
+    return size_megabytes
 
 
 def _rank_results(results: list[BenchmarkResult]) -> list[BenchmarkResult]:
@@ -32,25 +36,29 @@ def _rank_results(results: list[BenchmarkResult]) -> list[BenchmarkResult]:
 
 def build_comparison(results: list[BenchmarkResult]) -> str:
     # Return markdown table which compares models
-    sorted_res = _rank_results(results)
+    sorted_results = _rank_results(results)
 
     header = "| Model | Size (MB) | Latency (ms) | Throughput (FPS) | Precision | Recall | F1 | mAP50 | mAP50-95 |"
     sep = "|---|---:|---:|---:|---:|---:|---:|---:|"
     rows = [header, sep]
 
-    for r in sorted_res:
-        size = _model_size_mb(Path(r.model_path))
-        throughput = 1000.0 / r.avg_latency_ms if r.avg_latency_ms > 0 else 0.0
+    for result in sorted_results:
+        model_path = Path(result.model_path)
+        size_megabytes = _model_size_mb(model_path)
+        if result.avg_latency_ms > 0:
+            throughput = 1000.0 / result.avg_latency_ms
+        else:
+            throughput = 0.0
         rows.append(
-            f"| {r.model_name} "
-            f"| {size:.1f} "
-            f"| {r.avg_latency_ms:.1f} "
+            f"| {result.model_name} "
+            f"| {size_megabytes:.1f} "
+            f"| {result.avg_latency_ms:.1f} "
             f"| {throughput:.1f} "
-            f"| {r.overall_precision:.1%} "
-            f"| {r.overall_recall:.1%} "
-            f"| {r.overall_f1:.1%} "
-            f"| {r.map50:.1%} "
-            f"| {r.map50_95:.1%} |"
+            f"| {result.overall_precision:.1%} "
+            f"| {result.overall_recall:.1%} "
+            f"| {result.overall_f1:.1%} "
+            f"| {result.map50:.1%} "
+            f"| {result.map50_95:.1%} |"
         )
 
     return "\n".join(rows)
@@ -58,7 +66,7 @@ def build_comparison(results: list[BenchmarkResult]) -> str:
 
 def build_per_class_table(results: list[BenchmarkResult]) -> str:
     # Return a markdown table with per-class precision / recall / F1.
-    sorted_res = _rank_results(results)
+    sorted_results = _rank_results(results)
     headers = ["Model"]
     for cls in CLASS_NAMES:
         headers.extend([f"{cls} P", f"{cls} R", f"{cls} F1"])
@@ -67,16 +75,16 @@ def build_per_class_table(results: list[BenchmarkResult]) -> str:
 
     rows = ["| " + " | ".join(headers) + " |", "".join(sep)]
 
-    for r in sorted_res:
-        cells = [r.model_name]
+    for result in sorted_results:
+        cells = [result.model_name]
         for cls in CLASS_NAMES:
-            m = r.per_class.get(cls)
-            if m:
+            class_metrics = result.per_class.get(cls)
+            if class_metrics:
                 cells.extend(
                     [
-                        f"{m.precision:.1%}",
-                        f"{m.recall:.1%}",
-                        f"{m.f1:.1%}",
+                        f"{class_metrics.precision:.1%}",
+                        f"{class_metrics.recall:.1%}",
+                        f"{class_metrics.f1:.1%}",
                     ]
                 )
             else:

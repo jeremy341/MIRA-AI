@@ -49,11 +49,13 @@ def _build_training_params(exp: dict, project: dict) -> dict:
 
 
 def _cell_lines(source: str) -> list[str]:
-    lines = source.split("\n")
-    src_lines = [line + "\n" for line in lines[:-1]]
-    if lines[-1]:
-        src_lines.append(lines[-1])
-    return src_lines
+    source_lines = source.split("\n")
+    notebook_lines = []
+    for line in source_lines[:-1]:
+        notebook_lines.append(line + "\n")
+    if source_lines[-1]:
+        notebook_lines.append(source_lines[-1])
+    return notebook_lines
 
 
 def _md_cell(source: str) -> dict:
@@ -82,8 +84,11 @@ def generate_kaggle_notebook(exp: dict, project: dict) -> dict:
     exp_name = exp.get("name", "mira_exp")
     export_formats = exp.get("export", {}).get("formats", ["tflite_int8", "onnx"])
 
-    aug = params["augmentation"]
-    aug_lines = ",\n        ".join(f"{k}={v}" for k, v in aug.items())
+    augmentation = params["augmentation"]
+    augmentation_arguments = []
+    for argument_name, argument_value in augmentation.items():
+        augmentation_arguments.append(f"{argument_name}={argument_value}")
+    aug_lines = ",\n        ".join(augmentation_arguments)
 
     export_cells = ""
     if "tflite_int8" in export_formats:
@@ -229,17 +234,18 @@ def main():
         project_root = Path(__file__).resolve().parent.parent
 
     project_config = _load_project_config(project_root)
-    exp_config = _load_experiment_config(config_path)
+    experiment_config = _load_experiment_config(config_path)
 
-    notebook = generate_kaggle_notebook(exp_config, project_config)
+    notebook = generate_kaggle_notebook(experiment_config, project_config)
 
     if args.output:
         output_path = Path(args.output)
     else:
-        exp_name = exp_config.get("name", "mira_exp")
-        output_path = Path(f"{exp_name}_kaggle.ipynb")
+        experiment_name = experiment_config.get("name", "mira_exp")
+        output_path = Path(f"{experiment_name}_kaggle.ipynb")
 
-    output_path.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
+    notebook_json = json.dumps(notebook, indent=1)
+    output_path.write_text(notebook_json, encoding="utf-8")
     print(f"Kaggle notebook generated: {output_path}")
 
 

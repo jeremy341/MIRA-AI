@@ -9,26 +9,32 @@ def _getch():
     if sys.platform == "win32":
         import msvcrt
 
-        ch = msvcrt.getch()
-        if ch == b"\xe0":
-            second = msvcrt.getch()
-            mapped = {b"H": "UP", b"P": "DOWN", b"M": "RIGHT", b"K": "LEFT"}.get(second)
-            if mapped:
-                return mapped
+        key_bytes = msvcrt.getch()
+        if key_bytes == b"\xe0":
+            direction_byte = msvcrt.getch()
+            direction_by_byte = {
+                b"H": "UP",
+                b"P": "DOWN",
+                b"M": "RIGHT",
+                b"K": "LEFT",
+            }
+            direction = direction_by_byte.get(direction_byte)
+            if direction:
+                return direction
             # Function key or other extended key - consume remaining bytes
-            for _ in range(100):
+            for key_check in range(100):
                 if not msvcrt.kbhit():
                     break
                 msvcrt.getch()
             return ""
-        if ch == b"\r":
+        if key_bytes == b"\r":
             return "ENTER"
-        if ch == b"\x1b":
+        if key_bytes == b"\x1b":
             return "ESC"
-        if ch == b"\x03":
+        if key_bytes == b"\x03":
             return "CTRL_C"
         try:
-            return ch.decode("utf-8")
+            return key_bytes.decode("utf-8")
         except UnicodeDecodeError:
             return ""
     else:
@@ -37,46 +43,54 @@ def _getch():
         import tty
         import select
 
-        fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
+        input_file_descriptor = sys.stdin.fileno()
+        original_terminal_settings = termios.tcgetattr(input_file_descriptor)
         try:
-            tty.setraw(fd)
-            ch = sys.stdin.read(1)
-            if ch == "\x1b":
+            tty.setraw(input_file_descriptor)
+            key_text = sys.stdin.read(1)
+            if key_text == "\x1b":
                 # Check if more bytes available (non-blocking)
-                rest = ""
+                remaining_escape_text = ""
                 while select.select([sys.stdin], [], [], 0.01)[0]:
-                    rest += sys.stdin.read(1)
-                if rest == "[A":
+                    remaining_escape_text += sys.stdin.read(1)
+                if remaining_escape_text == "[A":
                     return "UP"
-                if rest == "[B":
+                if remaining_escape_text == "[B":
                     return "DOWN"
-                if rest == "[C":
+                if remaining_escape_text == "[C":
                     return "RIGHT"
-                if rest == "[D":
+                if remaining_escape_text == "[D":
                     return "LEFT"
                 return "ESC"  # Unknown escape sequence
-            if ch == "\r":
+            if key_text == "\r":
                 return "ENTER"
-            if ch == "\x03":
+            if key_text == "\x03":
                 return "CTRL_C"
-            return ch
+            return key_text
         finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
+            termios.tcsetattr(
+                input_file_descriptor,
+                termios.TCSADRAIN,
+                original_terminal_settings,
+            )
 
 
 def pick_model(items, labels=None, title="Available models", filter_func=None):
     # Interactive arrow-key model picker with y/N confirmation. Returns selected item name, or None if cancelled.
     if filter_func:
-        items = [i for i in items if filter_func(i)]
+        filtered_items = []
+        for item in items:
+            if filter_func(item):
+                filtered_items.append(item)
+        items = filtered_items
 
     if not items:
         print("No items available.")
         return None
 
     labels = labels or {}
-    idx = 0
-    selected = None
+    selected_index = 0
+    pending_selection = None
     display_items = list(items) + ["[Cancel]"]
 
     while True:
@@ -84,37 +98,45 @@ def pick_model(items, labels=None, title="Available models", filter_func=None):
         print(f"\n  {title}")
         print()
 
-        for i, item in enumerate(display_items):
-            selected_item = idx == i
-            prefix = "  " if not selected_item else "\u2192"
-            suffix = "  <--" if selected_item else ""
-            if item == "[Cancel]":
-                label = "Exit without selecting"
+        for item_index, item in enumerate(display_items):
+            is_selected_item = selected_index == item_index
+            if is_selected_item:
+                prefix = "\u2192"
+                suffix = "  <--"
             else:
-                label = labels.get(item, "")
-            print(f"  {prefix} {item}{' ' + label if label else ''}{suffix}")
+                prefix = "  "
+                suffix = ""
+            if item == "[Cancel]":
+                item_label = "Exit without selecting"
+            else:
+                item_label = labels.get(item, "")
+            if item_label:
+                label_text = " " + item_label
+            else:
+                label_text = ""
+            print(f"  {prefix} {item}{label_text}{suffix}")
 
         print("\n  \u2191\u2193 navigate  |  Enter: select  |  Esc: cancel")
 
-        if selected is not None:
-            print(f"\n  Run {selected}? (y/N): ", end="", flush=True)
-            ch = _getch()
-            if ch == "y":
+        if pending_selection is not None:
+            print(f"\n  Run {pending_selection}? (y/N): ", end="", flush=True)
+            confirmation_key = _getch()
+            if confirmation_key == "y":
                 print("y")
-                return selected
+                return pending_selection
             print("n")
-            selected = None
+            pending_selection = None
             continue
 
-        ch = _getch()
-        if ch == "UP":
-            idx = (idx - 1) % len(display_items)
-        elif ch == "DOWN":
-            idx = (idx + 1) % len(display_items)
-        elif ch in ("ENTER", "RIGHT"):
-            choice = display_items[idx]
-            if choice == "[Cancel]":
+        navigation_key = _getch()
+        if navigation_key == "UP":
+            selected_index = (selected_index - 1) % len(display_items)
+        elif navigation_key == "DOWN":
+            selected_index = (selected_index + 1) % len(display_items)
+        elif navigation_key in ("ENTER", "RIGHT"):
+            selected_item = display_items[selected_index]
+            if selected_item == "[Cancel]":
                 return None
-            selected = choice
-        elif ch in ("ESC", "CTRL_C"):
+            pending_selection = selected_item
+        elif navigation_key in ("ESC", "CTRL_C"):
             return None

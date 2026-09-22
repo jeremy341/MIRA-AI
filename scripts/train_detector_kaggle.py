@@ -38,25 +38,32 @@ def main():
     input_dir = os.environ.get("KAGGLE_INPUT_PATH", "/kaggle/input")
     data_root = None
 
-    normalized_dataset = args.dataset.lower().replace("+", "-")
-    for d in Path(input_dir).iterdir():
-        normalized_name = d.name.lower().replace("+", "-").replace(" ", "-")
-        if d.is_dir() and normalized_dataset in normalized_name and (d / "images" / "train").is_dir():
-            data_root = d
-            break
-
-    if data_root is None:
-        for d in Path(input_dir).iterdir():
-            if d.is_dir() and (d / "images" / "train").is_dir():
-                data_root = d
+    requested_dataset_name = args.dataset.lower().replace("+", "-")
+    kaggle_input_dir = Path(input_dir)
+    for candidate_dir in kaggle_input_dir.iterdir():
+        normalized_candidate_name = candidate_dir.name.lower().replace("+", "-").replace(" ", "-")
+        if candidate_dir.is_dir():
+            name_matches = requested_dataset_name in normalized_candidate_name
+            has_training_images = (candidate_dir / "images" / "train").is_dir()
+            if name_matches and has_training_images:
+                data_root = candidate_dir
                 break
 
     if data_root is None:
-        for d in Path(input_dir).iterdir():
-            if d.is_dir():
-                for sub in d.rglob("images/train"):
-                    if sub.is_dir():
-                        data_root = sub.parent.parent
+        for candidate_dir in kaggle_input_dir.iterdir():
+            if candidate_dir.is_dir():
+                has_training_images = (candidate_dir / "images" / "train").is_dir()
+                if has_training_images:
+                    data_root = candidate_dir
+                    break
+
+    if data_root is None:
+        for candidate_dir in kaggle_input_dir.iterdir():
+            if candidate_dir.is_dir():
+                nested_image_dirs = candidate_dir.rglob("images/train")
+                for image_train_dir in nested_image_dirs:
+                    if image_train_dir.is_dir():
+                        data_root = image_train_dir.parent.parent
                         break
                 if data_root:
                     break
@@ -69,8 +76,12 @@ def main():
         )
 
     print(f"Dataset: {data_root}")
-    train_imgs = list(data_root.rglob("images/train/*.jpg")) + list(data_root.rglob("images/train/*.png"))
-    val_imgs = list(data_root.rglob("images/val/*.jpg")) + list(data_root.rglob("images/val/*.png"))
+    train_jpg_images = list(data_root.rglob("images/train/*.jpg"))
+    train_png_images = list(data_root.rglob("images/train/*.png"))
+    train_imgs = train_jpg_images + train_png_images
+    val_jpg_images = list(data_root.rglob("images/val/*.jpg"))
+    val_png_images = list(data_root.rglob("images/val/*.png"))
+    val_imgs = val_jpg_images + val_png_images
     print(f"  Train: {len(train_imgs)} images")
     print(f"  Val:   {len(val_imgs)} images")
 

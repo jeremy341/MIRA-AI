@@ -34,14 +34,15 @@ def _generate_dummy_image(width: int = 640, height: int = 640) -> Path:
     try:
         from PIL import Image
 
-        img = Image.fromarray(np.random.randint(0, 255, (height, width, 3), dtype=np.uint8))
-        img.save(str(dummy))
+        pixels = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
+        image = Image.fromarray(pixels)
+        image.save(str(dummy))
         return dummy
     except ImportError:
         import cv2
 
-        img = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
-        cv2.imwrite(str(dummy), img)
+        pixels = np.random.randint(0, 255, (height, width, 3), dtype=np.uint8)
+        cv2.imwrite(str(dummy), pixels)
         return dummy
 
 
@@ -78,24 +79,28 @@ def measure_inference(model, image_path: Path, imgsz: int = 640, batch_size: int
     from pipeline.models import letterbox_preprocess, _get_device
     import torch
 
-    im_tensor, top, bottom, left, right, r, w0, h0 = letterbox_preprocess(image_path, imgsz)
+    image_tensor, top, bottom, left, right, scale, original_width, original_height = letterbox_preprocess(
+        image_path, imgsz
+    )
     backend = getattr(model, "_backend", None)
     if backend is None:
         loaded_model = getattr(model, "_model", None)
         backend = getattr(loaded_model, "model", loaded_model)
     if backend is None:
         raise AttributeError(f"Model {model.name} has no inference backend")
-    dev = _get_device(backend)
-    im_tensor = im_tensor.repeat(batch_size, 1, 1, 1).to(dev)
+    device = _get_device(backend)
+    batch_tensor = image_tensor.repeat(batch_size, 1, 1, 1).to(device)
 
-    if getattr(dev, "type", None) == "cuda":
-        torch.cuda.synchronize(dev)
+    if getattr(device, "type", None) == "cuda":
+        torch.cuda.synchronize(device)
     start = time.perf_counter()
     with torch.no_grad():
-        _ = backend(im_tensor)
-    if getattr(dev, "type", None) == "cuda":
-        torch.cuda.synchronize(dev)
-    return (time.perf_counter() - start) * 1000
+        _ = backend(batch_tensor)
+    if getattr(device, "type", None) == "cuda":
+        torch.cuda.synchronize(device)
+    elapsed_seconds = time.perf_counter() - start
+    elapsed_milliseconds = elapsed_seconds * 1000
+    return elapsed_milliseconds
 
 
 def profile_model(
@@ -109,10 +114,10 @@ def profile_model(
     registry.discover()
     model = registry.load_model(model_name)
 
-    imgsz = getattr(model, "_imgsz", 640)
+    image_size = getattr(model, "_imgsz", 640)
     if image_path is None or not image_path.exists():
         print("  No test image provided, generating dummy image...")
-        image_path = _generate_dummy_image(imgsz, imgsz)
+        image_path = _generate_dummy_image(image_size, image_size)
         print(f"  Dummy image saved to {image_path}")
         _dummy_generated = True
     else:
@@ -120,7 +125,7 @@ def profile_model(
 
     print(f"  Warming up ({warmup} iterations)...")
     for _ in range(warmup):
-        measure_inference(model, image_path, imgsz, batch_size)
+        measure_inference(model, image_path, image_size, batch_size)
 
     print(f"  Benchmarking ({iterations} iterations, batch_size={batch_size})...")
     latencies: list[float] = []
@@ -129,8 +134,8 @@ def profile_model(
     peak_gpu_before = _peak_gpu_memory_mb()
 
     for _ in range(iterations):
-        lat = measure_inference(model, image_path, imgsz, batch_size)
-        latencies.append(lat)
+        latency_ms = measure_inference(model, image_path, image_size, batch_size)
+        latencies.append(latency_ms)
 
     peak_gpu_after = _peak_gpu_memory_mb()
     peak_cpu = _peak_cpu_memory_mb()
@@ -150,7 +155,7 @@ def profile_model(
     results = {
         "model": model_name,
         "image": str(image_path),
-        "imgsz": imgsz,
+        "imgsz": image_size,
         "batch_size": batch_size,
         "iterations": iterations,
         "warmup": warmup,
