@@ -51,6 +51,77 @@ def _add_train_args(parser):
     parser.add_argument("--auto", action="store_true", help="Auto-detect hardware and configure training parameters.")
 
 
+def _apply_train_argument_overrides(args, config):
+    argument_to_config_field = (
+        ("model", "model"),
+        ("dataset", "dataset"),
+        ("epochs", "epochs"),
+        ("batch_size", "batch_size"),
+        ("name", "name"),
+        ("device", "device"),
+        ("data_dir", "data_dir"),
+    )
+    for argument_name, config_field in argument_to_config_field:
+        value = getattr(args, argument_name)
+        if value is not None:
+            setattr(config, config_field, value)
+
+
+def _configure_training_from_hardware(args, config):
+    from src.deploy import detect_hardware
+
+    hardware = detect_hardware()
+    print("\n  Auto-detecting hardware...")
+
+    if hardware.has_cuda:
+        config.device = "0"
+        if args.batch_size is None:
+            config.batch_size = 32
+        print("  GPU detected - device=cuda:0, batch_size=32")
+    else:
+        config.device = "cpu"
+        if args.batch_size is None:
+            config.batch_size = 8
+        print("  CPU only - device=cpu, batch_size=8")
+
+    if args.model is None:
+        from src.pipeline.models import ModelRegistry
+
+        model_registry = ModelRegistry()
+        model_registry.discover()
+        available_models = model_registry.list_models()
+        pytorch_models = [model for model in available_models if model["name"].endswith(".pt")]
+        if pytorch_models:
+            config.model = pytorch_models[-1]["name"]
+            print(f"  Base model: {config.model}")
+
+    if args.dataset is None:
+        from src.pipeline.dataset import DatasetRegistry
+
+        dataset_registry = DatasetRegistry()
+        dataset_registry.discover()
+        sources = dataset_registry.list_sources()
+        available_datasets = [source for source in sources if source["exists"]]
+        if available_datasets:
+            selected_dataset = available_datasets[0]
+            dataset_yaml = Path(selected_dataset["path"]) / "dataset.yaml"
+            if dataset_yaml.exists():
+                config.dataset = dataset_yaml
+                print(f"  Dataset: {selected_dataset['key']}")
+
+    print()
+
+
+def _resolve_detection_dataset(config):
+    from src.cli.inference import resolve_detection_data_yaml
+
+    try:
+        config.dataset = str(resolve_detection_data_yaml())
+    except FileNotFoundError as error:
+        print(f"Configuration error: {error}")
+        sys.exit(2)
+
+
 @register_command("train", "Train a YOLO detection or classification model", add_args=_add_train_args)
 def cmd_train(args):
     from src.pipeline.strategies import TrainConfig
@@ -65,64 +136,10 @@ def cmd_train(args):
     else:
         config = TrainConfig()
 
-    if args.model is not None:
-        config.model = args.model
-    if args.dataset is not None:
-        config.dataset = args.dataset
-    if args.epochs is not None:
-        config.epochs = args.epochs
-    if args.batch_size is not None:
-        config.batch_size = args.batch_size
-    if args.name is not None:
-        config.name = args.name
-    if args.device is not None:
-        config.device = args.device
-    if args.data_dir is not None:
-        config.data_dir = args.data_dir
+    _apply_train_argument_overrides(args, config)
 
     if args.auto:
-        from src.deploy import detect_hardware
-
-        hw = detect_hardware()
-        print("\n  Auto-detecting hardware...")
-
-        if hw.has_cuda:
-            config.device = "0"
-            if args.batch_size is None:
-                config.batch_size = 32
-            print("  GPU detected - device=cuda:0, batch_size=32")
-        else:
-            config.device = "cpu"
-            if args.batch_size is None:
-                config.batch_size = 8
-            print("  CPU only - device=cpu, batch_size=8")
-
-        if args.model is None:
-            from src.pipeline.models import ModelRegistry
-
-            registry = ModelRegistry()
-            registry.discover()
-            models = registry.list_models()
-            pt_models = [m for m in models if m["name"].endswith(".pt")]
-            if pt_models:
-                config.model = pt_models[-1]["name"]
-                print(f"  Base model: {config.model}")
-
-        if args.dataset is None:
-            from src.pipeline.dataset import DatasetRegistry
-
-            ds_registry = DatasetRegistry()
-            ds_registry.discover()
-            sources = ds_registry.list_sources()
-            available = [s for s in sources if s["exists"]]
-            if available:
-                default = available[0]
-                dataset_yaml = Path(default["path"]) / "dataset.yaml"
-                if dataset_yaml.exists():
-                    config.dataset = dataset_yaml
-                    print(f"  Dataset: {default['key']}")
-
-        print()
+        _configure_training_from_hardware(args, config)
 
     errors = config.validate()
     if errors:
@@ -132,13 +149,7 @@ def cmd_train(args):
         sys.exit(2)
 
     if args.task == "detection" and not config.dataset:
-        from src.cli.inference import resolve_detection_data_yaml
-
-        try:
-            config.dataset = str(resolve_detection_data_yaml())
-        except FileNotFoundError as exc:
-            print(f"Configuration error: {exc}")
-            sys.exit(2)
+        _resolve_detection_dataset(config)
 
     if args.dry_run:
         print("Configuration is valid. Dry run - no training started.")

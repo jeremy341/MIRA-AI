@@ -85,17 +85,19 @@ def _validate_dataset_path(dataset_path):
 
 
 def _iou(box_a: list[float], box_b: list[float]) -> float:
-    x1 = max(box_a[0], box_b[0])
-    y1 = max(box_a[1], box_b[1])
-    x2 = min(box_a[2], box_b[2])
-    y2 = min(box_a[3], box_b[3])
-    inter_width = max(0, x2 - x1)
-    inter_height = max(0, y2 - y1)
-    inter = inter_width * inter_height
+    intersection_left = max(box_a[0], box_b[0])
+    intersection_top = max(box_a[1], box_b[1])
+    intersection_right = min(box_a[2], box_b[2])
+    intersection_bottom = min(box_a[3], box_b[3])
+    intersection_width = max(0, intersection_right - intersection_left)
+    intersection_height = max(0, intersection_bottom - intersection_top)
+    intersection_area = intersection_width * intersection_height
     area_a = max(0, box_a[2] - box_a[0]) * max(0, box_a[3] - box_a[1])
     area_b = max(0, box_b[2] - box_b[0]) * max(0, box_b[3] - box_b[1])
-    union = area_a + area_b - inter
-    return inter / union if union > 0 else 0.0
+    union = area_a + area_b - intersection_area
+    if union == 0:
+        return 0.0
+    return intersection_area / union
 
 
 def build_confusion_matrix(
@@ -104,85 +106,106 @@ def build_confusion_matrix(
     conf: float,
 ) -> np.ndarray:
     # Build and return a proper confusion matrix (GT rows, Pred cols)
-    n = len(CLASS_NAMES)
-    background = n
-    matrix = np.zeros((n + 1, n + 1), dtype=int)
+    class_count = len(CLASS_NAMES)
+    background_class_id = class_count
+    matrix = np.zeros((class_count + 1, class_count + 1), dtype=int)
 
     for img_path, gt_objects in samples:
         try:
             result = model.predict(str(img_path), conf=conf, iou=0.5)
         except Exception as exc:
             logger.warning("Prediction failed for %s: %s", img_path.name, exc)
-            for gt in gt_objects:
-                gt_cls = int(gt["class_id"])
-                if 0 <= gt_cls < n:
-                    matrix[gt_cls, background] += 1
+            for ground_truth in gt_objects:
+                ground_truth_class = int(ground_truth["class_id"])
+                if 0 <= ground_truth_class < class_count:
+                    matrix[ground_truth_class, background_class_id] += 1
             continue
 
-        pred_boxes = [list(d.bbox) for d in result.detections]
-        pred_cls = [d.class_id for d in result.detections]
-        pred_used = [False] * len(pred_boxes)
+        prediction_boxes = [list(detection.bbox) for detection in result.detections]
+        prediction_classes = [detection.class_id for detection in result.detections]
+        prediction_was_matched = [False] * len(prediction_boxes)
 
-        for gt in gt_objects:
-            gt_box = gt["bbox"]
-            gt_cls = int(gt["class_id"])
-            if not (0 <= gt_cls < len(CLASS_NAMES)):
+        for ground_truth in gt_objects:
+            ground_truth_box = ground_truth["bbox"]
+            ground_truth_class = int(ground_truth["class_id"])
+            if not (0 <= ground_truth_class < class_count):
                 continue
-            best_iou = 0.5
-            best_pi = -1
+            best_overlap = 0.5
+            best_prediction_index = -1
 
-            for pi in range(len(pred_boxes)):
-                if pred_used[pi]:
+            for prediction_index, prediction_box in enumerate(prediction_boxes):
+                if prediction_was_matched[prediction_index]:
                     continue
-                iou_val = _iou(gt_box, pred_boxes[pi])
-                if iou_val >= best_iou:
-                    best_iou = iou_val
-                    best_pi = pi
+                overlap = _iou(ground_truth_box, prediction_box)
+                if overlap >= best_overlap:
+                    best_overlap = overlap
+                    best_prediction_index = prediction_index
 
-            if best_pi >= 0:
-                pred_used[best_pi] = True
-                pc = int(pred_cls[best_pi])
-                matrix[gt_cls, pc if 0 <= pc < n else background] += 1
+            if best_prediction_index >= 0:
+                prediction_was_matched[best_prediction_index] = True
+                prediction_class = int(prediction_classes[best_prediction_index])
+                if 0 <= prediction_class < class_count:
+                    matrix[ground_truth_class, prediction_class] += 1
+                else:
+                    matrix[ground_truth_class, background_class_id] += 1
             else:
-                matrix[gt_cls, background] += 1
+                matrix[ground_truth_class, background_class_id] += 1
 
-        for pi, used in enumerate(pred_used):
-            if not used:
-                pc = int(pred_cls[pi])
-                matrix[background, pc if 0 <= pc < n else background] += 1
+        for prediction_index, was_matched in enumerate(prediction_was_matched):
+            if was_matched:
+                continue
+            prediction_class = int(prediction_classes[prediction_index])
+            if 0 <= prediction_class < class_count:
+                matrix[background_class_id, prediction_class] += 1
+            else:
+                matrix[background_class_id, background_class_id] += 1
 
     return matrix
 
 
 def plot_confusion_matrix(matrix: np.ndarray, output_dir: Path) -> None:
     # Save a formatted confusion matrix as PNG
-    fig, ax = plt.subplots(figsize=(7, 6))
-    im = ax.imshow(matrix, cmap="Blues", aspect="auto")
+    figure, axes = plt.subplots(figsize=(7, 6))
+    image = axes.imshow(matrix, cmap="Blues", aspect="auto")
 
-    cbar = fig.colorbar(im, ax=ax, shrink=0.85)
-    cbar.ax.set_ylabel("Count", rotation=-90, va="bottom", fontweight="bold")
+    colorbar = figure.colorbar(image, ax=axes, shrink=0.85)
+    colorbar.ax.set_ylabel("Count", rotation=-90, va="bottom", fontweight="bold")
 
-    n = len(CLASS_NAMES) + 1
-    ax.set_xticks(np.arange(n))
-    ax.set_yticks(np.arange(n))
+    axis_count = len(CLASS_NAMES) + 1
+    tick_positions = np.arange(axis_count)
+    axes.set_xticks(tick_positions)
+    axes.set_yticks(tick_positions)
     labels = [*CLASS_NAMES, "background"]
-    ax.set_xticklabels(labels, fontsize=9, fontweight="bold")
-    ax.set_yticklabels(labels, fontsize=9, fontweight="bold")
+    axes.set_xticklabels(labels, fontsize=9, fontweight="bold")
+    axes.set_yticklabels(labels, fontsize=9, fontweight="bold")
 
-    for i in range(n):
-        for j in range(n):
-            val = matrix[i, j]
-            color = "white" if val > matrix.max() / 2 else "black"
-            ax.text(j, i, str(val), ha="center", va="center", color=color, fontsize=10, fontweight="bold")
+    half_maximum_count = matrix.max() / 2
+    for row_index in range(axis_count):
+        for column_index in range(axis_count):
+            cell_count = matrix[row_index, column_index]
+            if cell_count > half_maximum_count:
+                text_color = "white"
+            else:
+                text_color = "black"
+            axes.text(
+                column_index,
+                row_index,
+                str(cell_count),
+                ha="center",
+                va="center",
+                color=text_color,
+                fontsize=10,
+                fontweight="bold",
+            )
 
-    ax.set_xlabel("Prediction", fontsize=10, fontweight="bold")
-    ax.set_ylabel("Ground Truth", fontsize=10, fontweight="bold")
+    axes.set_xlabel("Prediction", fontsize=10, fontweight="bold")
+    axes.set_ylabel("Ground Truth", fontsize=10, fontweight="bold")
     plt.title("Confusion Matrix", fontsize=12, fontweight="bold", pad=12)
     plt.tight_layout()
-    path = output_dir / "confusion_matrix.png"
-    plt.savefig(path, dpi=300)
+    output_path = output_dir / "confusion_matrix.png"
+    plt.savefig(output_path, dpi=300)
     plt.close()
-    logger.info("Confusion matrix saved to %s", path)
+    logger.info("Confusion matrix saved to %s", output_path)
 
 
 def compute_per_class_ap(
@@ -193,33 +216,37 @@ def compute_per_class_ap(
     iou_thresh: float = 0.5,
 ) -> tuple[np.ndarray, np.ndarray, float]:
     # Compute precision, recall and AP for a single class.
-    all_dets: list[dict] = []
-    gt_by_img: dict[int, list[dict]] = {}
+    all_detections: list[dict] = []
+    ground_truth_by_image: dict[int, list[dict]] = {}
     failed_images: list[str] = []
 
-    for img_idx, (img_path, gt_objects) in enumerate(samples):
-        gt_matches = [gt for gt in gt_objects if gt["class_id"] == class_id]
-        gt_by_img[img_idx] = gt_matches
+    for image_index, (image_path, ground_truth_objects) in enumerate(samples):
+        class_ground_truth = [
+            ground_truth
+            for ground_truth in ground_truth_objects
+            if ground_truth["class_id"] == class_id
+        ]
+        ground_truth_by_image[image_index] = class_ground_truth
         try:
-            result = model.predict(str(img_path), conf=0.0, iou=iou_thresh)
+            result = model.predict(str(image_path), conf=0.0, iou=iou_thresh)
         except Exception as exc:
             logger.warning(
                 "Prediction failed for %s (class_id=%s): %s — counting as no detections for AP",
-                img_path.name,
+                image_path.name,
                 class_id,
                 exc,
             )
-            failed_images.append(str(img_path))
+            failed_images.append(str(image_path))
             continue
 
-        for det in result.detections:
-            if det.class_id != class_id:
+        for detection in result.detections:
+            if detection.class_id != class_id:
                 continue
-            all_dets.append(
+            all_detections.append(
                 {
-                    "img_idx": img_idx,
-                    "confidence": float(det.confidence),
-                    "bbox": list(det.bbox),
+                    "img_idx": image_index,
+                    "confidence": float(detection.confidence),
+                    "bbox": list(detection.bbox),
                 }
             )
 
@@ -231,46 +258,57 @@ def compute_per_class_ap(
             len(samples),
         )
 
-    all_dets.sort(key=lambda x: x["confidence"], reverse=True)
+    all_detections.sort(
+        key=lambda detection: detection["confidence"],
+        reverse=True,
+    )
 
-    num_gt = sum(len(v) for v in gt_by_img.values())
-    if num_gt == 0:
+    ground_truth_count = sum(len(objects) for objects in ground_truth_by_image.values())
+    if ground_truth_count == 0:
         logger.warning("Per-class AP class_id=%s: no ground-truth boxes for this class (AP=0.0)", class_id)
-    if num_gt == 0:
+    if ground_truth_count == 0:
         return np.array([0.0]), np.array([0.0]), 0.0
 
-    tp = np.zeros(len(all_dets))
-    fp = np.zeros(len(all_dets))
-    used_gt: dict[int, set[int]] = {}
+    true_positive_flags = np.zeros(len(all_detections))
+    false_positive_flags = np.zeros(len(all_detections))
+    used_ground_truth_by_image: dict[int, set[int]] = {}
 
-    for i, d in enumerate(all_dets):
-        img = d["img_idx"]
-        gt_list = gt_by_img.get(img, [])
-        if not gt_list:
-            fp[i] = 1.0
+    for detection_index, detection in enumerate(all_detections):
+        image_index = detection["img_idx"]
+        image_ground_truth = ground_truth_by_image.get(image_index, [])
+        if not image_ground_truth:
+            false_positive_flags[detection_index] = 1.0
             continue
-        used = used_gt.setdefault(img, set())
-        best_iou = 0.0
-        best_gt_idx = -1
-        for gi, gt in enumerate(gt_list):
-            if gi in used:
+        used_ground_truth = used_ground_truth_by_image.setdefault(image_index, set())
+        best_overlap = 0.0
+        best_ground_truth_index = -1
+        for ground_truth_index, ground_truth in enumerate(image_ground_truth):
+            if ground_truth_index in used_ground_truth:
                 continue
-            iou_val = _iou(d["bbox"], gt["bbox"])
-            if iou_val > best_iou:
-                best_iou = iou_val
-                best_gt_idx = gi
-        if best_iou >= iou_thresh and best_gt_idx >= 0:
-            tp[i] = 1.0
-            used.add(best_gt_idx)
+            overlap = _iou(detection["bbox"], ground_truth["bbox"])
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_ground_truth_index = ground_truth_index
+        if best_overlap >= iou_thresh and best_ground_truth_index >= 0:
+            true_positive_flags[detection_index] = 1.0
+            used_ground_truth.add(best_ground_truth_index)
         else:
-            fp[i] = 1.0
+            false_positive_flags[detection_index] = 1.0
 
-    tp_cum = np.cumsum(tp)
-    fp_cum = np.cumsum(fp)
-    denom = tp_cum + fp_cum
-    precision = np.divide(tp_cum, denom, out=np.zeros_like(tp_cum, dtype=float), where=denom != 0)
+    cumulative_true_positives = np.cumsum(true_positive_flags)
+    cumulative_false_positives = np.cumsum(false_positive_flags)
+    precision_denominators = cumulative_true_positives + cumulative_false_positives
+    precision = np.divide(
+        cumulative_true_positives,
+        precision_denominators,
+        out=np.zeros_like(cumulative_true_positives, dtype=float),
+        where=precision_denominators != 0,
+    )
     precision = np.nan_to_num(precision, nan=0.0)
-    recall = tp_cum / num_gt if num_gt > 0 else np.zeros_like(tp_cum, dtype=float)
+    if ground_truth_count > 0:
+        recall = cumulative_true_positives / ground_truth_count
+    else:
+        recall = np.zeros_like(cumulative_true_positives, dtype=float)
 
     # Append endpoints
     precision = np.concatenate([[1.0], precision])
@@ -278,10 +316,10 @@ def compute_per_class_ap(
 
     # Interpolated AP (COCO style)
     ap = 0.0
-    for t in np.arange(0, 1.01, 0.01):
-        mask = recall >= t
-        if np.any(mask):
-            ap += np.max(precision[mask]) / 101
+    for recall_sample in np.arange(0, 1.01, 0.01):
+        eligible_precisions = precision[recall >= recall_sample]
+        if len(eligible_precisions) > 0:
+            ap += np.max(eligible_precisions) / 101
 
     return precision, recall, float(ap)
 
@@ -295,59 +333,96 @@ def plot_pr_curves(
     # Plot per-class precision-recall curves and return per-class AP values
     per_class_ap: dict[str, float] = {}
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    figure, axes = plt.subplots(figsize=(8, 6))
 
-    for cls_id, cls_name in enumerate(CLASS_NAMES):
-        precision, recall, ap = compute_per_class_ap(model, samples, conf, cls_id)
-        per_class_ap[cls_name] = ap
-        color = PALETTE[cls_id % len(PALETTE)]
-        ax.plot(recall, precision, color=color, linewidth=1.8, label=f"{cls_name} (AP={ap:.3f})")
+    for class_id, class_name in enumerate(CLASS_NAMES):
+        precision_values, recall_values, average_precision = compute_per_class_ap(
+            model,
+            samples,
+            conf,
+            class_id,
+        )
+        per_class_ap[class_name] = average_precision
+        color_index = class_id % len(PALETTE)
+        line_color = PALETTE[color_index]
+        legend_label = f"{class_name} (AP={average_precision:.3f})"
+        axes.plot(
+            recall_values,
+            precision_values,
+            color=line_color,
+            linewidth=1.8,
+            label=legend_label,
+        )
 
-    ax.set_xlabel("Recall", fontsize=10, fontweight="bold")
-    ax.set_ylabel("Precision", fontsize=10, fontweight="bold")
-    ax.set_xlim(0, 1.05)
-    ax.set_ylim(0, 1.05)
-    ax.grid(True, linestyle=":")
-    ax.legend(loc="lower left", fontsize=8, framealpha=0.9)
+    axes.set_xlabel("Recall", fontsize=10, fontweight="bold")
+    axes.set_ylabel("Precision", fontsize=10, fontweight="bold")
+    axes.set_xlim(0, 1.05)
+    axes.set_ylim(0, 1.05)
+    axes.grid(True, linestyle=":")
+    axes.legend(loc="lower left", fontsize=8, framealpha=0.9)
     plt.title("Precision-Recall Curves (per class)", fontsize=12, fontweight="bold", pad=12)
     plt.tight_layout()
 
-    path = output_dir / "pr_curves.png"
-    plt.savefig(path, dpi=300)
+    output_path = output_dir / "pr_curves.png"
+    plt.savefig(output_path, dpi=300)
     plt.close()
-    logger.info("PR curves saved to %s", path)
+    logger.info("PR curves saved to %s", output_path)
 
     return per_class_ap
 
 
 def plot_class_metrics(per_class: dict[str, PerClassMetrics], output_dir: Path) -> None:
     # Bar chart of per-class precision, recall, F1
-    names = list(per_class.keys())
-    precisions = [m.precision for m in per_class.values()]
-    recalls = [m.recall for m in per_class.values()]
-    f1s = [m.f1 for m in per_class.values()]
+    class_names = list(per_class.keys())
+    precision_values = [metrics.precision for metrics in per_class.values()]
+    recall_values = [metrics.recall for metrics in per_class.values()]
+    f1_values = [metrics.f1 for metrics in per_class.values()]
 
-    x = np.arange(len(names))
-    width = 0.25
+    class_positions = np.arange(len(class_names))
+    bar_width = 0.25
 
-    fig, ax = plt.subplots(figsize=(9, 5))
-    ax.bar(x - width, precisions, width, label="Precision", color="#1f77b4", edgecolor="#333333", linewidth=0.7)
-    ax.bar(x, recalls, width, label="Recall", color="#ff7f0e", edgecolor="#333333", linewidth=0.7)
-    ax.bar(x + width, f1s, width, label="F1", color="#2ca02c", edgecolor="#333333", linewidth=0.7)
+    figure, axes = plt.subplots(figsize=(9, 5))
+    axes.bar(
+        class_positions - bar_width,
+        precision_values,
+        bar_width,
+        label="Precision",
+        color="#1f77b4",
+        edgecolor="#333333",
+        linewidth=0.7,
+    )
+    axes.bar(
+        class_positions,
+        recall_values,
+        bar_width,
+        label="Recall",
+        color="#ff7f0e",
+        edgecolor="#333333",
+        linewidth=0.7,
+    )
+    axes.bar(
+        class_positions + bar_width,
+        f1_values,
+        bar_width,
+        label="F1",
+        color="#2ca02c",
+        edgecolor="#333333",
+        linewidth=0.7,
+    )
 
-    ax.set_xticks(x)
-    ax.set_xticklabels(names, fontsize=9, fontweight="bold")
-    ax.set_ylim(0, 1.1)
-    ax.set_ylabel("Score", fontsize=10, fontweight="bold")
-    ax.grid(axis="y", linestyle="--")
-    ax.legend(fontsize=9)
+    axes.set_xticks(class_positions)
+    axes.set_xticklabels(class_names, fontsize=9, fontweight="bold")
+    axes.set_ylim(0, 1.1)
+    axes.set_ylabel("Score", fontsize=10, fontweight="bold")
+    axes.grid(axis="y", linestyle="--")
+    axes.legend(fontsize=9)
     plt.title("Per-Class Metrics", fontsize=12, fontweight="bold", pad=12)
     plt.tight_layout()
 
-    path = output_dir / "class_metrics.png"
-    plt.savefig(path, dpi=300)
+    output_path = output_dir / "class_metrics.png"
+    plt.savefig(output_path, dpi=300)
     plt.close()
-    logger.info("Class metrics chart saved to %s", path)
+    logger.info("Class metrics chart saved to %s", output_path)
 
 
 def main() -> None:
@@ -360,13 +435,14 @@ def main() -> None:
     args = parse_args()
 
     raw_model_path = Path(args.model)
+    model_path = None
     try:
-        model_path = (
-            (DETECTION_DIR / raw_model_path).resolve()
-            if raw_model_path.parent == Path(".")
-            else resolve_safe_path(raw_model_path, ROOT_DIR)
-        )
-        model_path.relative_to(DETECTION_DIR.resolve())
+        if raw_model_path.parent == Path("."):
+            resolved_model_path = (DETECTION_DIR / raw_model_path).resolve()
+        else:
+            resolved_model_path = resolve_safe_path(raw_model_path, ROOT_DIR)
+        resolved_model_path.relative_to(DETECTION_DIR.resolve())
+        model_path = resolved_model_path
     except (ConfigError, ValueError):
         model_path = None
     if model_path is None or not model_path.is_file():
@@ -379,13 +455,12 @@ def main() -> None:
         data_path = Path(args.data)
         if not data_path.is_absolute():
             data_path = ROOT_DIR / data_path
-        _validate_dataset_path(data_path)
     else:
         data_path = discover_default_dataset()
         if data_path is None:
             logger.error("No dataset found. Specify --data path explicitly.")
             sys.exit(1)
-        _validate_dataset_path(data_path)
+    _validate_dataset_path(data_path)
     logger.info("Dataset: %s", data_path)
 
     if args.output:
@@ -413,17 +488,24 @@ def main() -> None:
     benchmark = ModelBenchmark(models=[model], dataset=data_path, conf=args.conf)
     benchmark.samples = samples
     benchmark.evaluated_on_train = evaluated_on_train
-    t0 = time.perf_counter()
+    benchmark_start_time = time.perf_counter()
     results = benchmark.run()
-    elapsed = time.perf_counter() - t0
-    throughput_fps = len(samples) / elapsed if elapsed > 0 else 0.0
-    logger.info("Benchmark completed in %.1fs (throughput: %.1f images/sec)", elapsed, throughput_fps)
+    benchmark_elapsed_seconds = time.perf_counter() - benchmark_start_time
+    if benchmark_elapsed_seconds > 0:
+        throughput_fps = len(samples) / benchmark_elapsed_seconds
+    else:
+        throughput_fps = 0.0
+    logger.info(
+        "Benchmark completed in %.1fs (throughput: %.1f images/sec)",
+        benchmark_elapsed_seconds,
+        throughput_fps,
+    )
 
     result = results[0]
 
     logger.info("Generating confusion matrix ...")
-    matrix = build_confusion_matrix(model, samples, args.conf)
-    plot_confusion_matrix(matrix, output_dir)
+    confusion_matrix = build_confusion_matrix(model, samples, args.conf)
+    plot_confusion_matrix(confusion_matrix, output_dir)
 
     logger.info("Generating PR curves ...")
     per_class_ap = plot_pr_curves(model, samples, args.conf, output_dir)
@@ -449,7 +531,7 @@ def main() -> None:
 
     export_data = result.to_dict()
     export_data["per_class_ap"] = per_class_ap
-    export_data["confusion_matrix"] = matrix.tolist()
+    export_data["confusion_matrix"] = confusion_matrix.tolist()
     export_data["throughput_fps"] = throughput_fps
     export_data["eval_args"] = {
         "conf": args.conf,
@@ -457,15 +539,15 @@ def main() -> None:
         "model": args.model,
     }
 
-    json_path = output_dir / "metrics.json"
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(export_data, f, indent=2)
-    logger.info("Metrics saved to %s", json_path)
+    metrics_path = output_dir / "metrics.json"
+    with open(metrics_path, "w", encoding="utf-8") as metrics_file:
+        json.dump(export_data, metrics_file, indent=2)
+    logger.info("Metrics saved to %s", metrics_path)
 
-    table_path = output_dir / "comparison_table.txt"
-    with open(table_path, "w", encoding="utf-8") as f:
-        f.write(ModelBenchmark.comparison_table(results))
-    logger.info("Comparison table saved to %s", table_path)
+    comparison_path = output_dir / "comparison_table.txt"
+    with open(comparison_path, "w", encoding="utf-8") as comparison_file:
+        comparison_file.write(ModelBenchmark.comparison_table(results))
+    logger.info("Comparison table saved to %s", comparison_path)
 
     print(f"All outputs saved to {output_dir}/")
 

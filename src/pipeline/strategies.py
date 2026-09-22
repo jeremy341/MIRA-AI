@@ -44,24 +44,20 @@ class TrainConfig:
         """Validate configuration parameters and return a list of error messages."""
         errors: list[str] = []
 
-        if self.epochs < 1:
-            errors.append(f"epochs must be >= 1, got {self.epochs}")
-        if self.batch_size < 1:
-            errors.append(f"batch_size must be >= 1, got {self.batch_size}")
-        if self.imgsz < 1:
-            errors.append(f"imgsz must be >= 1, got {self.imgsz}")
-        if self.lr0 <= 0:
-            errors.append(f"lr0 must be > 0, got {self.lr0}")
-        if self.weight_decay < 0:
-            errors.append(f"weight_decay must be >= 0, got {self.weight_decay}")
-        if self.patience < 1:
-            errors.append(f"patience must be >= 1, got {self.patience}")
-        if self.workers < 0:
-            errors.append(f"workers must be >= 0, got {self.workers}")
-        if self.seed < 0:
-            errors.append(f"seed must be >= 0, got {self.seed}")
+        checks = (
+            (self.epochs < 1, f"epochs must be >= 1, got {self.epochs}"),
+            (self.batch_size < 1, f"batch_size must be >= 1, got {self.batch_size}"),
+            (self.imgsz < 1, f"imgsz must be >= 1, got {self.imgsz}"),
+            (self.lr0 <= 0, f"lr0 must be > 0, got {self.lr0}"),
+            (self.weight_decay < 0, f"weight_decay must be >= 0, got {self.weight_decay}"),
+            (self.patience < 1, f"patience must be >= 1, got {self.patience}"),
+            (self.workers < 0, f"workers must be >= 0, got {self.workers}"),
+            (self.seed < 0, f"seed must be >= 0, got {self.seed}"),
+        )
+        for is_invalid, message in checks:
+            if is_invalid:
+                errors.append(message)
 
-        # Device validation
         if self.device != "cpu" and not all(c.isdigit() or c in (",", ":") for c in self.device):
             errors.append(f"device must be 'cpu', comma-separated GPU IDs, or 'cuda:N', got '{self.device}'")
 
@@ -73,8 +69,8 @@ class TrainConfig:
         from dataclasses import fields as dc_fields
 
         try:
-            with open(path, encoding="utf-8") as f:
-                data = yaml.safe_load(f)
+            with open(path, encoding="utf-8") as config_file:
+                data = yaml.safe_load(config_file)
         except FileNotFoundError:
             raise ConfigError(f"Config file not found: {path}") from None
         except yaml.YAMLError as e:
@@ -82,17 +78,20 @@ class TrainConfig:
         if not isinstance(data, dict):
             raise ValueError(f"Config file {path} must contain a YAML mapping, got {type(data).__name__}")
 
-        known = {f.name for f in dc_fields(cls)} - {"extra"}
+        known_fields = {field.name for field in dc_fields(cls)} - {"extra"}
         declared_extra = data.get("extra", {})
         if declared_extra is None:
             declared_extra = {}
         if not isinstance(declared_extra, dict):
             raise ValueError(f"Config field 'extra' must be a mapping, got {type(declared_extra).__name__}")
-        extra = {**declared_extra, **{k: v for k, v in data.items() if k not in known and k != "extra"}}
+
+        config_values = {key: value for key, value in data.items() if key in known_fields}
+        unknown_values = {key: value for key, value in data.items() if key not in known_fields and key != "extra"}
+        extra = {**declared_extra, **unknown_values}
         if extra:
             unknown_names = list(extra.keys())
             logger.warning("Unknown config keys will be placed in extra dict: %s", unknown_names)
-        config = cls(**{k: v for k, v in data.items() if k in known}, extra=extra)
+        config = cls(**config_values, extra=extra)
 
         errors = config.validate()
         if errors:
@@ -119,6 +118,103 @@ class TrainingStrategy(ABC):
     def train(self, config: TrainConfig) -> TrainResult: ...
 
 
+_YOLO_TRAINING_KEYS = {
+    "data",
+    "epochs",
+    "batch",
+    "imgsz",
+    "lr0",
+    "lrf",
+    "momentum",
+    "weight_decay",
+    "warmup_epochs",
+    "warmup_momentum",
+    "patience",
+    "device",
+    "workers",
+    "amp",
+    "project",
+    "name",
+    "exist_ok",
+    "seed",
+    "deterministic",
+    "optimizer",
+    "distill_model",
+    "dis",
+    "cos_lr",
+    "close_mosaic",
+    "resume",
+    "pretrained",
+    "verbose",
+    "val",
+    "save",
+    "save_period",
+    "cache",
+    "plots",
+    "overlap_mask",
+    "mask_ratio",
+    "dropout",
+    "single_cls",
+    "nbs",
+    "multi_scale",
+    "hsv_h",
+    "hsv_s",
+    "hsv_v",
+    "degrees",
+    "translate",
+    "scale",
+    "shear",
+    "perspective",
+    "flipud",
+    "fliplr",
+    "mosaic",
+    "mixup",
+    "copy_paste",
+    "erasing",
+    "crop_fraction",
+    "box",
+    "cls",
+    "dfl",
+}
+
+
+def _build_yolo_training_kwargs(config: TrainConfig) -> dict[str, Any]:
+    training_kwargs = {
+        "data": config.dataset,
+        "epochs": config.epochs,
+        "batch": config.batch_size,
+        "imgsz": config.imgsz,
+        "lr0": config.lr0,
+        "lrf": config.lrf,
+        "momentum": config.momentum,
+        "weight_decay": config.weight_decay,
+        "warmup_epochs": config.warmup_epochs,
+        "warmup_momentum": config.warmup_momentum,
+        "patience": config.patience,
+        "device": config.device,
+        "workers": config.workers,
+        "amp": config.amp,
+        "project": config.project,
+        "name": config.name,
+        "exist_ok": config.exist_ok,
+        "seed": config.seed,
+        "deterministic": False,
+    }
+    extra_training_kwargs = {
+        key: value for key, value in config.extra.items() if key in _YOLO_TRAINING_KEYS
+    }
+    training_kwargs.update(extra_training_kwargs)
+
+    augmentation = config.extra.get("augmentation")
+    if isinstance(augmentation, dict):
+        augmentation_kwargs = {
+            key: value for key, value in augmentation.items() if key in _YOLO_TRAINING_KEYS
+        }
+        training_kwargs.update(augmentation_kwargs)
+
+    return training_kwargs
+
+
 class YOLOStrategy(TrainingStrategy):
     """Train a YOLO detection model via Ultralytics."""
 
@@ -126,96 +222,9 @@ class YOLOStrategy(TrainingStrategy):
         from ultralytics import YOLO
 
         model = YOLO(config.model)
-        kwargs = {
-            "data": config.dataset,
-            "epochs": config.epochs,
-            "batch": config.batch_size,
-            "imgsz": config.imgsz,
-            "lr0": config.lr0,
-            "lrf": config.lrf,
-            "momentum": config.momentum,
-            "weight_decay": config.weight_decay,
-            "warmup_epochs": config.warmup_epochs,
-            "warmup_momentum": config.warmup_momentum,
-            "patience": config.patience,
-            "device": config.device,
-            "workers": config.workers,
-            "amp": config.amp,
-            "project": config.project,
-            "name": config.name,
-            "exist_ok": config.exist_ok,
-            "seed": config.seed,
-            "deterministic": False,
-        }
-        if config.extra:
-            training_keys = {
-                "data",
-                "epochs",
-                "batch",
-                "imgsz",
-                "lr0",
-                "lrf",
-                "momentum",
-                "weight_decay",
-                "warmup_epochs",
-                "warmup_momentum",
-                "patience",
-                "device",
-                "workers",
-                "amp",
-                "project",
-                "name",
-                "exist_ok",
-                "seed",
-                "deterministic",
-                "optimizer",
-                "distill_model",
-                "dis",
-                "cos_lr",
-                "close_mosaic",
-                "resume",
-                "pretrained",
-                "verbose",
-                "val",
-                "save",
-                "save_period",
-                "cache",
-                "plots",
-                "overlap_mask",
-                "mask_ratio",
-                "dropout",
-                "single_cls",
-                "nbs",
-                "multi_scale",
-                "hsv_h",
-                "hsv_s",
-                "hsv_v",
-                "degrees",
-                "translate",
-                "scale",
-                "shear",
-                "perspective",
-                "flipud",
-                "fliplr",
-                "mosaic",
-                "mixup",
-                "copy_paste",
-                "erasing",
-                "crop_fraction",
-                "box",
-                "cls",
-                "dfl",
-            }
-            filtered = {k: v for k, v in config.extra.items() if k in training_keys}
-            kwargs.update(filtered)
-
-            for group in ("augmentation",):
-                values = config.extra.get(group)
-                if isinstance(values, dict):
-                    kwargs.update({k: v for k, v in values.items() if k in training_keys})
-
+        training_kwargs = _build_yolo_training_kwargs(config)
         t0 = time.time()
-        results = model.train(**kwargs)
+        results = model.train(**training_kwargs)
         elapsed = time.time() - t0
 
         best_path = str(Path(config.project) / config.name / "weights" / "best.pt")
@@ -279,41 +288,20 @@ class ClassifierStrategy(TrainingStrategy):
         class_names = train_ds.class_names
         num_classes = len(class_names)
 
-        strategy = (
-            tf.distribute.MirroredStrategy()
-            if tf.config.list_physical_devices("GPU")
-            else tf.distribute.OneDeviceStrategy("CPU")
-        )
+        available_gpus = tf.config.list_physical_devices("GPU")
+        if available_gpus:
+            distribution_strategy = tf.distribute.MirroredStrategy()
+        else:
+            distribution_strategy = tf.distribute.OneDeviceStrategy("CPU")
 
         base_model = config.extra.get("base_model", "mobilenetv2")
         fine_tune = config.extra.get("fine_tune", False)
 
-        with strategy.scope():
+        with distribution_strategy.scope():
             if base_model == "mobilenetv2":
-                base = keras.applications.MobileNetV2(
-                    input_shape=(config.imgsz, config.imgsz, 3),
-                    include_top=False,
-                    weights="imagenet",
-                )
-                base.trainable = fine_tune
-                x = keras.layers.GlobalAveragePooling2D()(base.output)
-                x = keras.layers.Dropout(0.2)(x)
-                out = keras.layers.Dense(num_classes, activation="softmax")(x)
-                model = keras.Model(inputs=base.input, outputs=out)
+                model = _build_mobilenet_classifier(keras, config.imgsz, num_classes, fine_tune)
             else:
-                model = keras.Sequential(
-                    [
-                        keras.layers.Input(shape=(config.imgsz, config.imgsz, 3)),
-                        keras.layers.Rescaling(1.0 / 255),
-                        keras.layers.Conv2D(32, 3, activation="relu"),
-                        keras.layers.MaxPooling2D(),
-                        keras.layers.Conv2D(64, 3, activation="relu"),
-                        keras.layers.MaxPooling2D(),
-                        keras.layers.Flatten(),
-                        keras.layers.Dense(128, activation="relu"),
-                        keras.layers.Dense(num_classes, activation="softmax"),
-                    ]
-                )
+                model = _build_custom_classifier(keras, config.imgsz, num_classes)
 
             model.compile(
                 optimizer=keras.optimizers.Adam(learning_rate=config.lr0),
@@ -351,6 +339,36 @@ class ClassifierStrategy(TrainingStrategy):
         serialize_result(meta, results_dir / "metadata.json")
 
         return train_result
+
+
+def _build_mobilenet_classifier(keras, image_size: int, num_classes: int, fine_tune: bool):
+    base_model = keras.applications.MobileNetV2(
+        input_shape=(image_size, image_size, 3),
+        include_top=False,
+        weights="imagenet",
+    )
+    base_model.trainable = fine_tune
+
+    features = keras.layers.GlobalAveragePooling2D()(base_model.output)
+    features = keras.layers.Dropout(0.2)(features)
+    predictions = keras.layers.Dense(num_classes, activation="softmax")(features)
+    return keras.Model(inputs=base_model.input, outputs=predictions)
+
+
+def _build_custom_classifier(keras, image_size: int, num_classes: int):
+    return keras.Sequential(
+        [
+            keras.layers.Input(shape=(image_size, image_size, 3)),
+            keras.layers.Rescaling(1.0 / 255),
+            keras.layers.Conv2D(32, 3, activation="relu"),
+            keras.layers.MaxPooling2D(),
+            keras.layers.Conv2D(64, 3, activation="relu"),
+            keras.layers.MaxPooling2D(),
+            keras.layers.Flatten(),
+            keras.layers.Dense(128, activation="relu"),
+            keras.layers.Dense(num_classes, activation="softmax"),
+        ]
+    )
 
 
 _STRATEGIES: dict[str, type[TrainingStrategy]] = {}
