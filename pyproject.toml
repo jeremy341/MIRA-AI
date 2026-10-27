@@ -43,6 +43,7 @@ all = ["mira-ai[train,analysis]"]
 dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "mira-ai[all]"]
 
 [project.urls]
+Homepage = "https://jeremydarko.me"
 Repository = "https://github.com/jeremy341/MIRA-AI"
 
 [project.scripts]
