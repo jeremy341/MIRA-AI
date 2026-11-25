@@ -101,6 +101,8 @@ To start the local dashboard:
 mira dashboard
 ```
 
+In the current source checkout, open `http://127.0.0.1:8000` and choose a source in **Detect**. Use **Connected camera** for live detection, or stop the stream and choose **Image file** for a local JPEG or PNG (up to 8 MB and 16 megapixels). The dashboard uploads the image to the server for inference and keeps the result out of camera session statistics. Use **Analytics** for session history and **Settings** for camera and model configuration.
+
 ## Development installation
 
 For working on the source code instead of using the PyPI release:

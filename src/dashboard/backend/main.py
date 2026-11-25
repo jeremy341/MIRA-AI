@@ -5,11 +5,11 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
-from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.camera_service import CameraService, ImageDetectionUnavailableError
 from src.dashboard.backend.command_service import DashboardCommandService
 from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.websocket_handler import WebSocketHandler
@@ -175,6 +175,26 @@ async def start_stream():
     raise HTTPException(
         status_code=500, detail="The stream could not be started. Check the camera connection and configuration."
     )
+
+
+@app.post("/api/detect/image")
+async def detect_image(request: Request, confidence: float = Query(0.55, ge=0.05, le=1)):
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type not in {"image/jpeg", "image/png"}:
+        raise HTTPException(status_code=415, detail="Choose a JPEG or PNG image.")
+
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > 8 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Choose an image no larger than 8 MB.")
+        payload.extend(chunk)
+
+    try:
+        return await camera_service.detect_image(bytes(payload), confidence)
+    except ImageDetectionUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/stream/stop")

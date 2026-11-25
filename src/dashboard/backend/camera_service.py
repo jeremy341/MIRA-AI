@@ -1,11 +1,16 @@
 # Camera service managing inference pipeline
 import asyncio
+import base64
 import threading
 import time
 from typing import Any
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
+
+import numpy as np
 import psutil
+from PIL import Image, ImageOps
 
 from ultralytics import YOLO
 from src.config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz
@@ -16,12 +21,17 @@ from src.dashboard.backend.models import WasteClass, Detection, SystemMetrics, S
 logger = get_logger(__name__)
 
 
+class ImageDetectionUnavailableError(RuntimeError):
+    pass
+
+
 class CameraService:
     _STOP_JOIN_TIMEOUT_SECONDS = 1.0
 
     def __init__(self, loop=None):
         self._lock = threading.Lock()
         self._operation_lock = asyncio.Lock()
+        self._image_detection_active = False
         self.status = SystemStatus.IDLE
         self.status_message = "System ready"
 
@@ -173,11 +183,57 @@ class CameraService:
         )
         return model, model_config, is_tflite_int8, img_size
 
+    async def detect_image(self, payload: bytes, confidence: float):
+        async with self._operation_lock:
+            with self._lock:
+                if self.is_streaming or (self._streaming_thread and self._streaming_thread.is_alive()):
+                    raise ImageDetectionUnavailableError("Stop the camera before detecting an image.")
+                config = self.model_config
+                if self.model is None or config is None:
+                    raise ImageDetectionUnavailableError("Load a model in Settings first.")
+                self._image_detection_active = True
+
+            try:
+                worker = asyncio.create_task(asyncio.to_thread(self._predict_image, payload, confidence, config))
+                try:
+                    return await asyncio.shield(worker)
+                except asyncio.CancelledError:
+                    await asyncio.gather(worker, return_exceptions=True)
+                    raise
+            finally:
+                with self._lock:
+                    self._image_detection_active = False
+
+    def _predict_image(self, payload: bytes, confidence: float, config: ModelConfig):
+        try:
+            with Image.open(BytesIO(payload), formats=["JPEG", "PNG"]) as source:
+                if source.width * source.height > 16_000_000:
+                    raise ValueError("Choose an image no larger than 16 megapixels.")
+                image = ImageOps.exif_transpose(source).convert("RGB")
+        except Image.DecompressionBombError as exc:
+            raise ValueError("Choose an image no larger than 16 megapixels.") from exc
+        except (OSError, SyntaxError) as exc:
+            raise ValueError("Choose a valid JPEG or PNG image.") from exc
+
+        image.thumbnail((1280, 1280))
+        model, _, _, image_size = self._load_model(config.name, config)
+        frame = np.asarray(image)[:, :, ::-1].copy()
+        results = model.predict(frame, imgsz=image_size, conf=confidence, iou=config.iou_threshold, verbose=False)
+        detections = self._process_results(results, confidence)
+        preview = BytesIO()
+        image.save(preview, format="JPEG", quality=90)
+        return {
+            "image": "data:image/jpeg;base64," + base64.b64encode(preview.getvalue()).decode("ascii"),
+            "detections": [detection.model_dump(mode="json") for detection in detections],
+        }
+
     async def start_streaming(self):
         with self._lock:
             if self.is_streaming:
                 return True
 
+            if self._image_detection_active:
+                return False
             if self._streaming_thread and self._streaming_thread.is_alive():
                 self._update_status_locked(SystemStatus.ERROR, "Previous streaming thread is still shutting down")
                 should_start = False
