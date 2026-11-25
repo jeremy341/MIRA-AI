@@ -32,6 +32,13 @@ describe('niceTicks', () => {
     expect(niceTicks(100, 0)[0]).toBe(0);
   });
 
+  it('never invents a negative axis for a flat non-negative series', () => {
+    expect(Math.min(...niceTicks(0, 0))).toBe(0);
+    expect(Math.max(...niceTicks(0, 0))).toBeGreaterThan(0);
+    expect(Math.min(...niceTicks(5, 5))).toBe(0);
+    expect(Math.max(...niceTicks(-5, -5))).toBe(0);
+  });
+
   it('chooses a step of 1, 2, 2.5, 5 or 10 times a power of ten', () => {
     expect(niceStep(100, 5)).toBe(20);
     expect(niceStep(1, 5)).toBe(0.2);

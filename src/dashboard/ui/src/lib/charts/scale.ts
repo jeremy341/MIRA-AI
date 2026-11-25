@@ -28,8 +28,14 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   let low = Math.min(min, max);
   let high = Math.max(min, max);
   if (low === high) {
-    low -= 1;
-    high += 1;
+    // A flat series. Counts and percentages start at zero, so never invent a negative axis for them.
+    if (low === 0) {
+      high = 1;
+    } else if (low > 0) {
+      low = 0;
+    } else {
+      high = 0;
+    }
   }
   const step = niceStep(high - low, count);
   const start = Math.floor(low / step) * step;
