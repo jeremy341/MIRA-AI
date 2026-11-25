@@ -387,8 +387,9 @@
     .grid {
       grid-template-columns: minmax(0, 1fr);
     }
+    /* On a phone the bar scrolls with the form; a sticky bar would cover the fields. */
     .actions-bar {
-      bottom: 5rem;
+      position: static;
     }
   }
 </style>
