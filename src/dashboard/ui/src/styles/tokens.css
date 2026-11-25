@@ -1,1 +1,129 @@
-:root { --app: #f5f5f5; }
+/*
+  MIRA design tokens, adapted from the Hack Club Orchard UI system (docs/dashboard-v2/orchard-tokens.css).
+
+  Two colours: near-black ink and Orchard's blue accent (#5173c5, hover #4565b6,
+  strong/text #395cb8, tint #eef0f5). The bin colours are data colours only: they
+  appear on detections, chips and charts, never as UI chrome.
+
+  Light theme only. Surfaces: app #f5f5f5, surface #fefefe, raised #ffffff,
+  sunken #ececec. Text: #1f1f1f, soft #535253, faint #7c7c7c (decorative only, it
+  fails AA on white, so text uses --ink-soft). Rules #e3e3e3.
+
+  Radii are Orchard's scale (control 10px, card 14px, panel 18px, widget 22px,
+  sheet 28px). Buttons are 12px. Motion is opacity and transform only, 140/220ms.
+
+  Tailwind glue from the reference file is removed: this UI is plain CSS. The font
+  families, the type scale and the radii are declared here directly.
+*/
+
+:root {
+  /* Type */
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-sans);
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --font-weight-normal: 450;
+  --font-weight-medium: 550;
+  --font-weight-semibold: 650;
+  --font-weight-bold: 800;
+
+  --text-hero: clamp(2rem, 1.4rem + 2.6vw, 3.25rem);
+  --text-display: clamp(1.75rem, 1.35rem + 1.8vw, 2.5rem);
+  --text-heading: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+  --text-title: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  --text-lede: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem);
+  --text-stat: clamp(1.75rem, 1.4rem + 1.4vw, 2.5rem);
+  --text-body: 1rem;
+  --text-small: 0.9375rem;
+  --text-micro: 0.8125rem;
+
+  /* Radii */
+  --radius-button: 0.75rem; /* 12px */
+  --radius-control: 0.625rem; /* 10px */
+  --radius-card: 0.875rem; /* 14px */
+  --radius-panel: 1.125rem; /* 18px */
+  --radius-widget: 1.375rem; /* 22px */
+  --radius-sheet: 1.75rem; /* 28px */
+  --radius-pill: 999px;
+  --radius: 0.75rem;
+
+  /* Layout */
+  --sidebar-width: 14.5rem;
+  --topbar-height: 3.5rem;
+  --content-max: 74rem;
+  --page-pad: 1.25rem;
+  --measure: 66ch;
+
+  /* Spacing scale (4px base) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+
+  /* Motion */
+  --dur-fast: 0.14s;
+  --dur-base: 0.22s;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --z-skip: 100;
+  --z-toast: 200;
+  --z-dialog: 300;
+
+  /* Orchard neutrals */
+  --app: #f5f5f5;
+  --surface: #fefefe;
+  --raised: #ffffff;
+  --sunken: #ececec;
+  --hover: #e5e5e5;
+  --rule: #e3e3e3;
+  --rule-strong: #b7b7b7;
+  --ink: #1f1f1f;
+  --ink-soft: #535253;
+  --ink-faint: #7c7c7c;
+
+  /* Form controls: the edge of an input needs 3:1 against its background (WCAG 1.4.11). */
+  --control-edge: #8a8a8a;
+
+  /* Orchard blue accent */
+  --accent: #5173c5;
+  --accent-hover: #4565b6;
+  --accent-strong: #395cb8;
+  --accent-subtle: #eef0f5;
+  --accent-subtle-hover: #dfe6f4;
+  --on-accent: #ffffff;
+  --destructive: #b1282b;
+  --destructive-subtle: #fbe9e9;
+
+  /* Status (MIRA additions, all AA on their background) */
+  --success-ink: #1e6b3a;
+  --success-subtle: #e6f3ea;
+  --warning-ink: #7a5200;
+  --warning-subtle: #fff4d6;
+  --info-ink: var(--accent-strong);
+  --info-subtle: var(--accent-subtle);
+
+  /* Bin colours, data only (fills, swatches, boxes; never body text on white) */
+  --class-glass: #2a7f45;
+  --class-paper: #2457c5;
+  --class-plastic: #f2c230;
+  --class-plastic-ink: #b38600;
+  --class-metal: #66778a;
+  --class-trash: #3a3a3a;
+  --class-on: #161616;
+
+  /* Elevations */
+  --shadow-raised: 0 0 0 1px var(--rule), 0 1px 2px rgb(0 0 0 / 4%);
+  --shadow-floating:
+    0 0 0 1px rgb(31 31 31 / 8%),
+    0 4px 12px rgb(0 0 0 / 6%),
+    0 12px 32px rgb(0 0 0 / 8%);
+  --shadow-overlay:
+    0 0 0 1px rgb(31 31 31 / 8%),
+    0 12px 24px rgb(0 0 0 / 10%),
+    0 32px 64px rgb(0 0 0 / 14%);
+}
