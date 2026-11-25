@@ -115,7 +115,7 @@ The language switch keeps the URL `#hash` (read from `location` on the client, u
 
 ## Metadata, sitemap, robots
 
-Every page renders `<Seo lang path title description />` once. It is the only place that writes title, description, canonical, hreflang (`en`, `de`, `x-default`), Open Graph (type, site name, title, description, url, locale, image with size and alt) and Twitter card tags, from `pageMetadata()`. Home keeps its title, other pages get ` | MIRA`. Share cards are `static/og-en.png` and `og-de.png` (1200 x 630); the HTML sources for them are in `../website-next/scripts/og/`. `SITE_URL` in `src/lib/site.ts` is the single place for the domain. `sitemap.xml` and `robots.txt` are prerendered from `src/lib/sitemap-data.ts`.
+Every page renders `<Seo lang path title description />` once. It is the only place that writes title, description, canonical, hreflang (`en`, `de`, `x-default`), Open Graph (type, site name, title, description, url, locale, image with size and alt) and Twitter card tags, from `pageMetadata()`. Home keeps its title, other pages get ` | MIRA`. Share cards are `static/og-en.png` and `og-de.png` (1200 x 630); the HTML sources for them are in `scripts/og/` (render each at 1200 x 630 in a browser). `SITE_URL` in `src/lib/site.ts` is the single place for the domain. `sitemap.xml` and `robots.txt` are prerendered from `src/lib/sitemap-data.ts`.
 
 ## 404
 

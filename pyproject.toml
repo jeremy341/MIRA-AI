@@ -25,6 +25,7 @@ classifiers = [
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "ultralytics>=8.3.0",
+    "lap>=0.5.12",
     "opencv-python>=4.0",
     "pyarrow>=10.0",
     "torch>=2.0",
@@ -51,7 +52,7 @@ analysis = [
     "scipy>=1.0",
 ]
 all = ["mira-ai[train,analysis]"]
-dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "mira-ai[all]"]
+dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "types-PyYAML", "mira-ai[all]"]
 
 [project.urls]
 Homepage = "https://jeremydarko.me"
@@ -100,7 +101,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 follow_imports = "skip"
 exclude = "src/dashboard"

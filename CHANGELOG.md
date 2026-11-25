@@ -6,9 +6,28 @@ All notable changes to MIRA are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-25
+
+### Added
+- Dashboard v2: a new interface (Svelte, light theme) with Detect, Sessions,
+  Models, Analytics and Settings. The old dashboard remains at `/legacy`.
+- Sessions: start, name and stop a run, review it, and replay its timeline.
+- Export: session detections as CSV or JSON, and a one-page HTML report.
+- Model compare and benchmark: run two models on the same image, or run
+  `mira benchmark` from the dashboard.
+- Video and batch input: import images, a folder or a video as background jobs
+  with progress and cancel.
+- Hardware history (processor, memory, temperature) and a sorting-arm
+  placeholder API with an event log. No robot is connected; commands are
+  simulated.
+- New MIRA logo.
+- `lap` is now a declared dependency, so object tracking works offline.
+
 ### Changed
 - Package metadata: added PyPI classifiers, Documentation, Issues, Changelog and
   Hugging Face project links, and removed a placeholder author email.
+- The dashboard backend is split into smaller modules and keeps its data in a
+  local SQLite database.
 
 ### Fixed
 - CI is green again: Ruff, formatting and mypy errors are resolved, and tests no
@@ -39,8 +58,9 @@ All notable changes to MIRA are recorded here. The format follows
   and trash, the `mira` CLI, a local dashboard, and dataset, training and
   evaluation tooling.
 
-[Unreleased]: https://github.com/jeremy341/MIRA-AI/compare/v1.0.2...HEAD
-[1.0.3]: https://github.com/jeremy341/MIRA-AI/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/jeremy341/MIRA-AI/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/jeremy341/MIRA-AI/compare/v1.0.3...v1.1.0
+[1.0.3]: https://github.com/jeremy341/MIRA-AI/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/jeremy341/MIRA-AI/releases/tag/v1.0.2
 [1.0.1]: https://github.com/jeremy341/MIRA-AI/releases/tag/v1.0.1
 [1.0.0]: https://github.com/jeremy341/MIRA-AI/releases/tag/v1.0.0
