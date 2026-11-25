@@ -220,7 +220,7 @@ def setup_camera_properties(
     if not cap.isOpened():
         raise CameraError("Camera is not opened before setting properties.")
     properties = (
-        (cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")),
+        (cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")),  # type: ignore[attr-defined]
         (cv2.CAP_PROP_FRAME_WIDTH, width),
         (cv2.CAP_PROP_FRAME_HEIGHT, height),
         (cv2.CAP_PROP_FPS, fps),
