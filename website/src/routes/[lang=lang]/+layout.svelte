@@ -8,8 +8,9 @@
 
   const lang = $derived(data.lang);
   const dict = $derived(getDictionary(lang));
-  // The documentation has its own chrome (sidebar and top bar), so the site header and footer step aside there.
-  const inDocs = $derived(/\/docs(\/|$)/.test(page.url.pathname));
+  // The documentation and the research report have their own chrome (sidebar and top bar), so the site header and
+  // footer step aside there.
+  const inDocs = $derived(/\/(docs|research)(\/|$)/.test(page.url.pathname));
 
   // The static HTML already carries the right <html lang> (hooks.server.ts). After a client side switch between
   // /en and /de the document is reused, so the attribute is updated here.

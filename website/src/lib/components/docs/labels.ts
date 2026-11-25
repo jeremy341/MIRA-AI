@@ -56,6 +56,14 @@ export const DOC_ICONS: Record<string, DocIconName> = {
   troubleshooting: "alert",
   faq: "help",
   changelog: "list",
+  question: "help",
+  tried: "train",
+  results: "chart",
+  runs: "list",
+  photos: "camera",
+  edge: "chip",
+  limits: "alert",
+  data: "database",
 };
 
 export const docIcon = (slug: string): DocIconName => DOC_ICONS[slug] ?? "doc";

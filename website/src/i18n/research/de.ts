@@ -31,6 +31,22 @@ export const de: ResearchDictionary = {
       data: "Daten und Nachvollziehbarkeit",
     },
   },
+  overview: {
+    resultTitle: "Das Ergebnis in einer Abbildung",
+    resultNote: "Das sind Validierungswerte auf Fotos, kein Test mit einer echten Kamera.",
+    cardsTitle: "Den Bericht lesen",
+    read: "Lesen",
+    cards: {
+      question: "Die Frage, die fünf Klassen und wie die Werte gemessen werden.",
+      tried: "Die vier Modelle und die Datensätze, die ich probiert habe, und warum mehr Daten nicht halfen.",
+      results: "Der Hauptwert, die Tabelle pro Klasse und wo Kunststoff schiefgeht.",
+      runs: "Alle 19 Experimente in einer Tabelle, mit Aufbau und Ergebnis.",
+      photos: "Echte Fotos mit den Boxen des Modells und die Fälle, in denen es scheitert.",
+      edge: "Export für kleine Geräte und was noch nicht gemessen wurde.",
+      limits: "Was die Zahlen nicht zeigen und was als Nächstes kommt.",
+      data: "Woher die Daten stammen und wie sich die Läufe wiederholen lassen.",
+    },
+  },
   question: {
     title: "Frage und Aufbau",
     p1: "Kann ein kleines Modell auf einem Kamerabild Glas, Metall, Papier, Kunststoff und Restmüll unterscheiden, und das gut genug, um als Auge eines Sortierroboters zu dienen?",

@@ -4,7 +4,6 @@
   import { getDictionary } from '$i18n';
   import { localePath, type Locale } from '$i18n/config';
   import type { DocsUi } from '$i18n/docs/ui';
-  import { docPath } from '$lib/docs-content';
   import { GITHUB_URL } from '$lib/site';
   import LanguageSwitch from '../LanguageSwitch.svelte';
   import DocsNav from './DocsNav.svelte';
@@ -20,8 +19,22 @@
     lang,
     ui,
     nav,
+    base = '/docs',
+    badge,
+    search = true,
     children
-  }: { lang: Locale; ui: DocsUi; nav: NavGroup[]; children: Snippet } = $props();
+  }: {
+    lang: Locale;
+    ui: DocsUi;
+    nav: NavGroup[];
+    /** '/docs' or '/research'. */
+    base?: string;
+    /** The small label next to the logo. */
+    badge?: string;
+    /** The docs search covers the docs only, so the research report hides it. */
+    search?: boolean;
+    children: Snippet;
+  } = $props();
 
   const dict = $derived(getDictionary(lang));
 
@@ -63,7 +76,7 @@
     <img src="/mira.svg" alt="" width="30" height="30" class="size-[1.875rem]" />
     <span class="text-[1.25rem] leading-none font-extrabold tracking-[0.04em] text-ink">MIRA</span>
   </a>
-  <span class="rounded-md bg-sunken px-2 py-0.5 text-[0.75rem] font-medium text-ink-soft">{ui.metaSuffix}</span>
+  <span class="rounded-md bg-sunken px-2 py-0.5 text-[0.75rem] font-medium text-ink-soft">{badge ?? ui.metaSuffix}</span>
 {/snippet}
 
 <div class="min-h-dvh bg-app">
@@ -72,7 +85,7 @@
     <div class="flex h-full flex-col overflow-hidden rounded-2xl border border-rule bg-surface shadow-[var(--shadow-raised)]">
       <div class="flex items-center gap-2.5 px-4 pt-4 pb-3">{@render brand()}</div>
       <div class="min-h-0 flex-1 overflow-y-auto px-3 pt-1 pb-6">
-        <DocsNav {lang} {ui} groups={nav} />
+        <DocsNav {lang} {ui} groups={nav} {base} />
       </div>
     </div>
   </aside>
@@ -98,9 +111,12 @@
 
         <div class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5">
           <a href={localePath(lang, '/')} class={topLink}>{dict.nav.home}</a>
-          <a href={localePath(lang, '/research')} class={topLink}>{dict.nav.research}</a>
+          {#if base !== '/docs'}<a href={localePath(lang, '/docs')} class={topLink}>{dict.nav.docs}</a>{/if}
+          {#if base !== '/research'}<a href={localePath(lang, '/research')} class={topLink}>{dict.nav.research}</a>{/if}
           <a href={localePath(lang, '/package')} class={topLink}>{dict.nav.package}</a>
-          <DocsSearch {lang} {ui} class="max-w-60 min-w-0 flex-1 sm:flex-none sm:basis-60" />
+          {#if search}
+            <DocsSearch {lang} {ui} class="max-w-60 min-w-0 flex-1 sm:flex-none sm:basis-60" />
+          {/if}
           <a
             href={GITHUB_URL}
             target="_blank"
@@ -119,7 +135,7 @@
             switchTo={dict.common.switchTo}
             class="hidden sm:flex"
           />
-          <a href={localePath(lang, docPath('quickstart'))} class="btn btn-primary hidden md:inline-flex">{ui.installCta}</a>
+          <a href={localePath(lang, '/docs/quickstart')} class="btn btn-primary hidden md:inline-flex">{ui.installCta}</a>
         </div>
       </div>
     </header>
@@ -151,7 +167,7 @@
       </button>
     </div>
     <div class="px-3 py-4">
-      <DocsNav {lang} {ui} groups={nav} onNavigate={closeMenu} />
+      <DocsNav {lang} {ui} groups={nav} {base} onNavigate={closeMenu} />
     </div>
   </dialog>
 </div>

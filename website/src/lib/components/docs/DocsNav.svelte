@@ -3,7 +3,6 @@
   import { localePath, stripLocale, type Locale } from '$i18n/config';
   import { fmt } from '$i18n/format';
   import type { DocsUi } from '$i18n/docs/ui';
-  import { docPath, slugFromPathname } from '$lib/docs-content';
   import DocIcon from './DocIcon.svelte';
   import { docIcon } from './labels';
   import type { NavGroup } from './types';
@@ -17,18 +16,25 @@
     lang,
     ui,
     groups,
+    base = '/docs',
     onNavigate
   }: {
     lang: Locale;
     ui: DocsUi;
     groups: NavGroup[];
+    /** Path of the section the list belongs to: the docs or the research report. */
+    base?: string;
     /** Called after a link is chosen, e.g. to close the mobile drawer. */
     onNavigate?: () => void;
   } = $props();
 
   const pathname = $derived(stripLocale(page.url.pathname));
-  const currentSlug = $derived(slugFromPathname(pathname));
-  const onIndex = $derived(/^\/docs\/?$/.test(pathname));
+  const currentSlug = $derived.by(() => {
+    if (!pathname.startsWith(`${base}/`)) return undefined;
+    const rest = pathname.slice(base.length + 1).replace(/\/$/, '');
+    return rest && !rest.includes('/') ? rest : undefined;
+  });
+  const onIndex = $derived(pathname === base || pathname === `${base}/`);
   const sections = $derived(
     (page.data as { doc?: { slug: string; sections: { id: string; title: string }[] } }).doc ?? null
   );
@@ -92,7 +98,7 @@
 <nav aria-label={ui.navLabel} class="mt-4">
   {#if !needle}
     <a
-      href={localePath(lang, '/docs')}
+      href={localePath(lang, base)}
       aria-current={onIndex ? 'page' : undefined}
       onclick={onNavigate}
       class="{row} {rowTone(onIndex)}"
@@ -134,7 +140,7 @@
             {@const active = item.slug === currentSlug}
             <li>
               <a
-                href={localePath(lang, docPath(item.slug))}
+                href={localePath(lang, `${base}/${item.slug}`)}
                 aria-current={active ? 'page' : undefined}
                 onclick={onNavigate}
                 class="{row} {rowTone(active)}"
