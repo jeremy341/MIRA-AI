@@ -1,0 +1,167 @@
+[
+  {
+    "file": "detect-01.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "glass",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection.",
+    "detections": [
+      {
+        "cls": "glass",
+        "confidence": 0.92,
+        "box": [
+          0.0,
+          0.0001,
+          0.9997,
+          1.0
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-02.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "metal",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection.",
+    "detections": [
+      {
+        "cls": "metal",
+        "confidence": 0.86,
+        "box": [
+          0.0003,
+          0.0,
+          1.0,
+          1.0
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-03.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "paper",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection.",
+    "detections": [
+      {
+        "cls": "paper",
+        "confidence": 0.96,
+        "box": [
+          0.0001,
+          0.0002,
+          1.0,
+          0.9982
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-04.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "plastic",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection.",
+    "detections": [
+      {
+        "cls": "plastic",
+        "confidence": 0.66,
+        "box": [
+          0.001,
+          0.0,
+          0.9997,
+          1.0
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-05.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "trash",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection.",
+    "detections": [
+      {
+        "cls": "trash",
+        "confidence": 0.95,
+        "box": [
+          0.0,
+          0.0,
+          1.0,
+          1.0
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-06.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "glass",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Correct detection; the box follows the bottle rather than the whole frame.",
+    "detections": [
+      {
+        "cls": "glass",
+        "confidence": 0.86,
+        "box": [
+          0.266,
+          0.0,
+          0.7559,
+          0.9998
+        ]
+      }
+    ]
+  },
+  {
+    "file": "detect-07.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "plastic",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Plastic bottle missed: no detection above the 0.25 threshold.",
+    "detections": []
+  },
+  {
+    "file": "detect-08.jpg",
+    "width": 512,
+    "height": 384,
+    "trueClass": "cardboard",
+    "model": "mira_exp019",
+    "conf": 0.25,
+    "source": "TrashNet (garythung/trashnet), MIT licence",
+    "note": "Out of scope: MIRA has no cardboard class, so the box is labelled paper.",
+    "detections": [
+      {
+        "cls": "paper",
+        "confidence": 0.93,
+        "box": [
+          0.0006,
+          0.0013,
+          0.9998,
+          0.999
+        ]
+      }
+    ]
+  }
+]
