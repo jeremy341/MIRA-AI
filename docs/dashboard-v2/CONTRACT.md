@@ -159,8 +159,8 @@ Indexes exist on `detections(session_id, ts)`, `metrics(session_id, ts)`, `hardw
 - `GET /sessions/{id}/report.html` -> a self-contained HTML page (inline CSS and inline SVG charts,
   no external requests) that fits **one A4 page** when printed (`@media print`, `@page { size: A4;
   margin: 12mm }`): title, name, date, model, duration, totals, class table, per-class bar chart,
-  detections-over-time chart, average confidence, a notes block, and the line "Validation or
-  session counts are not real-world sorting accuracy." Escape all user text.
+  detections-over-time chart, average confidence, a notes block, and the line "Session counts describe this run only and are not real-world sorting accuracy."
+  Escape all user text.
 - `GET /sessions/{id}/report.html?download=1` sets an attachment header.
 
 ### Compare (B3)
