@@ -1,21 +1,31 @@
 <script lang="ts">
-  // Placeholder for U2. Replace this file (and keep the default export) to build the Analytics page.
-  import Button from '../../lib/components/Button.svelte';
-  import Card from '../../lib/components/Card.svelte';
-  import EmptyState from '../../lib/components/EmptyState.svelte';
   import PageHeader from '../../lib/components/PageHeader.svelte';
+  import ArmPanel from './ArmPanel.svelte';
+  import HardwarePanel from './HardwarePanel.svelte';
+  import SessionAnalytics from './SessionAnalytics.svelte';
 </script>
 
-<PageHeader title="Analytics" description="Charts for session results, hardware history and sorting-arm events." />
+<PageHeader
+  title="Analytics"
+  description="Session results, the health of the machine that runs the detector, and the sorting arm's event log."
+/>
 
-<Card variant="panel">
-  <EmptyState
-    icon="analytics"
-    title="Analytics are coming next"
-    description="Charts for session results, hardware history and the sorting-arm event log."
-  >
-    {#snippet actions()}
-      <Button variant="secondary" href="#/detect">Back to Detect</Button>
-    {/snippet}
-  </EmptyState>
-</Card>
+<div class="sections">
+  <section aria-label="Session results">
+    <SessionAnalytics />
+  </section>
+  <section aria-label="Hardware">
+    <HardwarePanel />
+  </section>
+  <section aria-label="Sorting arm">
+    <ArmPanel />
+  </section>
+</div>
+
+<style>
+  .sections {
+    display: grid;
+    gap: var(--space-8);
+    min-width: 0;
+  }
+</style>

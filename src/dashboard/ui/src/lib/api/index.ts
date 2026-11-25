@@ -24,5 +24,5 @@ export const api = createApi(runtimeFetch);
 export type Api = typeof api;
 
 export * from './errors';
-export { sessionExportUrl, unwrapList, TIMEOUTS, LIMITS } from './endpoints';
+export { sessionExportUrl, TIMEOUTS, LIMITS } from './endpoints';
 export type { ExportFormat, SessionListParams, DetectionQuery } from './endpoints';

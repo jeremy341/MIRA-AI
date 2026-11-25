@@ -16,10 +16,12 @@ import type {
   BenchmarkRun,
   BenchmarkRunAccepted,
   BenchmarkRunCreateBody,
+  BenchmarkRunListResponse,
   CameraConfig,
   CameraInitializeResponse,
+  CompareListResponse,
+  CompareRecord,
   CompareResponse,
-  ComparisonSummary,
   DetectImageResponse,
   HardwareCurrent,
   HardwareHistoryResponse,
@@ -72,22 +74,6 @@ export interface DetectionQuery {
   offset?: number;
   class_name?: ClassName;
   min_confidence?: number;
-}
-
-/**
- * Returns the array from a list payload. The contract says some list endpoints return "a list"
- * and others return `{key: [...]}`. Both are accepted so the UI does not depend on which one a
- * given backend version uses.
- */
-export function unwrapList<T>(payload: unknown, keys: readonly string[]): T[] {
-  if (Array.isArray(payload)) return payload as T[];
-  if (payload && typeof payload === 'object') {
-    for (const key of keys) {
-      const value = (payload as Record<string, unknown>)[key];
-      if (Array.isArray(value)) return value as T[];
-    }
-  }
-  return [];
 }
 
 /** A browser URL for an export. Opening it (or using it as a link `href`) downloads the file. */
@@ -176,12 +162,9 @@ export function createEndpoints(http: HttpClient) {
     runCompare: (form: FormData) =>
       http.request<CompareResponse>('/api/v1/compare', { method: 'POST', form, timeoutMs: TIMEOUTS.upload }),
 
-    listComparisons: (limit = 20) =>
-      get<ComparisonSummary[] | { comparisons: ComparisonSummary[] }>('/api/v1/compare', { limit }).then((payload) =>
-        unwrapList<ComparisonSummary>(payload, ['comparisons', 'items']),
-      ),
+    listComparisons: (limit = 20) => get<CompareListResponse>('/api/v1/compare', { limit }),
 
-    getComparison: (id: string) => get<CompareResponse>(`/api/v1/compare/${encodeURIComponent(id)}`),
+    getComparison: (id: string) => get<CompareRecord>(`/api/v1/compare/${encodeURIComponent(id)}`),
 
     deleteComparison: (id: string) =>
       http.request<void>(`/api/v1/compare/${encodeURIComponent(id)}`, { method: 'DELETE', timeoutMs: TIMEOUTS.default }),
@@ -190,10 +173,7 @@ export function createEndpoints(http: HttpClient) {
     createBenchmarkRun: (body: BenchmarkRunCreateBody) =>
       post<BenchmarkRunAccepted>('/api/v1/benchmark/runs', body, TIMEOUTS.default),
 
-    listBenchmarkRuns: (limit = 20) =>
-      get<BenchmarkRun[] | { runs: BenchmarkRun[] }>('/api/v1/benchmark/runs', { limit }).then((payload) =>
-        unwrapList<BenchmarkRun>(payload, ['runs', 'items']),
-      ),
+    listBenchmarkRuns: (limit = 20) => get<BenchmarkRunListResponse>('/api/v1/benchmark/runs', { limit }),
 
     getBenchmarkRun: (id: string) => get<BenchmarkRun>(`/api/v1/benchmark/runs/${encodeURIComponent(id)}`),
 

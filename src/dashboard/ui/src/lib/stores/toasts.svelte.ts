@@ -1,6 +1,6 @@
 import { dismiss, enqueue, TOAST_DURATION_MS, type Toast, type ToastKind } from '../toast-queue';
 
-/** Toast notifications. Errors stay longer; at most four are shown. */
+/** Toast notifications. Errors stay longer; at most three are shown. */
 class ToastStore {
   items = $state.raw<Toast[]>([]);
   private nextId = 1;

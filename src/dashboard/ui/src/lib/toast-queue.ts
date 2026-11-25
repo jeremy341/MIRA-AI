@@ -8,7 +8,8 @@ export interface Toast {
   message: string;
 }
 
-export const MAX_TOASTS = 4;
+/** Three at most, so a burst of messages never covers much of the page. The oldest leave first. */
+export const MAX_TOASTS = 3;
 
 /** Errors stay longer so they can be read. */
 export const TOAST_DURATION_MS: Record<ToastKind, number> = {

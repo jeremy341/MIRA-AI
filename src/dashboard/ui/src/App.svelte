@@ -28,8 +28,9 @@
   let mounted = false;
 
   // Move focus to the page when the route changes, so keyboard and screen reader users land on the new content.
+  // It watches the full path, so opening another session (`#/sessions/<id>`) also starts at the top.
   $effect(() => {
-    void router.current;
+    void router.path;
     if (!mounted) return;
     // A route change starts at the top. preventScroll keeps the focus call from scrolling by its own offset.
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -94,7 +95,7 @@
       grid-template-columns: minmax(0, 1fr);
     }
     .content {
-      padding-bottom: 6rem;
+      padding-bottom: calc(var(--tabbar-height) + 2rem);
     }
   }
   @media (max-width: 420px) {

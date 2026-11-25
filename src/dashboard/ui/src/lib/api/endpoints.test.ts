@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createApi, sessionExportUrl, unwrapList } from './index';
+import { createApi, sessionExportUrl } from './index';
 import type { FetchLike } from './client';
 
 function capture(body: unknown = {}, status = 200) {
@@ -66,11 +66,26 @@ describe('v1 endpoints', () => {
     expect((calls[0].init?.headers as Record<string, string>)['Content-Type']).toBeUndefined();
   });
 
-  it('accepts a bare array or a wrapped list for compare and benchmark listings', async () => {
-    const bare = capture([{ id: 'c1', created_at: '2026-11-25T00:00:00Z', input_name: 'x.jpg', models: [] }]);
-    expect(await bare.api.v1.listComparisons(5)).toHaveLength(1);
-    const wrapped = capture({ runs: [{ id: 'b1' }] });
-    expect(await wrapped.api.v1.listBenchmarkRuns(5)).toEqual([{ id: 'b1' }]);
+  it('reads compare and benchmark listings from their wrapped payloads', async () => {
+    const compare = capture({ comparisons: [{ id: 'c1' }], total: 1 });
+    expect(await compare.api.v1.listComparisons(5)).toEqual({ comparisons: [{ id: 'c1' }], total: 1 });
+    expect(compare.calls[0].url).toBe('/api/v1/compare?limit=5');
+    const bench = capture({ runs: [{ id: 'b1' }], total: 1 });
+    expect(await bench.api.v1.listBenchmarkRuns(5)).toEqual({ runs: [{ id: 'b1' }], total: 1 });
+    expect(bench.calls[0].url).toBe('/api/v1/benchmark/runs?limit=5');
+  });
+
+  it('builds the job, hardware and benchmark URLs', async () => {
+    const { api, calls } = capture({});
+    await api.v1.getJob('j 1');
+    await api.v1.getHardwareHistory(15, 240);
+    await api.v1.deleteBenchmarkRun('b1');
+    expect(calls.map((c) => c.url)).toEqual([
+      '/api/v1/jobs/j%201',
+      '/api/v1/hardware/history?minutes=15&points=240',
+      '/api/v1/benchmark/runs/b1',
+    ]);
+    expect(calls[2].init?.method).toBe('DELETE');
   });
 
   it('posts arm commands and feedback', async () => {
@@ -85,21 +100,6 @@ describe('v1 endpoints', () => {
   it('deletes with 204 and resolves to undefined', async () => {
     const { api } = capture({}, 204);
     await expect(api.v1.deleteSession('s1')).resolves.toBeUndefined();
-  });
-});
-
-describe('unwrapList', () => {
-  it('returns arrays as they are', () => {
-    expect(unwrapList([1, 2], ['items'])).toEqual([1, 2]);
-  });
-
-  it('finds the first matching key in a wrapped object', () => {
-    expect(unwrapList({ other: [9], runs: [1] }, ['runs'])).toEqual([1]);
-  });
-
-  it('returns an empty list when nothing matches', () => {
-    expect(unwrapList({ nothing: true }, ['runs'])).toEqual([]);
-    expect(unwrapList(null, ['runs'])).toEqual([]);
   });
 });
 

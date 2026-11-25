@@ -8,6 +8,11 @@
     type?: 'button' | 'submit';
     /** Renders a link styled as a button. */
     href?: string;
+    /** For links: open in a new tab. Pair with `rel="noopener"`, which `target="_blank"` needs. */
+    target?: '_blank' | '_self';
+    rel?: string;
+    /** For links: download the target. A string names the file. */
+    download?: boolean | string;
     disabled?: boolean;
     /** Shows a spinner and blocks clicks. The label stays, so the width does not jump. */
     busy?: boolean;
@@ -22,6 +27,9 @@
     size = 'md',
     type = 'button',
     href,
+    target,
+    rel,
+    download,
     disabled = false,
     busy = false,
     block = false,
@@ -34,11 +42,15 @@
 </script>
 
 {#if href}
+  <!-- A disabled link is not a link: it has no href, so clicks cannot navigate. -->
   <a
     class="btn {variant} {size}"
     class:block
     class:inactive
-    {href}
+    href={inactive ? undefined : href}
+    {target}
+    {rel}
+    {download}
     {title}
     aria-disabled={inactive ? 'true' : undefined}
     tabindex={inactive ? -1 : undefined}
