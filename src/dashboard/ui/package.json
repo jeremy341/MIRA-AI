@@ -1,0 +1,28 @@
+{
+  "name": "mira-dashboard-ui",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MIRA dashboard v2 UI shell (Svelte 5 + Vite + TypeScript).",
+  "scripts": {
+    "dev": "vite",
+    "dev:mock": "vite --mode mock",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.2",
+    "svelte": "^5.59.1",
+    "svelte-check": "^4.7.8",
+    "typescript": "~5.9.3",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
+    "@fontsource/space-mono": "^5.3.0"
+  },
+  "packageManager": "pnpm@11.21.0"
+}
