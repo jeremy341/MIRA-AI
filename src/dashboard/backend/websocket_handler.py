@@ -35,6 +35,8 @@ class WebSocketHandler:
         camera_service.on_frame = self.update_frame
 
     async def start(self):
+        # Create the queue inside the running loop: it must not stay bound to a previous loop (tests, reloads).
+        self._broadcast_queue = asyncio.Queue(maxsize=32)
         self._broadcast_task = asyncio.create_task(self._broadcast_consumer())
 
     async def stop(self):

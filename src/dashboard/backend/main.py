@@ -1,6 +1,7 @@
 # Fast Api server for MIRA Dashboard
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.dashboard.backend.camera_service import CameraService, ImageDetectionUnavailableError
 from src.dashboard.backend.command_service import DashboardCommandService
@@ -53,6 +55,16 @@ app.include_router(v1.api_router, prefix="/api/v1")
 app.include_router(v1.ws_router, prefix="/ws/v1")
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+UI_DIST_DIR = FRONTEND_DIR / "dist"
+
+
+def _new_ui_available() -> bool:
+    """The Svelte UI is served when it has been built (and MIRA_DASHBOARD_UI is not set to legacy)."""
+    return os.environ.get("MIRA_DASHBOARD_UI", "").lower() != "legacy" and (UI_DIST_DIR / "index.html").exists()
+
+
+if (UI_DIST_DIR / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=UI_DIST_DIR / "assets"), name="ui-assets")
 
 
 def _status_payload() -> dict:
@@ -111,11 +123,26 @@ def _history_payload(key: str, items) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    # Serve the MIRA Control Center dashboard
+    # Serve the new Svelte dashboard when built, otherwise the legacy one
+    if _new_ui_available():
+        return FileResponse(UI_DIST_DIR / "index.html", media_type="text/html")
+    return await legacy_dashboard()
+
+
+@app.get("/legacy", response_class=HTMLResponse)
+async def legacy_dashboard():
     dashboard_path = FRONTEND_DIR / "dashboard.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path, media_type="text/html")
     raise HTTPException(status_code=404, detail="Dashboard not found")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    icon = UI_DIST_DIR / "favicon.svg"
+    if icon.exists():
+        return FileResponse(icon, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Not found")
 
 
 @app.get("/dashboard.css")

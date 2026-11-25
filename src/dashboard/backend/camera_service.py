@@ -339,6 +339,9 @@ class CameraService:
                 "camera_initialized": self.camera is not None,
                 "model_loaded": self.model is not None,
                 "streaming": self.is_streaming,
+                "model_name": self.model_config.name if self.model_config is not None else None,
+                "camera_config": self.camera_config.model_dump() if self.camera_config is not None else None,
+                "model_config": self.model_config.model_dump() if self.model_config is not None else None,
             }
 
     async def stop_streaming(self, release_camera: bool = False) -> bool:
