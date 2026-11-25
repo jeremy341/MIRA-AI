@@ -270,10 +270,12 @@
     margin-bottom: var(--space-2);
   }
   .back a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target);
     color: var(--accent-strong);
     font-weight: var(--font-weight-medium);
     text-decoration: none;
-    padding: 0.5rem 0;
   }
   .back a:hover {
     text-decoration: underline;
