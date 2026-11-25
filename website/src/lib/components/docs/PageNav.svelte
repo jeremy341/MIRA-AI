@@ -3,7 +3,7 @@
   import type { DocsUi } from '$i18n/docs/ui';
   import { docPath } from '$lib/docs-content';
 
-  /** Previous and next page, in reading order, under a heavy rule like the end of a chapter. */
+  /** Previous and next page as two cards at the end of the article. */
   let {
     lang,
     ui,
@@ -16,25 +16,24 @@
     next?: { slug: string; title: string };
   } = $props();
 
-  const item = 'group block min-w-0 py-5 sm:py-6';
-  const title =
-    'mt-1 inline font-serif text-[1.25rem] leading-snug font-medium text-ink group-hover:bg-marker group-focus-visible:bg-marker';
+  const card =
+    'group block min-w-0 rounded-xl border border-rule bg-surface px-5 py-4 shadow-[var(--shadow-raised)] transition-colors duration-(--dur-fast) hover:border-accent';
 </script>
 
 {#if prev || next}
-  <nav aria-label={ui.prevNextLabel} class="mt-20 grid gap-x-8 border-t border-ink sm:grid-cols-2">
+  <nav aria-label={ui.prevNextLabel} class="mt-16 grid gap-3 sm:grid-cols-2">
     {#if prev}
-      <a href={localePath(lang, docPath(prev.slug))} rel="prev" class={item}>
+      <a href={localePath(lang, docPath(prev.slug))} rel="prev" class={card}>
         <span class="block text-[0.8125rem] text-muted-foreground"><span aria-hidden="true">&larr; </span>{ui.previous}</span>
-        <span class={title}>{prev.title}</span>
+        <span class="mt-1 block text-[1.0625rem] font-semibold text-ink group-hover:text-accent-strong">{prev.title}</span>
       </a>
     {:else}
       <span class="hidden sm:block"></span>
     {/if}
     {#if next}
-      <a href={localePath(lang, docPath(next.slug))} rel="next" class="{item} sm:text-right">
+      <a href={localePath(lang, docPath(next.slug))} rel="next" class="{card} sm:text-right">
         <span class="block text-[0.8125rem] text-muted-foreground">{ui.next}<span aria-hidden="true"> &rarr;</span></span>
-        <span class={title}>{next.title}</span>
+        <span class="mt-1 block text-[1.0625rem] font-semibold text-ink group-hover:text-accent-strong">{next.title}</span>
       </a>
     {/if}
   </nav>

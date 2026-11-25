@@ -119,7 +119,7 @@
     aria-expanded={expanded}
     aria-controls={expanded && results.length ? listId : undefined}
     aria-activedescendant={expanded && results[active] ? `${baseId}-opt-${active}` : undefined}
-    aria-keyshortcuts="Alt+/"
+    aria-keyshortcuts="Control+K Meta+K Alt+/"
     placeholder={labels.placeholder}
     value={query}
     oninput={(event) => {
@@ -133,14 +133,15 @@
       open = true;
     }}
     onkeydown={onKeydown}
-    class="h-11 w-full rounded-lg border border-rule bg-surface pr-14 pl-3 text-base text-ink shadow-[var(--shadow-raised)] transition-colors placeholder:text-muted-foreground focus-visible:border-accent lg:h-10 lg:text-[0.9375rem]"
+    class="h-10 w-full rounded-lg border border-rule bg-surface pr-14 pl-9 text-base text-ink shadow-[var(--shadow-raised)] transition-colors placeholder:text-muted-foreground focus-visible:border-accent lg:text-[0.9375rem]"
   />
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
   {#if !query}
     <kbd
       aria-hidden="true"
-      class="pointer-events-none absolute top-1/2 right-2.5 hidden h-5 min-w-5 -translate-y-1/2 items-center justify-center border border-rule px-1 font-mono text-[0.6875rem] text-muted-foreground lg:inline-flex"
+      class="pointer-events-none absolute top-1/2 right-2.5 hidden h-5 -translate-y-1/2 items-center justify-center rounded border border-rule px-1.5 font-mono text-[0.6875rem] text-muted-foreground sm:inline-flex"
     >
-      Alt+/
+      Ctrl K
     </kbd>
   {/if}
 
@@ -148,7 +149,7 @@
 
   {#if expanded}
     <div
-      class="fixed inset-x-5 top-[4.25rem] z-50 max-h-[min(26rem,70dvh)] overflow-y-auto rounded-xl border border-rule bg-surface shadow-[var(--shadow-overlay)] sm:inset-x-8 lg:absolute lg:inset-x-0 lg:top-[calc(100%+0.375rem)] lg:min-w-[22rem]"
+      class="fixed inset-x-4 top-[4.25rem] z-50 max-h-[min(26rem,70dvh)] overflow-y-auto rounded-xl border border-rule bg-surface shadow-[var(--shadow-overlay)] sm:inset-x-8 lg:absolute lg:inset-x-auto lg:right-0 lg:top-[calc(100%+0.375rem)] lg:w-[26rem]"
     >
       {#if results.length === 0}
         <p class="px-4 py-4 text-[0.9375rem] leading-6 text-ink-soft">

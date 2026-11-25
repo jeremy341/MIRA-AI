@@ -22,6 +22,21 @@ export type DocsUi = {
   onThisPage: string;
   /** Placeholder of the section filter on the Research and Package sidebars. */
   filterSections: string;
+  /** Placeholder of the filter at the top of the docs sidebar, and the message when it matches nothing. */
+  filterSidebar: string;
+  noMatches: string;
+  /** Accessible name of the breadcrumb trail, and its first entry. */
+  breadcrumbLabel: string;
+  breadcrumbHome: string;
+  /** Page actions under the title. */
+  copyMarkdown: string;
+  copiedMarkdown: string;
+  copyMarkdownFailed: string;
+  editOnGithub: string;
+  /** Contains {title}. Accessible name of a group's expand and collapse button. */
+  toggleGroup: string;
+  /** Label of the primary button in the docs top bar. */
+  installCta: string;
   /** Accessible name of the scrollable area around a wide table; the table's own name is its caption. */
   tableScrollLabel: string;
   prevNextLabel: string;
@@ -62,6 +77,8 @@ export type DocsUi = {
     tryHint: string;
   };
   index: {
+    browse: string;
+    quick: { slug: string; title: string; text: string }[];
     title: string;
     lede: string;
     installLabel: string;
@@ -86,6 +103,16 @@ const en: DocsUi = {
   close: "Close",
   onThisPage: "On this page",
   filterSections: "Filter sections",
+  filterSidebar: "Filter sidebar",
+  noMatches: "No page matches.",
+  breadcrumbLabel: "Breadcrumb",
+  breadcrumbHome: "Docs",
+  copyMarkdown: "Copy as Markdown",
+  copiedMarkdown: "Copied",
+  copyMarkdownFailed: "Could not copy",
+  editOnGithub: "Edit on GitHub",
+  toggleGroup: "Toggle {title}",
+  installCta: "Install",
   tableScrollLabel: "Scrolls sideways on small screens",
   prevNextLabel: "Previous and next pages",
   previous: "Previous",
@@ -114,6 +141,13 @@ const en: DocsUi = {
     tryHint: "Try a flag such as {flag} or a word such as {words}.",
   },
   index: {
+    browse: "Browse the docs",
+    quick: [
+      { slug: "quickstart", title: "Install MIRA", text: "Install from PyPI, check the environment and run the first detection." },
+      { slug: "dashboard", title: "Open the dashboard", text: "Detect, record sessions, replay them and export the results." },
+      { slug: "train-evaluate", title: "Train a detector", text: "Train from an experiment file, then evaluate and benchmark it." },
+      { slug: "dashboard-api", title: "Use the API", text: "Sessions, exports, jobs and live events over HTTP." },
+    ],
     title: "Documentation",
     lede: "Guides and reference for the `mira-ai` package. Each command, option and default was checked against the repository code.",
     installLabel: "Install command",
@@ -138,6 +172,16 @@ const de: DocsUi = {
   close: "Schließen",
   onThisPage: "Auf dieser Seite",
   filterSections: "Abschnitte filtern",
+  filterSidebar: "Seitenleiste filtern",
+  noMatches: "Keine passende Seite.",
+  breadcrumbLabel: "Brotkrumen",
+  breadcrumbHome: "Doku",
+  copyMarkdown: "Als Markdown kopieren",
+  copiedMarkdown: "Kopiert",
+  copyMarkdownFailed: "Kopieren nicht möglich",
+  editOnGithub: "Auf GitHub bearbeiten",
+  toggleGroup: "{title} ein- oder ausklappen",
+  installCta: "Installieren",
   tableScrollLabel: "Auf kleinen Bildschirmen seitlich scrollbar",
   prevNextLabel: "Vorherige und nächste Seite",
   previous: "Zurück",
@@ -166,6 +210,13 @@ const de: DocsUi = {
     tryHint: "Versuchen Sie eine Option wie {flag} oder ein Wort wie {words}.",
   },
   index: {
+    browse: "Die Doku durchsuchen",
+    quick: [
+      { slug: "quickstart", title: "MIRA installieren", text: "Von PyPI installieren, die Umgebung prüfen und die erste Erkennung starten." },
+      { slug: "dashboard", title: "Das Dashboard öffnen", text: "Erkennen, Sitzungen aufzeichnen, abspielen und die Ergebnisse exportieren." },
+      { slug: "train-evaluate", title: "Einen Detektor trainieren", text: "Aus einer Experimentdatei trainieren, dann auswerten und vergleichen." },
+      { slug: "dashboard-api", title: "Die API nutzen", text: "Sitzungen, Exporte, Jobs und Live-Ereignisse über HTTP." },
+    ],
     title: "Dokumentation",
     lede: "Anleitungen und Referenz zum Paket `mira-ai`. Jeder Befehl, jede Option und jeder Standardwert wurde am Code des Repositorys geprüft.",
     installLabel: "Installationsbefehl",

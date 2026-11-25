@@ -31,6 +31,12 @@ describe("isSearchShortcut", () => {
     expect(isSearchShortcut(key({ metaKey: true }))).toBe(false);
   });
 
+  it("accepts Ctrl+K and Cmd+K", () => {
+    expect(isSearchShortcut(key({ key: "k", code: "KeyK", altKey: false, ctrlKey: true }))).toBe(true);
+    expect(isSearchShortcut(key({ key: "K", code: "KeyK", altKey: false, metaKey: true }))).toBe(true);
+    expect(isSearchShortcut(key({ key: "k", code: "KeyK", altKey: true, ctrlKey: true }))).toBe(false);
+  });
+
   it("ignores other keys", () => {
     expect(isSearchShortcut(key({ key: "k", code: "KeyK" }))).toBe(false);
   });

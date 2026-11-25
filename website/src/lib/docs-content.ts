@@ -350,3 +350,44 @@ export function searchDocs(query: string, index: readonly SearchEntry[], limit =
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit);
 }
+
+/* ------------------------------------------------------------------ */
+/* Markdown                                                            */
+/* ------------------------------------------------------------------ */
+
+const CLASS_NAMES_FOR_MARKDOWN = ["glass", "metal", "paper", "plastic", "trash"] as const;
+
+function blockToMarkdown(block: DocBlock): string {
+  switch (block.type) {
+    case "p":
+      return block.text;
+    case "h3":
+      return `### ${block.text}`;
+    case "code":
+      return "```\n" + block.code + "\n```";
+    case "list":
+      return block.items.map((item, index) => `${block.ordered ? `${index + 1}.` : "-"} ${item}`).join("\n");
+    case "callout":
+      return `> **${block.title}**\n> ${block.text}`;
+    case "table": {
+      const row = (cells: string[]) => `| ${cells.map((cell) => cell.replace(/\|/g, "\|")).join(" | ")} |`;
+      return [`*${block.caption}*`, "", row(block.head), row(block.head.map(() => "---")), ...block.rows.map(row)].join("\n");
+    }
+    case "endpoints":
+      return block.items.map((item) => `- \`${item.method} ${item.path}\`: ${item.text}`).join("\n");
+    case "flow":
+      return [`**${block.label}**`, ...block.steps.map((step, index) => `${index + 1}. **${step.title}**: ${step.detail}`)].join("\n");
+    case "classes":
+      return CLASS_NAMES_FOR_MARKDOWN.map((name, index) => `- ${index}: ${name}`).join("\n");
+  }
+}
+
+/** One docs page as Markdown, for the "Copy as Markdown" action. Inline markup is already Markdown. */
+export function docToMarkdown(page: DocPage): string {
+  const parts = [`# ${page.title}`, page.lead ?? page.summary];
+  for (const section of page.sections) {
+    parts.push(`## ${section.title}`);
+    for (const block of section.blocks) parts.push(blockToMarkdown(block));
+  }
+  return parts.join("\n\n") + "\n";
+}
