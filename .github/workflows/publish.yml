@@ -19,11 +19,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build the dashboard UI
+        working-directory: src/dashboard/ui
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm check
+          pnpm test
+          pnpm build
+      - name: Verify the UI is in the build
+        run: |
+          test -f src/dashboard/frontend/dist/index.html
+          if grep -rq "mira-mock-layer-v1" src/dashboard/frontend/dist; then echo "mock layer leaked into the build"; exit 1; fi
       - name: Build distributions
         run: |
           pip install --upgrade build twine
           python -m build
           twine check dist/*
+          python - <<'EOF'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(n.endswith("frontend/dist/index.html") for n in names), "UI missing from wheel"
+          assert any(n.endswith("v1/migrations/0001_core.sql") for n in names), "migrations missing from wheel"
+          EOF
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

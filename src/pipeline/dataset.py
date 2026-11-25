@@ -322,8 +322,7 @@ class DatasetRegistry:
             normalized_width = box_width / image_width
             normalized_height = box_height / image_height
             yolo_lines.append(
-                f"{target_category_id} {center_x:.6f} {center_y:.6f} "
-                f"{normalized_width:.6f} {normalized_height:.6f}\n"
+                f"{target_category_id} {center_x:.6f} {center_y:.6f} {normalized_width:.6f} {normalized_height:.6f}\n"
             )
         return yolo_lines
 

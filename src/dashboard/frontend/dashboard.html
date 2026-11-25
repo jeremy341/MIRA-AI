@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MIRA - Recycling Sorting Robot</title>
+  <title>MIRA | Detection workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,11 +16,11 @@
       <div class="brand" aria-label="MIRA Recycling Sorting Robot">
         <span class="brand-copy">
           <span class="brand-name">MIRA</span>
-          <span class="brand-subtitle">Recycling Sorting Robot</span>
+          <span class="brand-subtitle">Detection workspace</span>
         </span>
       </div>
       <nav class="navigation" aria-label="Main Navigation">
-        <button class="nav-button active" type="button" data-page="dashboard">Dashboard</button>
+        <button class="nav-button active" type="button" data-page="dashboard" aria-current="page">Detect</button>
         <button class="nav-button" type="button" data-page="analytics">Analytics</button>
         <button class="nav-button" type="button" data-page="settings">Settings</button>
       </nav>
@@ -28,7 +28,7 @@
       <div class="system-strip">
         <div class="system-item model-info">
           <span class="system-label">Model</span>
-          <span id="modelName">YOLO11</span>
+          <span id="modelName">Not loaded</span>
         </div>
         <div class="system-item">
           <span id="connectionDot" class="connection-dot disconnected"></span>
@@ -41,13 +41,17 @@
       </div>
     </header>
     <main class="workspace">
-      <section id="dashboardPage" class="page active" aria-label="Dashboard">
+      <section id="dashboardPage" class="page active" aria-labelledby="detectTitle">
+        <div class="detect-heading">
+          <h1 id="detectTitle">Detect</h1>
+          <p>Run MIRA on a connected camera or a local image.</p>
+        </div>
         <div class="dashboard-grid">
           <article class="panel camera-panel">
             <header class="panel-header">
               <div class="panel-title-wrap">
-                <h1 class="panel-title">Camera & Detection</h1>
-                <span class="panel-kicker" id="cameraStatusLabel">System ready</span>
+                <h2 class="panel-title" id="sourceTitle">Camera preview</h2>
+                <span class="panel-kicker" id="cameraStatusLabel">Preparing camera and model</span>
               </div>
               <div class="camera-actions">
                 <span id="liveBadge" class="live-badge">
@@ -66,45 +70,43 @@
                   <p class="placeholder-text">Preparing the camera and model…</p>
                 </div>
               </div>
-              <img id="cameraImage" class="camera-image" alt="Live camera feed of the sorting robot" />
-              <canvas id="detectionCanvas" class="detection-canvas"></canvas>
+              <img id="cameraImage" class="camera-image" alt="Live camera frame" />
+              <canvas id="detectionCanvas" class="detection-canvas" aria-hidden="true"></canvas>
+            </div>
+            <footer class="preview-footer">
+              <p id="cameraState" class="camera-state">Waiting for stream…</p>
               <div class="metric-rail" aria-label="Live metrics">
                 <div class="camera-metric"><span class="camera-metric-label">FPS</span><span id="fpsValue" class="camera-metric-value">-</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Latency</span><span id="latencyValue" class="camera-metric-value">- ms</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Objects</span><span id="detectionCountValue" class="camera-metric-value">0</span></div>
                 <div class="camera-metric"><span class="camera-metric-label">Confidence</span><span id="liveConfidenceValue" class="camera-metric-value">- %</span></div>
               </div>
-              <div id="cameraState" class="camera-state">Waiting for stream…</div>
-            </div>
+            </footer>
           </article>
-          <article class="panel distribution-panel">
-            <header class="panel-header">
-              <div class="panel-title-wrap">
-                <h2 class="panel-title">Class Distribution</h2>
-                <span class="panel-kicker">Current Session</span>
+          <aside class="detect-sidebar" aria-label="Detection controls and output">
+            <section class="panel detect-controls" aria-labelledby="inputTitle">
+              <h2 id="inputTitle">Input</h2>
+              <label for="detectSource">Source</label>
+              <select id="detectSource" class="field-select">
+                <option value="camera">Connected camera</option>
+                <option value="image">Image file</option>
+              </select>
+              <div id="imageControls" hidden>
+                <label for="imageFile">JPEG or PNG, up to 8 MB and 16 megapixels</label>
+                <input id="imageFile" type="file" accept="image/jpeg,image/png" />
+                <button id="detectImageButton" class="button primary" type="button" disabled>Detect image</button>
+                <p id="imageStatus" class="control-note" role="status"></p>
               </div>
-              <span id="distributionTotal" class="panel-kicker">0 Objects</span>
-            </header>
-            <div class="distribution-content">
-              <div class="chart-wrap">
-                <canvas id="distributionChart"></canvas>
-                <div id="distributionEmpty" class="chart-empty visible">No detections yet</div>
-              </div>
-              <div id="classLegend" class="class-legend"></div>
-            </div>
-          </article>
-          <article class="panel recent-panel">
-            <header class="panel-header">
-              <div class="panel-title-wrap">
-                <h2 class="panel-title">Recent Detections</h2>
-              <span class="panel-kicker">Newest first</span>
-              </div>
-              <span id="recentCount" class="panel-kicker">0 Entries</span>
-            </header>
-            <div id="recentList" class="recent-list">
-              <div class="empty-state">No detections yet.<br />Waiting for model data.</div>
-            </div>
-          </article>
+              <label for="displayConfidence">Minimum confidence <output id="displayConfidenceValue" for="displayConfidence">55%</output></label>
+              <input id="displayConfidence" type="range" min="5" max="100" step="5" value="55" aria-describedby="confidenceNote" />
+              <p id="confidenceNote" class="control-note">Filters the preview. Set camera inference thresholds in Settings.</p>
+            </section>
+            <section class="panel detect-results" aria-labelledby="currentTitle">
+              <h2 id="currentTitle">Current detections <span id="currentCount">0</span></h2>
+              <p id="currentEmpty" class="control-note">Start the camera to see its current frame.</p>
+              <ul id="currentDetections" aria-label="Detected objects"></ul>
+            </section>
+          </aside>
         </div>
       </section>
       <section id="analyticsPage" class="page" aria-label="Analytics">
@@ -179,6 +181,26 @@
                 <div id="sysEmpty" class="performance-chart-empty visible">Waiting for stream data</div>
               </div>
             </div>
+          </article>
+          <article class="panel distribution-panel">
+            <header class="panel-header">
+              <h2 class="panel-title">Session class distribution</h2>
+              <span id="distributionTotal" class="panel-kicker">0 Objects</span>
+            </header>
+            <div class="distribution-content">
+              <div class="chart-wrap">
+                <canvas id="distributionChart"></canvas>
+                <div id="distributionEmpty" class="chart-empty visible">No detections yet</div>
+              </div>
+              <div id="classLegend" class="class-legend"></div>
+            </div>
+          </article>
+          <article class="panel recent-panel">
+            <header class="panel-header">
+              <h2 class="panel-title">Recent detections</h2>
+              <span id="recentCount" class="panel-kicker">0 Entries</span>
+            </header>
+            <div id="recentList" class="recent-list"></div>
           </article>
         </div>
       </section>

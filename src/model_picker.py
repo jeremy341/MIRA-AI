@@ -22,7 +22,7 @@ def _getch():
             if direction:
                 return direction
             # Function key or other extended key - consume remaining bytes
-            for key_check in range(100):
+            for _key_check in range(100):
                 if not msvcrt.kbhit():
                     break
                 msvcrt.getch()

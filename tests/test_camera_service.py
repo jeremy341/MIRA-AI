@@ -1,6 +1,7 @@
 # Focused runtime regression tests for the dashboard camera service.
 
 import asyncio
+import logging
 import threading
 from unittest.mock import MagicMock, patch
 
@@ -236,6 +237,16 @@ async def test_stop_waits_for_streaming_read_before_releasing_camera():
 
 @pytest.mark.asyncio
 async def test_stop_is_bounded_when_camera_read_does_not_return(caplog):
+    # `get_logger` turns propagation off, so caplog's root handler only sees this logger when attached directly.
+    service_logger = logging.getLogger("src.dashboard.backend.camera_service")
+    service_logger.addHandler(caplog.handler)
+    try:
+        await _stop_is_bounded_body(caplog)
+    finally:
+        service_logger.removeHandler(caplog.handler)
+
+
+async def _stop_is_bounded_body(caplog):
     read_started = threading.Event()
     allow_test_worker_to_finish = threading.Event()
     camera = MagicMock()

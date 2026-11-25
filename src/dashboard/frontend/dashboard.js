@@ -26,6 +26,8 @@ const state = {
   controlConnected: false,
   // detections
   latestDetections: [],
+  imageBusy: false,
+  currentResultKey: "",
   history: [],
   classCounts: Object.fromEntries(CLASSES.map(name => [name, 0])),
   totalDetections: 0,
@@ -89,8 +91,24 @@ const elements = {
   breakdownEmpty: document.getElementById("breakdownEmpty"),
   perfEmpty: document.getElementById("perfEmpty"),
   sysEmpty: document.getElementById("sysEmpty"),
-  toastRegion: document.getElementById("toastRegion")
+  toastRegion: document.getElementById("toastRegion"),
+  source: document.getElementById("detectSource"),
+  sourceTitle: document.getElementById("sourceTitle"),
+  imageControls: document.getElementById("imageControls"),
+  imageFile: document.getElementById("imageFile"),
+  detectImageButton: document.getElementById("detectImageButton"),
+  imageStatus: document.getElementById("imageStatus"),
+  confidence: document.getElementById("displayConfidence"),
+  confidenceValue: document.getElementById("displayConfidenceValue"),
+  confidenceNote: document.getElementById("confidenceNote"),
+  currentCount: document.getElementById("currentCount"),
+  currentEmpty: document.getElementById("currentEmpty"),
+  currentList: document.getElementById("currentDetections")
 };
+
+function isImageSource() {
+  return elements.source.value === "image";
+}
 
 function updateStartButton() {
   const ready = state.cameraReady && state.modelReady;
@@ -98,6 +116,13 @@ function updateStartButton() {
   if (state.busy && !state.streaming) elements.startButton.textContent = "Starting…";
   else if (!ready) elements.startButton.textContent = "Preparing…";
   else elements.startButton.textContent = "Start Stream";
+  elements.source.disabled = state.busy || state.streaming || state.imageBusy;
+  elements.imageFile.disabled = state.imageBusy;
+  elements.confidence.disabled = state.imageBusy;
+  elements.detectImageButton.disabled = state.imageBusy || state.streaming || state.backendRunning
+    || !state.modelReady || !elements.imageFile.files.length;
+  elements.cameraStatusLabel.hidden = isImageSource();
+  elements.detectImageButton.textContent = state.imageBusy ? "Detecting…" : "Detect image";
 }
 
 function updateReadinessMessage() {
@@ -303,6 +328,7 @@ function showToast(message, type = "success") {
   window.setTimeout(() => { if (toast.isConnected) toast.remove(); }, 4500);
 }
 async function fetchJSON(url, options = {}, silent = false) {
+  const { timeoutMs = 15000, ...requestOptions } = options;
   const controller = new AbortController();
   const externalSignal = options.signal;
   const abortExternal = () => controller.abort();
@@ -310,10 +336,10 @@ async function fetchJSON(url, options = {}, silent = false) {
     if (externalSignal.aborted) controller.abort();
     else externalSignal.addEventListener("abort", abortExternal, { once: true });
   }
-  const timeout = window.setTimeout(function() { controller.abort(); }, 15000);
+  const timeout = window.setTimeout(function() { controller.abort(); }, timeoutMs);
   try {
     const response = await fetch(url, {
-      ...options,
+      ...requestOptions,
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
       signal: controller.signal,
     });
@@ -360,12 +386,7 @@ function setStreaming(streaming, message = "") {
   elements.cameraStatusLabel.textContent = message || (streaming ? "Streaming active" : "System ready");
   elements.cameraState.textContent = message || (streaming ? "Waiting for camera frame…" : "Waiting for stream…");
   if (!streaming) {
-    state.frameLoaded = false;
-    state.latestDetections = [];
-    elements.cameraImage.classList.remove("visible");
-    elements.cameraPlaceholder.style.display = "flex";
-    elements.detectionCountValue.textContent = "0";
-    elements.liveConfidenceValue.textContent = "- %";
+    if (!isImageSource()) clearPreview();
     elements.fpsValue.textContent = "-";
     elements.latencyValue.textContent = "- ms";
     clearBoundingBoxes();
@@ -431,7 +452,7 @@ function connectControlSocket() {
 function handleVideoMessage(payload) {
   switch (payload.type) {
   case "frame":
-      if (typeof payload.frame === "string") {
+      if (!isImageSource() && typeof payload.frame === "string" && (state.streaming || state.backendRunning || state.busy)) {
         state.frameLoaded = false;
         processDetections(Array.isArray(payload.detections) ? payload.detections : []);
         elements.cameraImage.src = payload.frame.startsWith("data:") ? payload.frame : `data:image/jpeg;base64,${payload.frame}`;
@@ -485,7 +506,10 @@ function handleControlMessage(payload) {
   }
   if (payload.type === "response") {
     if (payload.command === "set_camera_config") state.cameraReady = payload.success === true;
-    if (payload.command === "load_model") state.modelReady = payload.success === true;
+    if (payload.command === "load_model") {
+      state.modelReady = payload.success === true;
+      if (state.modelReady) elements.modelName.textContent = document.getElementById("modelSelect").value;
+    }
     if (payload.command === "set_camera_config" || payload.command === "load_model") updateReadinessMessage();
     showToast(payload.message || (payload.success ? "Command completed" : "Command failed"), payload.success ? "success" : "error");
   }
@@ -520,18 +544,45 @@ function handleStatus(status, message) {
     elements.cameraStatusLabel.textContent = message || "Initializing";
     elements.cameraState.textContent = message || "Initializing…";
   }
+  updateStartButton();
 }
 function processDetections(items) {
-  const detections = items.map(normalizeDetection);
-  state.latestDetections = detections;
+  state.latestDetections = items.map(normalizeDetection);
+}
+
+function visibleDetections() {
+  const confidence = Number(elements.confidence.value) / 100;
+  return state.latestDetections.filter(detection => detection.confidence >= confidence);
+}
+
+function renderCurrentDetections() {
+  const detections = visibleDetections();
+  const key = detections.map(item => `${item.className}:${Math.round(item.confidence * 100)}`).join(",");
+  const emptyMessage = state.frameLoaded ? "No objects above the selected confidence." : isImageSource()
+    ? "Choose an image and run detection."
+    : "Start the camera to see its current frame.";
+  if (elements.currentEmpty.textContent !== emptyMessage) elements.currentEmpty.textContent = emptyMessage;
+  elements.currentEmpty.hidden = detections.length > 0;
+  if (state.currentResultKey === key) return;
+  state.currentResultKey = key;
+  elements.currentCount.textContent = String(detections.length);
   elements.detectionCountValue.textContent = String(detections.length);
+  elements.currentList.replaceChildren(...detections.map(detection => {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    const confidence = document.createElement("strong");
+    label.textContent = CLASS_LABELS[detection.className];
+    label.style.setProperty("--object-color", CLASS_COLORS[detection.className]);
+    confidence.textContent = `${Math.round(detection.confidence * 100)}%`;
+    item.append(label, confidence);
+    return item;
+  }));
   if (detections.length) {
     const average = detections.reduce((sum, item) => sum + item.confidence, 0) / detections.length;
     elements.liveConfidenceValue.textContent = `${Math.round(average * 100)} %`;
   } else {
     elements.liveConfidenceValue.textContent = "- %";
   }
-  drawBoundingBoxes(detections);
 }
 function recordTrendPoint() {
   const time = formatTime(new Date().toISOString());
@@ -664,19 +715,17 @@ function drawBoundingBoxes(detections) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!detections.length || !state.frameLoaded) return;
   const img = elements.cameraImage;
-  const imgRect = img.getBoundingClientRect();
-  const stageRect = stage.getBoundingClientRect();
-  const offsetX = imgRect.left - stageRect.left;
-  const offsetY = imgRect.top - stageRect.top;
-  const scaleX = imgRect.width / (img.naturalWidth || imgRect.width);
-  const scaleY = imgRect.height / (img.naturalHeight || imgRect.height);
+  if (!img.naturalWidth || !img.naturalHeight) return;
+  const scale = Math.min(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+  const offsetX = (canvas.width - img.naturalWidth * scale) / 2;
+  const offsetY = (canvas.height - img.naturalHeight * scale) / 2;
   detections.forEach(detection => {
     if (!detection.bbox || detection.bbox.length < 4) return;
     const [x1, y1, x2, y2] = detection.bbox;
-    const sx = offsetX + x1 * scaleX;
-    const sy = offsetY + y1 * scaleY;
-    const sw = (x2 - x1) * scaleX;
-    const sh = (y2 - y1) * scaleY;
+    const sx = offsetX + x1 * scale;
+    const sy = offsetY + y1 * scale;
+    const sw = (x2 - x1) * scale;
+    const sh = (y2 - y1) * scale;
     const color = CLASS_COLORS[detection.className] || "#ffffff";
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
@@ -687,7 +736,7 @@ function drawBoundingBoxes(detections) {
     const labelHeight = 18;
     const labelY = Math.max(0, sy - labelHeight);
     const textY = labelY + 13;
-    ctx.fillStyle = color;
+    ctx.fillStyle = "#18231e";
     ctx.fillRect(sx, labelY, textWidth + 10, labelHeight);
     ctx.fillStyle = "#ffffff";
     ctx.fillText(label, sx + 5, textY);
@@ -716,7 +765,7 @@ function resetSessionStats() {
   state.backendAverageConfidence = null;
 }
 function startStream() {
-  if (state.streaming || state.busy) return;
+  if (state.streaming || state.busy || isImageSource()) return;
   resetSessionStats();
   setBusy(true);
   clearTimeout(streamReadyTimer);
@@ -748,13 +797,111 @@ function stopStream() {
     .finally(() => setBusy(false));
 }
 function switchPage(pageName) {
-  elements.navButtons.forEach(button => { button.classList.toggle("active", button.dataset.page === pageName); });
+  elements.navButtons.forEach(button => {
+    const active = button.dataset.page === pageName;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
   elements.pages.forEach(page => { page.classList.toggle("active", page.id === `${pageName}Page`); });
+  document.querySelector(".workspace").scrollTop = 0;
+  if (pageName === "dashboard") drawBoundingBoxes(visibleDetections());
 }
 // nav + stream buttons - keep simple, no delegate
 elements.navButtons.forEach(function(button) { button.addEventListener("click", function() { switchPage(button.dataset.page); }); });
 elements.startButton.addEventListener("click", startStream);
 elements.stopButton.addEventListener("click", stopStream);
+
+function clearPreview() {
+  state.frameLoaded = false;
+  state.latestDetections = [];
+  elements.cameraImage.removeAttribute("src");
+  elements.cameraImage.classList.remove("visible");
+  elements.cameraPlaceholder.style.display = "flex";
+  clearBoundingBoxes();
+  renderCurrentDetections();
+}
+
+function updateSource() {
+  const image = isImageSource();
+  elements.sourceTitle.textContent = image ? "Image preview" : "Camera preview";
+  elements.cameraImage.alt = image ? "Analyzed image" : "Live camera frame";
+  elements.cameraStage.dataset.source = elements.source.value;
+  elements.imageControls.hidden = !image;
+  elements.startButton.hidden = image;
+  elements.stopButton.hidden = image;
+  document.querySelector(".preview-footer").hidden = image;
+  elements.cameraPlaceholder.querySelector(".placeholder-title").textContent = image ? "No image analyzed" : "No active camera stream";
+  elements.cameraPlaceholder.querySelector(".placeholder-text").textContent = image ? "Choose a JPEG or PNG to begin." : "Use Start Stream when the camera is ready.";
+  elements.confidenceNote.textContent = image ? "Sets the threshold for the next image run." : "Filters the preview. Set camera inference thresholds in Settings.";
+  elements.imageStatus.textContent = "";
+  clearPreview();
+  updateStartButton();
+}
+
+async function detectSelectedImage() {
+  const file = elements.imageFile.files[0];
+  if (!file || elements.detectImageButton.disabled) return;
+  clearPreview();
+  if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 8 * 1024 * 1024) {
+    elements.imageStatus.textContent = "Choose a JPEG or PNG up to 8 MB and 16 megapixels.";
+    return;
+  }
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const megapixels = bitmap.width * bitmap.height / 1_000_000;
+      bitmap.close();
+      if (megapixels > 16) {
+        elements.imageStatus.textContent = "Choose an image no larger than 16 megapixels.";
+        return;
+      }
+    } catch (_) {
+      // The server decodes and validates the image as well; let it report the problem.
+    }
+  }
+  state.imageBusy = true;
+  elements.imageStatus.textContent = "Uploading image for detection…";
+  updateStartButton();
+  try {
+    const result = await fetchJSON(`/api/detect/image?confidence=${Number(elements.confidence.value) / 100}`, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+      timeoutMs: 60000,
+    }, true);
+    processDetections(result.detections);
+    elements.cameraImage.src = result.image;
+    const { length } = result.detections;
+    elements.imageStatus.textContent = `${length} ${length === 1 ? "object" : "objects"} detected.`;
+  } catch (error) {
+    elements.imageStatus.textContent = error.message;
+  } finally {
+    state.imageBusy = false;
+    updateStartButton();
+  }
+}
+
+elements.source.addEventListener("change", updateSource);
+elements.imageFile.addEventListener("change", () => {
+  clearPreview();
+  elements.imageStatus.textContent = "";
+  updateStartButton();
+});
+elements.detectImageButton.addEventListener("click", detectSelectedImage);
+elements.confidence.addEventListener("input", () => {
+  elements.confidenceValue.value = `${elements.confidence.value}%`;
+  if (isImageSource()) {
+    if (state.frameLoaded || elements.cameraImage.hasAttribute("src")) {
+      clearPreview();
+      elements.imageStatus.textContent = "Run detection again to apply the new threshold.";
+    }
+    return;
+  }
+  renderCurrentDetections();
+  drawBoundingBoxes(visibleDetections());
+});
+new ResizeObserver(() => drawBoundingBoxes(visibleDetections())).observe(elements.cameraStage);
 let sessionTimer = null;
 function startSessionTimer() {
   if (sessionTimer) return;
@@ -764,7 +911,8 @@ elements.cameraImage.addEventListener("load", () => {
   state.frameLoaded = true;
   elements.cameraImage.classList.add("visible");
   elements.cameraPlaceholder.style.display = "none";
-  drawBoundingBoxes(state.latestDetections);
+  renderCurrentDetections();
+  drawBoundingBoxes(visibleDetections());
 });
 const sliders = [
   { slider: document.getElementById("modelConf"), label: document.getElementById("modelConfVal") },
@@ -868,6 +1016,7 @@ async function prepareDefaults() {
     try {
       await fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(modelConfig) }, true);
       state.modelReady = true;
+      elements.modelName.textContent = modelName;
     } catch (_) {
       showToast("The default model could not be loaded. Check Settings.", "warning");
     }
@@ -880,7 +1029,7 @@ const cameraForm = document.getElementById("cameraSettingsForm");
 if (cameraForm) {
   cameraForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (state.streaming || state.busy) {
+    if (state.streaming || state.busy || state.imageBusy) {
       showToast("Stop the stream before changing camera settings.", "warning");
       return;
     }
@@ -902,7 +1051,7 @@ const modelForm = document.getElementById("modelSettingsForm");
 if (modelForm) {
   modelForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (state.streaming || state.busy) {
+    if (state.streaming || state.busy || state.imageBusy) {
       showToast("Stop the stream before changing models.", "warning");
       return;
     }
@@ -912,6 +1061,7 @@ if (modelForm) {
       fetchJSON("/api/model/load", { method: "POST", body: JSON.stringify(config) })
         .then(data => {
           state.modelReady = true;
+          elements.modelName.textContent = config.name;
           updateReadinessMessage();
           showToast(data.message || "Model loaded", "success");
         })
@@ -920,6 +1070,7 @@ if (modelForm) {
   });
 }
 
+updateSource();
 renderRecent();
 renderSummary();
 startSessionTimer();

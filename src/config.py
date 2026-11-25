@@ -91,7 +91,7 @@ def _validate_project_config(cfg: dict[str, Any]) -> list[str]:
             if val is not None and (not isinstance(val, int) or val < min_val):
                 errors.append(f"'training.{key}' must be an integer >= {min_val}")
         lr = training.get("default_lr")
-        if lr is not None and (not isinstance(lr, (int, float)) or lr <= 0):
+        if lr is not None and (not isinstance(lr, int | float) or lr <= 0):
             errors.append("'training.default_lr' must be a positive number")
         patience = training.get("early_stopping_patience")
         if patience is not None and (not isinstance(patience, int) or patience < 1):
@@ -99,13 +99,13 @@ def _validate_project_config(cfg: dict[str, Any]) -> list[str]:
     inference = cfg.get("inference", {})
     if isinstance(inference, dict):
         reject = inference.get("reject_threshold")
-        if reject is not None and (not isinstance(reject, (int, float)) or not 0 < reject < 1):
+        if reject is not None and (not isinstance(reject, int | float) or not 0 < reject < 1):
             errors.append("'inference.reject_threshold' must be a float in (0, 1)")
         conf = inference.get("default_conf")
-        if conf is not None and (not isinstance(conf, (int, float)) or not 0 < conf < 1):
+        if conf is not None and (not isinstance(conf, int | float) or not 0 < conf < 1):
             errors.append("'inference.default_conf' must be a float in (0, 1)")
         iou = inference.get("default_iou")
-        if iou is not None and (not isinstance(iou, (int, float)) or not 0 < iou < 1):
+        if iou is not None and (not isinstance(iou, int | float) or not 0 < iou < 1):
             errors.append("'inference.default_iou' must be a float in (0, 1)")
     return errors
 
@@ -220,7 +220,7 @@ def setup_camera_properties(
     if not cap.isOpened():
         raise CameraError("Camera is not opened before setting properties.")
     properties = (
-        (cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")),
+        (cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG")),  # type: ignore[attr-defined]
         (cv2.CAP_PROP_FRAME_WIDTH, width),
         (cv2.CAP_PROP_FRAME_HEIGHT, height),
         (cv2.CAP_PROP_FPS, fps),
@@ -242,8 +242,6 @@ def setup_camera_properties(
             continue
         property_name = property_names.get(property_id, str(property_id))
         raise CameraError(f"Failed to set camera property: {property_name}")
-
-
 
 
 _TRAINING = PROJECT_CONFIG.get("training", {})

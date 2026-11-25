@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Project website and docs
+    url: https://mira-vision.vercel.app/
+    about: Documentation, experiment history and results.
+  - name: Models on Hugging Face
+    url: https://huggingface.co/Jeremy341/MIRA-AI
+    about: Additional experiment models and exports.

@@ -2,6 +2,12 @@
 
 **Jugend forscht 2027**
 
+[![CI](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremy341/MIRA-AI/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/mira-ai)](https://pypi.org/project/mira-ai/)
+[![Python](https://img.shields.io/pypi/pyversions/mira-ai)](https://pypi.org/project/mira-ai/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Jeremy341%2FMIRA--AI-yellow)](https://huggingface.co/Jeremy341/MIRA-AI)
+
 MIRA is my project for recognizing different types of waste with a camera. The
 long-term idea is to use the detections to sort objects automatically.
 
@@ -94,6 +100,8 @@ To start the local dashboard:
 ```powershell
 mira dashboard
 ```
+
+In the current source checkout, open `http://127.0.0.1:8000` and choose a source in **Detect**. Use **Connected camera** for live detection, or stop the stream and choose **Image file** for a local JPEG or PNG (up to 8 MB and 16 megapixels). The dashboard uploads the image to the server for inference and keeps the result out of camera session statistics. Use **Analytics** for session history and **Settings** for camera and model configuration.
 
 ## Development installation
 

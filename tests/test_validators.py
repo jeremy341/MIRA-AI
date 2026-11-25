@@ -128,6 +128,7 @@ def test_dataset_summary():
         assert summary["labels"] == 1
         assert "class_counts" in summary
 
+
 def test_validation_reports_split_errors_before_label_errors(tmp_path):
     from src.pipeline.validators import validate_yolo_dataset
 

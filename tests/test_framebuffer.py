@@ -15,6 +15,7 @@ def test_framebuffer_running_is_isolated():
     fb1._running = False
     assert fb2._running is True
 
+
 def test_frame_buffer_returns_independent_array_copy():
     import numpy as np
     from src.hardware import _FrameBuffer
