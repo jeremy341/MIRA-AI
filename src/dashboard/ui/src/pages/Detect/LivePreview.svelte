@@ -101,7 +101,7 @@
   .badge {
     position: absolute;
     top: var(--space-2);
-    left: var(--space-2);
+    right: var(--space-2);
   }
   .placeholder {
     display: grid;

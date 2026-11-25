@@ -154,10 +154,10 @@ export interface PreviewInput {
 
 export function previewMessage(input: PreviewInput): { title: string; description: string } {
   if (!input.cameraReady) {
-    return { title: 'Camera not connected', description: 'Connect the camera in step 1 to see the preview here.' };
+    return { title: 'Camera not connected', description: 'Connect the camera to see the preview here.' };
   }
   if (!input.modelLoaded) {
-    return { title: 'No model loaded', description: 'Load a model in step 2 to start detecting.' };
+    return { title: 'No model loaded', description: 'Load a model to start detecting.' };
   }
   if (!input.streaming) {
     return { title: 'Ready to stream', description: 'Press Start stream to see live boxes here.' };

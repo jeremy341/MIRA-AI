@@ -15,7 +15,7 @@
   const placeholder = defaultSessionName();
 </script>
 
-<Card title="Session" description="Detections are saved to a session while the stream runs.">
+<Card title="Session">
   {#if unavailable}
     <Notice tone="info" title="Not available yet">
       Sessions are not available on this server yet. Detection still works without them.
@@ -45,13 +45,13 @@
       <Button variant="secondary" busy={detect.sessionBusy} onclick={() => stopSession(active.id)}>Stop session</Button>
     </div>
   {:else}
-    <Field id="session-name" label="Session name" hint="Leave empty to use the date and time.">
+    <Field id="session-name" label="Name" hint="Optional. Leave empty to use the date and time.">
       <TextInput
         id="session-name"
         bind:value={detect.sessionName}
         placeholder={placeholder}
         maxlength={80}
-        describedby={describedBy('session-name', { hint: 'Leave empty to use the date and time.' })}
+        describedby={describedBy('session-name', { hint: 'Optional. Leave empty to use the date and time.' })}
       />
     </Field>
     <div class="actions">
