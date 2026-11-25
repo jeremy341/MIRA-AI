@@ -14,7 +14,7 @@
   import { system } from '../../lib/stores/system.svelte';
   import type { StepAction } from './detect-logic';
   import { confidenceLabel, objectCountLabel, readinessSteps } from './detect-logic';
-  import { connectCamera, loadSavedModel, startStream, stopStream } from './detect-actions';
+  import { connectCamera, loadSavedModel, modelToLoad, startStream, stopStream } from './detect-actions';
   import DetectionList from './DetectionList.svelte';
   import ImagePanel from './ImagePanel.svelte';
   import ReadinessSteps from './ReadinessSteps.svelte';
@@ -28,14 +28,16 @@
     { value: 'image', label: 'Image file' },
   ] as const;
 
+  const plannedModel = $derived(modelToLoad()?.name ?? null);
+
   const steps = $derived(
     readinessSteps({
       source: detect.source,
       cameraReady: system.cameraReady,
       modelLoaded: system.modelLoaded,
       streaming: system.streaming,
-      savedModel: settings.saved.model.name || null,
-      loadedModelName: settings.saved.model.name || null,
+      savedModel: plannedModel,
+      loadedModelName: settings.saved.model.name || plannedModel,
     }),
   );
 
@@ -150,7 +152,7 @@
       </Card>
 
       <div class="tiles">
-        <StatTile label="Frame rate" value={fpsValue} unit="FPS" trend={live.fpsHistory} trendLabel="Frame rate over the last minute" hint={system.streaming ? 'Measured in the browser' : 'Stream stopped'} />
+        <StatTile label="Frame rate" value={fpsValue} unit="FPS" trend={system.streaming ? live.fpsHistory : undefined} trendLabel="Frame rate over the last minute" hint={system.streaming ? 'Measured in the browser' : 'Stream stopped'} />
         <StatTile label="Inference" value={system.streaming && live.state.metrics ? formatMs(live.state.metrics.latencyMs) : '-'} hint={live.state.metrics ? `Average ${formatMs(live.state.metrics.avgLatencyMs)}` : 'Waiting for metrics'} />
         <StatTile label="Objects in view" value={live.state.frame ? livePeople : '-'} hint={live.state.frame ? objectCountLabel(livePeople) : 'No frame yet'} />
       </div>

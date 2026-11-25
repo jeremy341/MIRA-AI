@@ -166,6 +166,8 @@
       left: 0;
       right: 0;
       bottom: 0;
+      width: 100%;
+      max-width: 100vw;
       height: auto;
       flex-direction: row;
       padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom, 0px));

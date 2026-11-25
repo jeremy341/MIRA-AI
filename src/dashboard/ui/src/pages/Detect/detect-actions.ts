@@ -10,6 +10,8 @@ import { settings } from '../../lib/stores/settings.svelte';
 import { system } from '../../lib/stores/system.svelte';
 import { toasts } from '../../lib/stores/toasts.svelte';
 import { normalizeDetections } from '../../lib/realtime/video-state';
+import { defaultDraft } from '../../lib/settings-model';
+import type { ModelConfig } from '../../lib/types';
 import { imageContentType, streamStartHint, validateImageFile } from './detect-logic';
 
 export async function connectCamera(): Promise<void> {
@@ -25,15 +27,26 @@ export async function connectCamera(): Promise<void> {
   }
 }
 
+/** The model the Detect page loads: the saved one, or the recommended model until Settings is applied. */
+export function modelToLoad(): ModelConfig | null {
+  if (settings.saved.model.name) return settings.saved.model;
+  const fallback = system.models?.find((m) => m.recommended) ?? system.models?.[0];
+  return fallback ? defaultDraft(fallback.name).model : null;
+}
+
 export async function loadSavedModel(): Promise<void> {
-  const config = settings.saved.model;
-  if (!config.name) {
-    toasts.info('Choose a model in Settings first.');
+  const config = modelToLoad();
+  if (!config) {
+    toasts.info('No model is available. Add one to the models folder, then reload.');
     return;
   }
   detect.loadBusy = true;
   try {
     await api.legacy.loadModel(config);
+    // The first model loaded becomes the saved one, so the readiness steps and the top bar agree.
+    if (!settings.saved.model.name) {
+      settings.markApplied({ camera: settings.saved.camera, model: config });
+    }
     toasts.success(`Model ${config.name} loaded.`);
   } catch (error) {
     toasts.error(describeError(error, 'The model could not be loaded.'));

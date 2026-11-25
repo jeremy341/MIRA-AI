@@ -88,8 +88,11 @@
   @media (max-width: 899px) {
     .item {
       flex-direction: column;
-      align-items: flex-start;
+      align-items: stretch;
       gap: 0;
+    }
+    dd {
+      width: 100%;
     }
     .items {
       display: grid;
