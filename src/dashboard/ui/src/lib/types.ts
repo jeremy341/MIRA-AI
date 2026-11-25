@@ -1,8 +1,9 @@
 /*
   Wire types. Legacy routes (`/api/*`, `/ws/video`) match src/dashboard/backend/main.py and
-  websocket_handler.py. v1 types (`/api/v1`, `/ws/v1/events`) match docs/dashboard-v2/CONTRACT.md section 7.
+  websocket_handler.py. v1 types (`/api/v1`, `/ws/v1/events`) match docs/dashboard-v2/CONTRACT.md section 7
+  and the routers in src/dashboard/backend/v1/routers/ (checked against them in U2).
   JSON is snake_case. Timestamps in payloads are ISO-8601 strings.
-  Where the contract leaves a shape open, the type is marked `OPEN:` and listed in the UI README.
+  Where the contract or the routers leave a shape open, the type is marked `OPEN:` and listed in the UI README.
 */
 
 export const CLASS_NAMES = ['glass', 'metal', 'paper', 'plastic', 'trash'] as const;
@@ -224,7 +225,11 @@ export interface SessionSummary {
   avg_confidence: number | null;
 }
 
-/** GET /api/v1/sessions/{id} adds `config` and `notes`. OPEN: POST returns this shape too (assumed). */
+/**
+ * GET /api/v1/sessions/{id} adds `config` and `notes`.
+ * OPEN: the contract says POST /sessions returns "session" without listing its fields. It is typed as this
+ * detail shape. The sessions router is still a stub on this branch, so this is unconfirmed.
+ */
 export interface SessionDetail extends SessionSummary {
   config: Record<string, unknown> | null;
   notes: string | null;
@@ -276,58 +281,113 @@ export interface SessionTimelineResponse {
   buckets: TimelineBucket[];
 }
 
-/** OPEN: the detection shape inside compare results is assumed to match `Detection`. */
-export interface CompareModelResult {
+/** One detection inside a compare result. Compare detections carry no timestamp (compare router). */
+export interface CompareDetection {
+  class_name: ClassName;
+  confidence: number;
+  bbox: Bbox;
+  track_id: number | null;
+}
+
+/** A model's result as it is stored and listed: the annotated image is never stored. */
+export interface CompareModelRecord {
   name: string;
   latency_ms: number;
   objects: number;
   class_counts: ClassCounts;
   avg_confidence: number | null;
-  detections: Detection[];
+  detections: CompareDetection[];
+}
+
+/** The `winner_hint` of a compare run (compare.py `_winner_hint`). These are observations, not accuracy. */
+export interface CompareWinnerHint {
+  fastest_model: string;
+  most_objects_model: string;
+  highest_avg_confidence_model: string | null;
+  note: string;
+}
+
+/** POST /api/v1/compare. Only the run that just happened carries `annotated_image`. */
+export interface CompareModelResult extends CompareModelRecord {
   /** Data URI of the annotated JPEG. */
   annotated_image: string;
 }
 
-/** OPEN: `winner_hint` is not specified in the contract. */
 export interface CompareResponse {
   id: string;
   input_name: string;
   models: CompareModelResult[];
-  winner_hint: Record<string, unknown>;
+  winner_hint: CompareWinnerHint;
 }
 
-/** OPEN: list item shape for GET /api/v1/compare (no images). */
-export interface ComparisonSummary {
+/** GET /api/v1/compare/{id} and each item of the list. The router stores no images, so there is no `annotated_image`. */
+export interface CompareRecord {
   id: string;
   created_at: IsoTimestamp;
   input_name: string;
-  models: string[];
+  models: CompareModelRecord[];
+  winner_hint: CompareWinnerHint;
+}
+
+/** GET /api/v1/compare?limit=20 */
+export interface CompareListResponse {
+  comparisons: CompareRecord[];
+  total: number;
 }
 
 export type JobStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 
-/** OPEN: `per_class` and `errors` shapes are not specified, so they are typed loosely. */
-export interface BenchmarkModelResult {
-  model: string;
-  map50: number | null;
-  map50_95: number | null;
-  precision: number | null;
-  recall: number | null;
-  f1: number | null;
-  avg_latency_ms: number | null;
-  fps: number | null;
-  per_class: Record<string, unknown>;
-  errors: string[] | null;
+/** Benchmark run status. The router reuses the job statuses. */
+export type BenchmarkStatus = JobStatus;
+
+/** Per-class counts from `PerClassMetrics.to_dict()` (src/pipeline/benchmark.py). Keys are dataset class names. */
+export interface BenchmarkClassMetrics {
+  tp: number;
+  fp: number;
+  fn: number;
+  precision: number;
+  recall: number;
+  f1: number;
 }
 
-/** GET /api/v1/benchmark/runs/{id}. OPEN: list items are assumed to share this shape. */
+/** One model's row in a benchmark run (`_result_to_api` in benchmark.py). */
+export interface BenchmarkModelResult {
+  model: string;
+  map50: number;
+  map50_95: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  avg_latency_ms: number;
+  /** Always null on this backend: the benchmark does not measure FPS. Show a dash. */
+  fps: number | null;
+  per_class: Record<string, BenchmarkClassMetrics>;
+  /** Messages for models or images that could not be evaluated. An empty list means no errors. */
+  errors: string[];
+}
+
+/** The `config` a run was started with, as stored by benchmark.py (`dataset` is the resolved path). */
+export interface BenchmarkConfig {
+  models: string[];
+  dataset: string;
+  confidence: number;
+  max_images: number | null;
+}
+
+/** GET /api/v1/benchmark/runs/{id} and each item of the list. `results` fills in as each model finishes. */
 export interface BenchmarkRun {
   id: string;
-  /** OPEN: benchmark status values are assumed to match the job statuses. */
-  status: JobStatus;
-  config: Record<string, unknown>;
+  created_at: IsoTimestamp;
+  status: BenchmarkStatus;
+  config: BenchmarkConfig;
   results: BenchmarkModelResult[] | null;
   job_id: string | null;
+}
+
+/** GET /api/v1/benchmark/runs?limit=20 */
+export interface BenchmarkRunListResponse {
+  runs: BenchmarkRun[];
+  total: number;
 }
 
 export interface BenchmarkRunCreateBody {
@@ -372,6 +432,7 @@ export interface Job {
   message: string;
   created_at: IsoTimestamp;
   finished_at: IsoTimestamp | null;
+  /** OPEN: batch jobs return their own shape (not specified). Benchmark jobs return `{run_id, results}`. */
   result: Record<string, unknown> | null;
   error: string | null;
 }
@@ -393,10 +454,11 @@ export interface HardwareCurrent {
   cpu_count: number;
 }
 
+/** One bucket of GET /api/v1/hardware/history. Values are averages; `temperature_c` is null without a sensor. */
 export interface HardwarePoint {
   ts: IsoTimestamp;
-  cpu_percent: number;
-  memory_percent: number;
+  cpu_percent: number | null;
+  memory_percent: number | null;
   temperature_c: number | null;
 }
 
@@ -425,14 +487,36 @@ export interface ArmCommandBody {
   track_id?: number;
 }
 
-/** OPEN: the JSON shape of an arm event is not specified. `payload` is the parsed payload_json. */
+/** Event kinds the simulator writes: `<action>_requested`, then `<action>_completed` or `<action>_failed`. */
+export type ArmEventKind =
+  | 'sort_requested'
+  | 'sort_completed'
+  | 'sort_failed'
+  | 'home_requested'
+  | 'home_completed'
+  | 'home_failed'
+  | 'stop_requested'
+  | 'stop_completed'
+  | 'stop_failed';
+
+/**
+ * The `payload` of an arm event (arm.py). `*_requested` carries `action`. `*_completed` and `*_failed`
+ * carry `request_id` (the id of the requested event) and `message`.
+ */
+export interface ArmEventPayload {
+  action?: ArmCommandAction;
+  request_id?: number;
+  message?: string;
+}
+
+/** An arm event as the router serialises it (`_serialize_event`). `correct` is only set on `sort_completed` events. */
 export interface ArmEvent {
   id: number;
   ts: IsoTimestamp;
-  kind: string;
+  kind: ArmEventKind;
   class_name: ClassName | null;
   track_id: number | null;
-  payload: Record<string, unknown>;
+  payload: ArmEventPayload;
   correct: boolean | null;
 }
 
@@ -467,6 +551,44 @@ export interface HelloEvent {
 
 export interface PingEvent {
   type: 'ping';
+}
+
+/** `data` of `job_progress` (jobs.py). The job is keyed by `job_id`, not `id`. */
+export interface JobProgressEventData {
+  job_id: string;
+  progress: number;
+  message: string;
+}
+
+/** `data` of `job_finished`. */
+export interface JobFinishedEventData {
+  job_id: string;
+  status: JobStatus;
+  error: string | null;
+}
+
+/** `data` of `session_started` (batch_runner.py). */
+export interface SessionStartedEventData {
+  session_id: string;
+  source: SessionSource;
+  name: string;
+}
+
+/** `data` of `session_stopped`. */
+export interface SessionStoppedEventData {
+  session_id: string;
+  status: SessionStatus;
+}
+
+/**
+ * `data` of `hardware_sample` (hardware_sampler.py). OPEN: `ts` here is a raw epoch number from the sampler,
+ * not an ISO string like the envelope and the HTTP payloads. The UI does not use this event for charts.
+ */
+export interface HardwareSampleEventData {
+  ts: number;
+  cpu_percent: number;
+  memory_percent: number;
+  temperature_c: number | null;
 }
 
 /** Every EventBus event, fanned out as `{type, ts, data}`. Callers narrow `data` per event type. */

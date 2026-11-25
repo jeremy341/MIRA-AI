@@ -5,12 +5,14 @@
  *  - /ws/v1/events: a hello on open, a ping every 20 s, and a hardware sample every 5 s.
  * Only what the UI needs is implemented.
  */
-import { randomDetections, state } from './backend';
+import { randomDetections, state, tickMock } from './backend';
 import { scenePool } from './scene';
 import { rng } from './fixtures';
+import { subscribeMockEvents } from './mock-events';
 
 const FRAME_INTERVAL_MS = 250;
 const METRICS_INTERVAL_MS = 1000;
+const CLOCK_INTERVAL_MS = 1000;
 const HARDWARE_INTERVAL_MS = 5000;
 const EVENTS_PING_MS = 20000;
 
@@ -26,6 +28,7 @@ class MockSocket {
   private frameIndex = 0;
   private wasStreaming = false;
   private readonly random = rng(Date.now() & 0xffff);
+  private unsubscribe: (() => void) | null = null;
 
   constructor(private readonly kind: 'video' | 'events') {
     this.timers.push(
@@ -39,6 +42,9 @@ class MockSocket {
           this.timers.push(setInterval(() => this.tickMetrics(), METRICS_INTERVAL_MS));
         } else {
           this.emit({ type: 'hello', ts: new Date().toISOString(), data: { version: 1 } });
+          // Job, arm and session events come from the mock backend, as the EventBus sends them.
+          this.unsubscribe = subscribeMockEvents((type, data) => this.emit({ type, ts: new Date().toISOString(), data }));
+          this.timers.push(setInterval(() => tickMock(), CLOCK_INTERVAL_MS));
           this.timers.push(setInterval(() => this.emit({ type: 'ping' }), EVENTS_PING_MS));
           this.timers.push(setInterval(() => this.tickHardware(), HARDWARE_INTERVAL_MS));
         }
@@ -61,6 +67,8 @@ class MockSocket {
       clearInterval(timer);
     }
     this.timers = [];
+    this.unsubscribe?.();
+    this.unsubscribe = null;
     this.onclose?.({ code, reason, wasClean: code === 1000 } as CloseEvent);
   }
 
@@ -126,13 +134,15 @@ class MockSocket {
   }
 
   private tickHardware(): void {
+    // The sampler's event carries its own epoch `ts` in seconds (hardware_sampler.py).
     this.emit({
       type: 'hardware_sample',
       ts: new Date().toISOString(),
       data: {
+        ts: Date.now() / 1000,
         cpu_percent: Math.round((30 + this.random() * 25) * 10) / 10,
         memory_percent: Math.round((42 + this.random() * 4) * 10) / 10,
-        temperature_c: Math.round((52 + this.random() * 6) * 10) / 10,
+        temperature_c: state.hardwareSensor ? Math.round((52 + this.random() * 6) * 10) / 10 : null,
       },
     });
   }
@@ -154,8 +164,9 @@ export function openMockSocket(path: string): WebSocket {
 }
 
 /**
- * Developer aid, mock mode only: `__miraMock.dropSockets()` in the console closes every open
- * mock socket with code 1006, so the reconnect and "connection lost" states can be checked.
+ * Developer aid, mock mode only, in the browser console:
+ *  - `__miraMock.dropSockets()` closes every open mock socket with code 1006, to check the reconnect states.
+ *  - `__miraMock.hardwareSensor(false)` removes the temperature reading (a board without a sensor).
  */
 function registerDevHooks(): void {
   if (typeof window === 'undefined') return;
@@ -164,5 +175,8 @@ function registerDevHooks(): void {
       for (const socket of [...openSockets]) socket.drop();
     },
     openSockets: () => openSockets.size,
+    hardwareSensor: (on: boolean) => {
+      state.hardwareSensor = on;
+    },
   };
 }
