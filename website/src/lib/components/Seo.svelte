@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { Locale } from '$i18n/config';
   import { pageMetadata } from '$lib/metadata';
+  import { structuredDataScript } from '$lib/structured-data';
 
   /**
-   * Every page renders this once: title, description, canonical, hreflang (en, de, x-default), Open Graph and
-   * Twitter card. It is the only place that writes these tags, so a page can never lose the share card, the
-   * locale or the site name. `path` has no language prefix ("/" for Home, "/docs/cli" for a doc).
+   * Each localized page renders this once: title, description, canonical, hreflang (en, de, x-default), Open Graph,
+   * Twitter card and structured data. This is the only metadata source for localized routes, keeping share cards,
+   * locale and site identity consistent. `path` has no language prefix ("/" for Home, "/docs/cli" for a doc).
    * Home keeps its title; every other page gets " | MIRA" in <title>, og:title and twitter:title.
    */
   let {
@@ -17,6 +18,15 @@
   }: { lang: Locale; path: string; title: string; description: string; noindex?: boolean } = $props();
 
   const meta = $derived(pageMetadata(lang, path, title, description));
+  const structuredData = $derived(
+    structuredDataScript({
+      lang,
+      path,
+      canonicalUrl: meta.canonicalUrl,
+      title: meta.shareTitle,
+      description: meta.description
+    })
+  );
 </script>
 
 <svelte:head>
@@ -46,4 +56,5 @@
   <meta name="twitter:description" content={meta.twitter.description} />
   <meta name="twitter:image" content={meta.twitter.image.url} />
   <meta name="twitter:image:alt" content={meta.twitter.image.alt} />
+  {@html `<script type="application/ld+json">${structuredData}</script>`}
 </svelte:head>
