@@ -1,0 +1,5 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 120,
+  "ignorePatterns": ["build", ".svelte-kit", "node_modules", "static", "pnpm-lock.yaml", "pnpm-workspace.yaml"]
+}
