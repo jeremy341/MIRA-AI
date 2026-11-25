@@ -5,6 +5,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
@@ -15,11 +16,13 @@ jobs:
       - run: pip install -e .[dev] mypy==1.15.0 ruff==0.12.1
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
-      - run: mypy src/ --ignore-missing-imports --follow-imports=skip --exclude 'src/dashboard/'
+      # --cache-dir=/dev/null: mypy 1.15 crashes while writing its cache for the newest numpy stubs.
+      - run: mypy src/ --ignore-missing-imports --follow-imports=skip --exclude 'src/dashboard/' --cache-dir=/dev/null
 
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12"]
     steps:
@@ -29,3 +32,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e .[dev]
       - run: pytest tests/ -v --tb=short
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dashboard/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm build
+      - name: No mock code in the production bundle
+        run: "! grep -rq mira-mock-layer-v1 ../frontend/dist"

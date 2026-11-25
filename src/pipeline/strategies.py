@@ -200,16 +200,12 @@ def _build_yolo_training_kwargs(config: TrainConfig) -> dict[str, Any]:
         "seed": config.seed,
         "deterministic": False,
     }
-    extra_training_kwargs = {
-        key: value for key, value in config.extra.items() if key in _YOLO_TRAINING_KEYS
-    }
+    extra_training_kwargs = {key: value for key, value in config.extra.items() if key in _YOLO_TRAINING_KEYS}
     training_kwargs.update(extra_training_kwargs)
 
     augmentation = config.extra.get("augmentation")
     if isinstance(augmentation, dict):
-        augmentation_kwargs = {
-            key: value for key, value in augmentation.items() if key in _YOLO_TRAINING_KEYS
-        }
+        augmentation_kwargs = {key: value for key, value in augmentation.items() if key in _YOLO_TRAINING_KEYS}
         training_kwargs.update(augmentation_kwargs)
 
     return training_kwargs

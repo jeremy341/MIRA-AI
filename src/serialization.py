@@ -53,7 +53,7 @@ def _dataclass_to_dict(obj: Any) -> Any:
             converted_value = _dataclass_to_dict(value)
             converted_values[converted_key] = converted_value
         return converted_values
-    if isinstance(obj, (list, tuple)):
+    if isinstance(obj, list | tuple):
         converted_items = []
         for item in obj:
             converted_items.append(_dataclass_to_dict(item))

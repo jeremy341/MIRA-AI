@@ -76,3 +76,5 @@ scripts/run_exp020.py
 # --- CLAUDE AI context (private) ---
 CLAUDE/
 memory.md
+src/dashboard/frontend/dist/
+src/dashboard/ui/node_modules/

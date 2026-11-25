@@ -5,15 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mira-ai"
 dynamic = ["version"]
-description = "Machine Intelligence for Recycling Automation - Jugend Forscht 2027"
-authors = [{name = "Jeremy Darko", email = "jeremy@example.com"}]
+description = "Machine Intelligence for Recycling Automation: YOLO11 waste detection (glass, metal, paper, plastic, trash) with a live dashboard and CLI."
+authors = [{name = "Jeremy Darko"}]
 license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
-keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
+keywords = ["recycling", "edge-ai", "yolo", "yolo11", "object-detection", "computer-vision", "waste-sorting", "waste-detection", "tflite", "onnx"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "ultralytics>=8.3.0",
+    "lap>=0.5.12",
     "opencv-python>=4.0",
     "pyarrow>=10.0",
     "torch>=2.0",
@@ -40,11 +52,15 @@ analysis = [
     "scipy>=1.0",
 ]
 all = ["mira-ai[train,analysis]"]
-dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "mira-ai[all]"]
+dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==0.12.1", "mypy==1.15.0", "types-PyYAML", "mira-ai[all]"]
 
 [project.urls]
 Homepage = "https://jeremydarko.me"
+Documentation = "https://mira-vision.vercel.app/"
 Repository = "https://github.com/jeremy341/MIRA-AI"
+Issues = "https://github.com/jeremy341/MIRA-AI/issues"
+Changelog = "https://github.com/jeremy341/MIRA-AI/blob/main/CHANGELOG.md"
+"Hugging Face" = "https://huggingface.co/Jeremy341/MIRA-AI"
 
 [project.scripts]
 mira = "src.cli:main"
@@ -52,13 +68,15 @@ mira = "src.cli:main"
 [tool.setuptools.packages.find]
 include = ["src", "src.*"]
 exclude = ["tests*", "scripts*", "src.dashboard.frontend*"]
+namespaces = true
 
 [tool.setuptools.dynamic]
 version = {attr = "src.version.__version__"}
 
 [tool.setuptools.package-data]
 "src" = ["assets/*.yaml", "assets/models/detection/*.pt", "assets/models/detection/*.yaml"]
-"src.dashboard" = ["frontend/**/*"]
+"src.dashboard" = ["frontend/**/*", "frontend/dist/**/*"]
+"src.dashboard.backend.v1" = ["migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -74,12 +92,16 @@ exclude = ["reference/", ".venv/", "datasets/", "models/"]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
 ignore = ["E501", "E402", "I001", "UP017"]
 
+[tool.ruff.lint.per-file-ignores]
+# Test doubles deliberately mirror the camelCase OpenCV / pycocotools APIs.
+"tests/*" = ["N802", "N803"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 ignore_missing_imports = true
 follow_imports = "skip"
 exclude = "src/dashboard"

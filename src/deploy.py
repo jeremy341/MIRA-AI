@@ -122,12 +122,13 @@ def _read_system_memory_mb() -> int:
                     return int(line.split()[1]) // 1024
     except (ImportError, OSError, ValueError):
         return 0
+    return 0
 
 
 def _read_windows_memory_mb() -> int:
     import ctypes
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]  # Windows only
     installed_memory_kb = ctypes.c_ulonglong()
     kernel32.GetPhysicallyInstalledSystemMemory(ctypes.byref(installed_memory_kb))
     return int(installed_memory_kb.value // 1024)

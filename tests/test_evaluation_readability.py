@@ -50,10 +50,12 @@ def test_iou_returns_zero_for_zero_area_and_touches():
 
 
 def test_map_uses_bbox_pixel_key_and_excludes_classes_without_ground_truth():
-    predictions = [[
-        {"class_id": 0, "confidence": 0.9, "bbox_pixel": [0, 0, 10, 10]},
-        {"class_id": 1, "confidence": 1.0, "bbox_pixel": [20, 20, 30, 30]},
-    ]]
+    predictions = [
+        [
+            {"class_id": 0, "confidence": 0.9, "bbox_pixel": [0, 0, 10, 10]},
+            {"class_id": 1, "confidence": 1.0, "bbox_pixel": [20, 20, 30, 30]},
+        ]
+    ]
     ground_truth = [[{"class_id": 0, "bbox": [0, 0, 10, 10]}]]
 
     assert compute_map(predictions, ground_truth) == pytest.approx(1.0)
@@ -69,14 +71,27 @@ def test_benchmark_json_keys_and_comparison_sorting_are_stable():
     )
 
     assert list(result.to_dict()) == [
-        "model_name", "model_path", "model_type", "total_images", "per_class",
-        "overall_f1", "overall_precision", "overall_recall", "avg_latency_ms",
-        "total_detections", "map50", "map50_95", "errors", "evaluated_on_train",
+        "model_name",
+        "model_path",
+        "model_type",
+        "total_images",
+        "per_class",
+        "overall_f1",
+        "overall_precision",
+        "overall_recall",
+        "avg_latency_ms",
+        "total_detections",
+        "map50",
+        "map50_95",
+        "errors",
+        "evaluated_on_train",
     ]
-    table = ModelBenchmark.comparison_table([
-        BenchmarkResult("low", "low.pt", ".pt", overall_f1=0.2),
-        BenchmarkResult("high", "high.pt", ".pt", overall_f1=0.9),
-    ])
+    table = ModelBenchmark.comparison_table(
+        [
+            BenchmarkResult("low", "low.pt", ".pt", overall_f1=0.2),
+            BenchmarkResult("high", "high.pt", ".pt", overall_f1=0.9),
+        ]
+    )
     assert table.index("high") < table.index("low")
 
 
@@ -94,10 +109,15 @@ class PredictionModel:
 def test_confusion_matrix_uses_gt_rows_prediction_columns_and_background():
     valid_class = min(1, len(CLASS_NAMES) - 1)
     model = PredictionModel([detection(valid_class, [0, 0, 10, 10])])
-    samples = [(Path("image.jpg"), [
-        {"class_id": 0, "bbox": [0, 0, 10, 10]},
-        {"class_id": 0, "bbox": [20, 20, 30, 30]},
-    ])]
+    samples = [
+        (
+            Path("image.jpg"),
+            [
+                {"class_id": 0, "bbox": [0, 0, 10, 10]},
+                {"class_id": 0, "bbox": [20, 20, 30, 30]},
+            ],
+        )
+    ]
 
     matrix = evaluate.build_confusion_matrix(model, samples, 0.25)
     background = len(CLASS_NAMES)
@@ -199,9 +219,20 @@ def test_main_writes_summary_json_table_and_plot_files(tmp_path, monkeypatch, ca
             return "comparison"
 
     samples = [(Path("image.jpg"), [])]
-    monkeypatch.setattr(evaluate, "parse_args", lambda: type("Args", (), {
-        "model": "mira.pt", "data": "dataset.yaml", "conf": 0.25, "output": str(output_dir),
-    })())
+    monkeypatch.setattr(
+        evaluate,
+        "parse_args",
+        lambda: type(
+            "Args",
+            (),
+            {
+                "model": "mira.pt",
+                "data": "dataset.yaml",
+                "conf": 0.25,
+                "output": str(output_dir),
+            },
+        )(),
+    )
     monkeypatch.setattr(evaluate, "DETECTION_DIR", tmp_path)
     monkeypatch.setattr(evaluate, "ROOT_DIR", tmp_path)
     monkeypatch.setattr(evaluate, "resolve_safe_path", lambda path, root: model_path)
@@ -209,11 +240,17 @@ def test_main_writes_summary_json_table_and_plot_files(tmp_path, monkeypatch, ca
     monkeypatch.setattr(evaluate, "ModelBenchmark", Benchmark)
     monkeypatch.setattr(evaluate, "load_yolo_dataset", lambda path: (samples, False))
     monkeypatch.setattr(evaluate, "build_confusion_matrix", lambda *args: np.zeros((2, 2), dtype=int))
-    monkeypatch.setattr(evaluate, "plot_confusion_matrix", lambda matrix, target: (target / "confusion_matrix.png").write_bytes(b"x"))
-    monkeypatch.setattr(evaluate, "plot_pr_curves", lambda model, samples, conf, target: (
-        (target / "pr_curves.png").write_bytes(b"x"), {"paper": 0.5}
-    )[1])
-    monkeypatch.setattr(evaluate, "plot_class_metrics", lambda *args: (output_dir / "class_metrics.png").write_bytes(b"x"))
+    monkeypatch.setattr(
+        evaluate, "plot_confusion_matrix", lambda matrix, target: (target / "confusion_matrix.png").write_bytes(b"x")
+    )
+    monkeypatch.setattr(
+        evaluate,
+        "plot_pr_curves",
+        lambda model, samples, conf, target: ((target / "pr_curves.png").write_bytes(b"x"), {"paper": 0.5})[1],
+    )
+    monkeypatch.setattr(
+        evaluate, "plot_class_metrics", lambda *args: (output_dir / "class_metrics.png").write_bytes(b"x")
+    )
     monkeypatch.setattr(evaluate, "_validate_dataset_path", lambda path: None)
 
     evaluate.main()

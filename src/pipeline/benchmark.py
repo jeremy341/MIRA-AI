@@ -6,7 +6,9 @@ import json
 import math
 import time
 from dataclasses import dataclass, field
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -20,6 +22,7 @@ IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff")
 @dataclass
 class PerClassMetrics:
     """Per-class detection evaluation metrics."""
+
     tp: int = 0
     fp: int = 0
     fn: int = 0
@@ -56,6 +59,7 @@ class PerClassMetrics:
             "recall": self.recall,
             "f1": self.f1,
         }
+
 
 @dataclass(frozen=True)
 class MatchResult:
@@ -100,7 +104,7 @@ def match_predictions(
     )
 
 
-def compute_iou(box_a: list[float], box_b: list[float]) -> float:
+def compute_iou(box_a: Sequence[float], box_b: Sequence[float]) -> float:
     """Compute IoU between two bounding boxes in xyxy format."""
     intersection_left = max(box_a[0], box_b[0])
     intersection_top = max(box_a[1], box_b[1])
@@ -234,9 +238,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[d
     samples: list[tuple[Path, list[dict]]] = []
     skipped = 0
     image_paths = sorted(
-        path
-        for path in image_dir.iterdir()
-        if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+        path for path in image_dir.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
     )
     for img_path in image_paths:
         label_path = label_dir / f"{img_path.stem}.txt"
@@ -280,9 +282,7 @@ def load_yolo_dataset(dataset_path: Path | str) -> tuple[list[tuple[Path, list[d
                     bottom = max(y_coordinates) * image_height
                 else:
                     continue
-                objects_for_image.append(
-                    {"class_id": class_id, "bbox": [left, top, right, bottom]}
-                )
+                objects_for_image.append({"class_id": class_id, "bbox": [left, top, right, bottom]})
         samples.append((img_path, objects_for_image))
 
     print(
@@ -329,8 +329,8 @@ def _compute_ap_for_class(
         else:
             false_positive_flags[detection_index] = 1
 
-    cumulative_true_positives = np.cumsum(true_positive_flags)
-    cumulative_false_positives = np.cumsum(false_positive_flags)
+    cumulative_true_positives: np.ndarray = np.cumsum(true_positive_flags)
+    cumulative_false_positives: np.ndarray = np.cumsum(false_positive_flags)
     recall_values = cumulative_true_positives / num_gt
     precision_denominators = cumulative_true_positives + cumulative_false_positives
     precision_values = cumulative_true_positives / np.maximum(precision_denominators, 1e-6)
@@ -365,7 +365,7 @@ def compute_map(preds: list[list[dict]], gts: list[list[dict]], iou_thresh: floa
         class_ground_truth = []
         if len(preds) != len(gts):
             raise ValueError("preds and gts must contain the same number of images")
-        for image_index, (image_predictions, image_ground_truth) in enumerate(zip(preds, gts)):
+        for image_index, (image_predictions, image_ground_truth) in enumerate(zip(preds, gts, strict=False)):
             for prediction in image_predictions:
                 if prediction["class_id"] == class_id:
                     prediction_for_ap = {**prediction, "img_idx": image_index}
@@ -403,7 +403,8 @@ class ModelBenchmark:
             self.models = models
         else:
             self.models = []
-        if isinstance(dataset, (Path, str)):
+        self.dataset: Path | None
+        if isinstance(dataset, Path | str):
             self.dataset = Path(dataset)
         else:
             self.dataset = None
@@ -483,9 +484,9 @@ class ModelBenchmark:
                 total_latency_ms += elapsed_seconds * 1000
                 successful_predictions += 1
 
-                predictions_for_map: list[dict] = []
+                predictions_for_map: list[dict[str, Any]] = []
                 for det in result.detections:
-                    prediction = {
+                    prediction: dict[str, Any] = {
                         "class_id": det.class_id,
                         "confidence": det.confidence,
                         "bbox_pixel": list(det.bbox),
@@ -493,9 +494,7 @@ class ModelBenchmark:
                     predictions_for_map.append(prediction)
 
                 predictions_for_f1 = [
-                    prediction
-                    for prediction in predictions_for_map
-                    if prediction["confidence"] >= self.conf
+                    prediction for prediction in predictions_for_map if prediction["confidence"] >= self.conf
                 ]
                 total_detections += len(predictions_for_f1)
 
@@ -531,20 +530,13 @@ class ModelBenchmark:
                         )
                     )
 
-                class_ids = {
-                    detection.class_id
-                    for detection in prediction_objects + ground_truth_objects
-                }
+                class_ids = {detection.class_id for detection in prediction_objects + ground_truth_objects}
                 for class_id in class_ids:
                     class_predictions = [
-                        detection
-                        for detection in prediction_objects
-                        if detection.class_id == class_id
+                        detection for detection in prediction_objects if detection.class_id == class_id
                     ]
                     class_ground_truth = [
-                        detection
-                        for detection in ground_truth_objects
-                        if detection.class_id == class_id
+                        detection for detection in ground_truth_objects if detection.class_id == class_id
                     ]
                     match_result = match_predictions(
                         class_predictions,

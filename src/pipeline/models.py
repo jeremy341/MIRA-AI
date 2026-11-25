@@ -146,8 +146,6 @@ def build_inference_result(
     )
 
 
-
-
 def _get_device(backend: Any):
     import torch
 

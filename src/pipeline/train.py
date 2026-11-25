@@ -49,7 +49,7 @@ class TrainingPipeline:
             logger.error(f"Failed to load model from '{model_path}': {e}")
             raise PipelineError(f"Failed to load model '{model_path}': {e}") from e
 
-        fixed_formats = {
+        fixed_formats: dict[str, dict[str, object]] = {
             "tflite_fp32": {"format": "tflite", "int8": False},
             "tflite": {"format": "tflite", "int8": False},
             "onnx": {"format": "onnx"},
@@ -60,9 +60,10 @@ class TrainingPipeline:
             normalized_format = fmt.lower().replace("-", "_")
             try:
                 if normalized_format == "tflite_int8":
-                    export_kwargs = {"format": "tflite", "int8": True}
+                    int8_kwargs: dict[str, object] = {"format": "tflite", "int8": True}
                     if dataset:
-                        export_kwargs["data"] = dataset
+                        int8_kwargs["data"] = dataset
+                    export_kwargs: dict[str, object] | None = int8_kwargs
                 elif normalized_format in fixed_formats:
                     export_kwargs = fixed_formats[normalized_format]
                 else:

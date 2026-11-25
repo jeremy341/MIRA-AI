@@ -1,19 +1,32 @@
 # Camera service managing inference pipeline
 import asyncio
+import base64
 import threading
 import time
 from typing import Any
-from collections import deque
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
+
+import numpy as np
 import psutil
+from PIL import Image, ImageOps
 
 from ultralytics import YOLO
-from src.config import CLASS_NAMES, DETECTION_DIR, BYTE_TRACK_CONFIG_PATH, get_tflite_imgsz
+from src.config import BYTE_TRACK_CONFIG_PATH as BYTE_TRACK_CONFIG_PATH
+from src.config import CLASS_NAMES, DETECTION_DIR, get_tflite_imgsz
 from src.hardware import USBCamera
 from src.logger import get_logger
-from src.dashboard.backend.models import WasteClass, Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
+from src.dashboard.backend.models import Detection, SystemMetrics, Statistics, SystemStatus, ModelConfig
+from src.dashboard.backend.engine.camera_input import CameraInputSource
+from src.dashboard.backend.engine.result_processing import ResultProcessor
+from src.dashboard.backend.engine.streaming_worker import StreamingWorker
 
 logger = get_logger(__name__)
+
+
+class ImageDetectionUnavailableError(RuntimeError):
+    pass
 
 
 class CameraService:
@@ -22,6 +35,7 @@ class CameraService:
     def __init__(self, loop=None):
         self._lock = threading.Lock()
         self._operation_lock = asyncio.Lock()
+        self._image_detection_active = False
         self.status = SystemStatus.IDLE
         self.status_message = "System ready"
 
@@ -35,6 +49,7 @@ class CameraService:
 
         self.model = None
         self.model_config = None
+        self._loaded_model_name = None
         self.is_tflite_int8 = False
         self.img_size = 640
 
@@ -49,6 +64,7 @@ class CameraService:
         self.on_metrics = None
         self.on_status_change = None
         self.on_frame = None
+        self._result_processor = ResultProcessor(lambda class_id: self._class_id_to_name(class_id))
 
     def _update_status_locked(self, status: SystemStatus, message: str):
         self.status = status
@@ -110,14 +126,7 @@ class CameraService:
 
     @staticmethod
     def _open_camera(config):
-        return USBCamera(
-            config.index,
-            config.width,
-            config.height,
-            config.fps,
-            config.autofocus,
-            config.auto_exposure,
-        )
+        return CameraInputSource.open_camera(config, USBCamera)
 
     async def load_model(self, model_name: str, config):
         async with self._operation_lock:
@@ -143,6 +152,7 @@ class CameraService:
         with self._lock:
             self.model = model
             self.model_config = model_config
+            self._loaded_model_name = model_name
             self.is_tflite_int8 = is_tflite_int8
             self.img_size = img_size
 
@@ -151,33 +161,70 @@ class CameraService:
 
     @staticmethod
     def _load_model(model_name: str, config):
-        if any(sep in model_name for sep in ("/", "\\", "..")):
-            raise ValueError(f"Invalid model name: {model_name}")
-
-        model_path = (DETECTION_DIR / model_name).resolve()
-        detection_root = DETECTION_DIR.resolve()
-        if model_path.parent != detection_root or not model_path.exists():
-            raise FileNotFoundError(f"Model not found: {model_name}")
-
-        is_tflite = model_path.suffix.lower() == ".tflite"
-        is_tflite_int8 = is_tflite and "int8" in model_name.lower()
-        img_size = get_tflite_imgsz(model_path) if is_tflite else 640
-        model = YOLO(str(model_path), task="detect")
-        model_config = ModelConfig(
-            name=config.name,
-            conf_threshold=min(config.conf_threshold, 0.25) if is_tflite_int8 else config.conf_threshold,
-            reject_threshold=config.reject_threshold,
-            iou_threshold=config.iou_threshold,
-            enable_tracking=config.enable_tracking if not is_tflite else False,
-            target_latency_ms=config.target_latency_ms,
+        return CameraInputSource.load_model(
+            model_name,
+            config,
+            detection_dir=DETECTION_DIR,
+            model_factory=YOLO,
+            imgsz_resolver=get_tflite_imgsz,
+            model_config_factory=ModelConfig,
         )
-        return model, model_config, is_tflite_int8, img_size
+
+    async def detect_image(self, payload: bytes, confidence: float):
+        async with self._operation_lock:
+            with self._lock:
+                if self.is_streaming or (self._streaming_thread and self._streaming_thread.is_alive()):
+                    raise ImageDetectionUnavailableError("Stop the camera before detecting an image.")
+                config = self.model_config
+                if self.model is None or config is None:
+                    raise ImageDetectionUnavailableError("Load a model in Settings first.")
+                self._image_detection_active = True
+
+            try:
+                worker = asyncio.create_task(asyncio.to_thread(self._predict_image, payload, confidence, config))
+                try:
+                    return await asyncio.shield(worker)
+                except asyncio.CancelledError:
+                    await asyncio.gather(worker, return_exceptions=True)
+                    raise
+            finally:
+                with self._lock:
+                    self._image_detection_active = False
+
+    def _predict_image(self, payload: bytes, confidence: float, config: ModelConfig):
+        try:
+            with Image.open(BytesIO(payload), formats=["JPEG", "PNG"]) as source:
+                if source.width * source.height > 16_000_000:
+                    raise ValueError("Choose an image no larger than 16 megapixels.")
+                image = ImageOps.exif_transpose(source).convert("RGB")
+        except Image.DecompressionBombError as exc:
+            raise ValueError("Choose an image no larger than 16 megapixels.") from exc
+        except (OSError, SyntaxError) as exc:
+            raise ValueError("Choose a valid JPEG or PNG image.") from exc
+
+        image.thumbnail((1280, 1280))
+        if self._loaded_model_name == config.name:
+            model = self.model
+            image_size = self.img_size
+        else:
+            model, _, _, image_size = self._load_model(config.name, config)
+        frame = np.asarray(image)[:, :, ::-1].copy()
+        results = model.predict(frame, imgsz=image_size, conf=confidence, iou=config.iou_threshold, verbose=False)
+        detections = self._process_results(results, confidence)
+        preview = BytesIO()
+        image.save(preview, format="JPEG", quality=90)
+        return {
+            "image": "data:image/jpeg;base64," + base64.b64encode(preview.getvalue()).decode("ascii"),
+            "detections": [detection.model_dump(mode="json") for detection in detections],
+        }
 
     async def start_streaming(self):
         with self._lock:
             if self.is_streaming:
                 return True
 
+            if self._image_detection_active:
+                return False
             if self._streaming_thread and self._streaming_thread.is_alive():
                 self._update_status_locked(SystemStatus.ERROR, "Previous streaming thread is still shutting down")
                 should_start = False
@@ -195,151 +242,10 @@ class CameraService:
         return should_start
 
     def _streaming_loop(self):
-        last_metrics_time = time.time()
-        metrics_interval = 0.5
-        consecutive_read_failures = 0
-
-        with self._lock:
-            config = self.model_config
-            confidence_threshold = config.conf_threshold if config else 0.5
-            reject_threshold = config.reject_threshold if config else confidence_threshold
-            iou_threshold = config.iou_threshold if config else 0.45
-            image_size = self.img_size
-            use_int8_tflite = self.is_tflite_int8
-            enable_tracking = config.enable_tracking if config else False
-            target_latency_ms = config.target_latency_ms if config else 50
-
-        while True:
-            try:
-                with self._lock:
-                    if not self.is_streaming:
-                        break
-                    camera = self.camera
-                    model = self.model
-                    if self.skip_frame:
-                        self.skip_frame = False
-                        continue
-
-                if camera is None or model is None:
-                    break
-
-                frame_received, frame = camera.read()
-                with self._lock:
-                    if not self.is_streaming:
-                        break
-                if not frame_received:
-                    consecutive_read_failures += 1
-                    if consecutive_read_failures >= 30:
-                        self._update_status(SystemStatus.ERROR, "Camera disconnected")
-                        with self._lock:
-                            self.is_streaming = False
-                        break
-                    time.sleep(0.01)
-                    continue
-                consecutive_read_failures = 0
-                if hasattr(camera, "is_alive") and not camera.is_alive():
-                    self._update_status(SystemStatus.ERROR, "Camera stream is frozen")
-                    with self._lock:
-                        self.is_streaming = False
-                    break
-
-                frame_start = time.perf_counter()
-
-                if enable_tracking and not use_int8_tflite:
-                    results = model.track(
-                        frame,
-                        imgsz=image_size,
-                        conf=confidence_threshold,
-                        iou=iou_threshold,
-                        persist=True,
-                        verbose=False,
-                        tracker=str(BYTE_TRACK_CONFIG_PATH),
-                    )
-                else:
-                    results = model.predict(
-                        frame,
-                        imgsz=image_size,
-                        conf=confidence_threshold,
-                        iou=iou_threshold,
-                        verbose=False,
-                    )
-
-                inference_time = (time.perf_counter() - frame_start) * 1000
-                detections = self._process_results(results, confidence_threshold, reject_threshold)
-                self._update_performance_metrics(inference_time, results)
-
-                current_time = time.time()
-                if current_time - last_metrics_time >= metrics_interval:
-                    metrics = self._calculate_system_metrics()
-                    with self._lock:
-                        self.metrics_history.append(metrics)
-                    if self.on_metrics and self._loop:
-                        asyncio.run_coroutine_threadsafe(self.on_metrics(metrics), self._loop)
-                    last_metrics_time = current_time
-
-                if detections and self.on_detection and self._loop:
-                    asyncio.run_coroutine_threadsafe(self.on_detection(detections), self._loop)
-
-                self._update_history(detections)
-
-                frame_callback = self.on_frame
-                if frame_callback:
-                    try:
-                        frame_callback(frame, detections)
-                    except Exception as e:
-                        logger.warning("Frame send error: %s", e)
-
-                with self._lock:
-                    if not results:
-                        self.skip_frame = False
-                    elif self.latency_history:
-                        avg_latency = sum(self.latency_history) / len(self.latency_history)
-                        self.skip_frame = avg_latency > target_latency_ms
-                    else:
-                        self.skip_frame = False
-
-            except Exception as e:
-                self._update_status(SystemStatus.ERROR, f"Streaming error: {e}")
-                logger.error("Streaming error: %s", e)
-                with self._lock:
-                    self.is_streaming = False
-                break
+        StreamingWorker(self).run()
 
     def _process_results(self, results, conf_threshold: float = 0.5, reject_threshold: float | None = None):
-        detections = []
-        effective_threshold = max(conf_threshold, reject_threshold or conf_threshold)
-
-        if not results or len(results) == 0:
-            return detections
-
-        boxes = results[0].boxes
-        if boxes is None or len(boxes) == 0:
-            return detections
-
-        for box in boxes:
-            if box.conf is None or len(box.conf) == 0 or box.cls is None or len(box.cls) == 0:
-                continue
-            conf = float(box.conf[0])
-            if conf < effective_threshold:
-                continue
-
-            cls_id = int(box.cls[0])
-            class_name = self._class_id_to_name(cls_id)
-
-            # Convert to WasteClass enum
-            try:
-                waste_class = WasteClass(class_name)
-            except ValueError:
-                continue  # Skip unknown classes
-
-            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int).tolist()
-            track_id = int(box.id[0]) if box.id is not None and len(box.id) > 0 else None
-
-            detection = Detection(class_name=waste_class, confidence=conf, bbox=[x1, y1, x2, y2], track_id=track_id)
-
-            detections.append(detection)
-
-        return detections
+        return self._result_processor.process(results, conf_threshold, reject_threshold)
 
     def _class_id_to_name(self, class_id: int) -> str:
         from src.visualize import class_id_to_name
@@ -433,6 +339,9 @@ class CameraService:
                 "camera_initialized": self.camera is not None,
                 "model_loaded": self.model is not None,
                 "streaming": self.is_streaming,
+                "model_name": self.model_config.name if self.model_config is not None else None,
+                "camera_config": self.camera_config.model_dump() if self.camera_config is not None else None,
+                "model_config": self.model_config.model_dump() if self.model_config is not None else None,
             }
 
     async def stop_streaming(self, release_camera: bool = False) -> bool:

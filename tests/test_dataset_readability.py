@@ -80,9 +80,7 @@ def test_merge_remapped_train_only_uses_80_20_split_and_counts(monkeypatch, tmp_
     for stem in ["one", "two", "three", "four", "five"]:
         (image_dir / f"{stem}.jpg").write_bytes(stem.encode())
         (label_dir / f"{stem}.txt").write_text("0 0.5 0.5 0.2 0.2\n", encoding="utf-8")
-    source = dataset.DatasetSource(
-        "sample", "Sample", "", "yolo", source_dir, {"train": "images/train"}, {0: 1}
-    )
+    source = dataset.DatasetSource("sample", "Sample", "", "yolo", source_dir, {"train": "images/train"}, {0: 1})
     registry.sources["sample"] = source
     output = tmp_path / "merged"
     result = registry.merge(["sample"], output)
@@ -93,8 +91,11 @@ def test_merge_remapped_train_only_uses_80_20_split_and_counts(monkeypatch, tmp_
     val_files = sorted((output / "images" / "val").glob("*.jpg"))
     assert len(train_files) == 4
     assert len(val_files) == 1
-    assert all((output / "labels" / split / f"{file.stem}.txt").read_text().startswith("1 ")
-               for split in ("train", "val") for file in (output / "images" / split).glob("*.jpg"))
+    assert all(
+        (output / "labels" / split / f"{file.stem}.txt").read_text().startswith("1 ")
+        for split in ("train", "val")
+        for file in (output / "images" / split).glob("*.jpg")
+    )
     assert (output / "dataset.yaml").read_text(encoding="utf-8").startswith("train: images/train\nval: images/val\n")
 
 

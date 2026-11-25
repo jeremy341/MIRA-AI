@@ -1,16 +1,19 @@
 # Fast Api server for MIRA Dashboard
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
-from src.dashboard.backend.camera_service import CameraService
+from src.dashboard.backend.camera_service import CameraService, ImageDetectionUnavailableError
 from src.dashboard.backend.command_service import DashboardCommandService
+from src.dashboard.backend import v1
 from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.websocket_handler import WebSocketHandler
 
@@ -25,7 +28,9 @@ async def lifespan(app: FastAPI):
     camera_service._loop = asyncio.get_running_loop()
     websocket_handler._loop = asyncio.get_running_loop()
     await websocket_handler.start()
+    await v1.startup()
     yield
+    await v1.shutdown()
     print("Shutting down MIRA Control Center...")
     await websocket_handler.stop()
     await camera_service.shutdown()
@@ -46,7 +51,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(v1.api_router, prefix="/api/v1")
+app.include_router(v1.ws_router, prefix="/ws/v1")
+
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+UI_DIST_DIR = FRONTEND_DIR / "dist"
+
+
+def _new_ui_available() -> bool:
+    """The Svelte UI is served when it has been built (and MIRA_DASHBOARD_UI is not set to legacy)."""
+    return os.environ.get("MIRA_DASHBOARD_UI", "").lower() != "legacy" and (UI_DIST_DIR / "index.html").exists()
+
+
+if (UI_DIST_DIR / "assets").is_dir():
+    app.mount("/assets", StaticFiles(directory=UI_DIST_DIR / "assets"), name="ui-assets")
 
 
 def _status_payload() -> dict:
@@ -81,6 +99,9 @@ def _statistics_payload(period: int) -> dict:
 
     stats = camera_service.get_statistics(period)
     stats_dict = stats.model_dump(mode="json")
+    from src.dashboard.backend.v1.routers.arm import get_accuracy_summary
+
+    stats_dict["sorting_accuracy"] = get_accuracy_summary()["accuracy"]
     total = sum(stats.class_counts.values())
     if total and stats.avg_confidence:
         stats_dict["average_confidence"] = (
@@ -102,11 +123,26 @@ def _history_payload(key: str, items) -> dict:
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
-    # Serve the MIRA Control Center dashboard
+    # Serve the new Svelte dashboard when built, otherwise the legacy one
+    if _new_ui_available():
+        return FileResponse(UI_DIST_DIR / "index.html", media_type="text/html")
+    return await legacy_dashboard()
+
+
+@app.get("/legacy", response_class=HTMLResponse)
+async def legacy_dashboard():
     dashboard_path = FRONTEND_DIR / "dashboard.html"
     if dashboard_path.exists():
         return FileResponse(dashboard_path, media_type="text/html")
     raise HTTPException(status_code=404, detail="Dashboard not found")
+
+
+@app.get("/favicon.svg")
+async def favicon():
+    icon = UI_DIST_DIR / "favicon.svg"
+    if icon.exists():
+        return FileResponse(icon, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Not found")
 
 
 @app.get("/dashboard.css")
@@ -175,6 +211,26 @@ async def start_stream():
     raise HTTPException(
         status_code=500, detail="The stream could not be started. Check the camera connection and configuration."
     )
+
+
+@app.post("/api/detect/image")
+async def detect_image(request: Request, confidence: float = Query(0.55, ge=0.05, le=1)):
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type not in {"image/jpeg", "image/png"}:
+        raise HTTPException(status_code=415, detail="Choose a JPEG or PNG image.")
+
+    payload = bytearray()
+    async for chunk in request.stream():
+        if len(payload) + len(chunk) > 8 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="Choose an image no larger than 8 MB.")
+        payload.extend(chunk)
+
+    try:
+        return await camera_service.detect_image(bytes(payload), confidence)
+    except ImageDetectionUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @app.post("/api/stream/stop")
