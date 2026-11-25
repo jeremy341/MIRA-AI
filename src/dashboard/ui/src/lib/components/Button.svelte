@@ -66,7 +66,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
-    min-height: 2.5rem;
+    min-height: var(--target);
     padding: 0 1.125rem;
     border: 1px solid transparent;
     border-radius: var(--radius-button);

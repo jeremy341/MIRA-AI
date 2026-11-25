@@ -18,8 +18,14 @@
 <Card title="Session" description="Detections are saved to a session while the stream runs.">
   {#if unavailable}
     <Notice tone="info" title="Not available yet">
-      Sessions are not available on this server. Detection still works without them.
+      Sessions are not available on this server yet. Detection still works without them.
     </Notice>
+    <Field id="session-name-off" label="Session name" hint="Available once sessions are enabled on the server.">
+      <TextInput id="session-name-off" value="" placeholder={placeholder} disabled />
+    </Field>
+    <div class="actions">
+      <Button disabled>Start session</Button>
+    </div>
   {:else if active}
     <dl class="active">
       <div>

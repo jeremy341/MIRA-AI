@@ -88,6 +88,7 @@ svg {
   transform: translateY(-200%);
   background: var(--ink);
   color: var(--surface);
+  min-height: var(--target);
   padding: 0.625rem 1rem;
   border-radius: var(--radius-control);
   font-size: 0.875rem;
@@ -115,17 +116,6 @@ svg {
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* Touch devices: targets at least 44 px. */
-@media (pointer: coarse) {
-  button,
-  a,
-  input:not([type="checkbox"]):not([type="radio"]),
-  select,
-  textarea,
-  [role="tab"] {
-    min-height: 44px;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,

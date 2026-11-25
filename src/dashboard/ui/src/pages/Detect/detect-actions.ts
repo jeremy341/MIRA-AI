@@ -20,7 +20,7 @@ export async function connectCamera(): Promise<void> {
     await api.legacy.initializeCamera(settings.saved.camera);
     toasts.success('Camera connected.');
   } catch (error) {
-    toasts.error(describeError(error, 'The camera could not be opened.'));
+    toasts.error(`The camera could not be opened: ${describeError(error, 'check the settings and try again.')}`);
   } finally {
     detect.connectBusy = false;
     await system.refreshStatus();
@@ -101,6 +101,7 @@ export async function detectImage(file: File): Promise<void> {
   const threshold = detect.minConfidence;
   try {
     const result = await api.legacy.detectImage(file, imageContentType(file), threshold);
+    detect.imageFile = file;
     detect.imageResult = {
       src: result.image,
       fileName: file.name,

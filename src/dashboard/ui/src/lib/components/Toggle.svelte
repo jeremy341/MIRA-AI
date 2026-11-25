@@ -40,7 +40,7 @@
     justify-content: space-between;
     gap: var(--space-3);
     width: 100%;
-    min-height: 2.5rem;
+    min-height: var(--target);
     padding: 0;
     border: 0;
     background: transparent;
@@ -64,7 +64,8 @@
     width: 2.75rem;
     height: 1.625rem;
     border-radius: var(--radius-pill);
-    background: var(--rule-strong);
+    /* The off track is a control boundary: it needs 3:1 against the card (WCAG 1.4.11). */
+    background: var(--control-edge);
     transition: background-color var(--dur-base) var(--ease-out);
   }
   .track.on {

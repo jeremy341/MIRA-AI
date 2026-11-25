@@ -1,3 +1,11 @@
+<script lang="ts" module>
+  let counter = 0;
+  function nextTitleId(): string {
+    counter += 1;
+    return `dialog-title-${counter}`;
+  }
+</script>
+
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import IconButton from './IconButton.svelte';
@@ -13,6 +21,7 @@
   let { open = $bindable(false), title, onclose, children, actions }: Props = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
+  const titleId = nextTitleId();
 
   // The native dialog gives focus trapping, Escape to close and the backdrop for free.
   $effect(() => {
@@ -32,10 +41,10 @@
   }
 </script>
 
-<dialog bind:this={dialog} class="dialog" aria-labelledby="dialog-title" onclose={handleClose} onclick={handleBackdropClick}>
+<dialog bind:this={dialog} class="dialog" aria-labelledby={titleId} onclose={handleClose} onclick={handleBackdropClick}>
   <div class="inner">
     <header class="head">
-      <h2 id="dialog-title" class="title">{title}</h2>
+      <h2 id={titleId} class="title">{title}</h2>
       <IconButton icon="close" label="Close" onclick={handleClose} />
     </header>
     <div class="body">{@render children()}</div>

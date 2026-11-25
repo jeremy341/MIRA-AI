@@ -47,6 +47,9 @@
   --radius-pill: 999px;
   --radius: 0.75rem;
 
+  /* Control height. 2.5rem normally, 44 px on touch devices (WCAG 2.5.5). Components use this token. */
+  --target: 2.5rem;
+
   /* Layout */
   --sidebar-width: 14.5rem;
   --topbar-height: 3.5rem;
@@ -126,4 +129,11 @@
     0 0 0 1px rgb(31 31 31 / 8%),
     0 12px 24px rgb(0 0 0 / 10%),
     0 32px 64px rgb(0 0 0 / 14%);
+}
+
+/* Touch devices: controls are at least 44 px (WCAG 2.5.5). Components read --target. */
+@media (pointer: coarse) {
+  :root {
+    --target: 2.75rem;
+  }
 }

@@ -12,7 +12,10 @@
     value: V;
     items: ReadonlyArray<TabItem<V>>;
     onchange?: (value: V) => void;
-    /** Element id prefix so each tab can be linked to its panel with aria-controls. */
+    /**
+     * Element id prefix. Each tab gets id `${idPrefix}-${value}`. The page must render the tab panel
+     * with id `${idPrefix}-panel`, because every tab sets aria-controls to that id.
+     */
     idPrefix?: string;
   }
 

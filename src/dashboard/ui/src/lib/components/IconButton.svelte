@@ -29,8 +29,8 @@
   .icon-btn {
     display: inline-grid;
     place-items: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: var(--target);
+    height: var(--target);
     flex-shrink: 0;
     border: 0;
     border-radius: var(--radius-control);

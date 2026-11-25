@@ -31,7 +31,9 @@
   $effect(() => {
     void router.current;
     if (!mounted) return;
-    document.getElementById('main')?.focus({ preventScroll: false });
+    // A route change starts at the top. preventScroll keeps the focus call from scrolling by its own offset.
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.getElementById('main')?.focus({ preventScroll: true });
     document.title = `${ROUTE_TITLES[router.current]} · MIRA dashboard`;
   });
 

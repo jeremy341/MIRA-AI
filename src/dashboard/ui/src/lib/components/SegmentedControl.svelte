@@ -70,7 +70,7 @@
     background: var(--sunken);
   }
   .segment {
-    min-height: 2.25rem;
+    min-height: var(--target);
     padding: 0 0.9rem;
     border: 0;
     border-radius: var(--radius-control);

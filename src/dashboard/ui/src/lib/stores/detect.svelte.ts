@@ -18,6 +18,8 @@ class DetectStore {
   /** Camera: filters the preview list. Image: the threshold for the next run. */
   minConfidence = $state(0.25);
   imageResult = $state.raw<ImageResult | null>(null);
+  /** The file behind the last result, so "Run again" can send it without opening the picker. */
+  imageFile = $state.raw<File | null>(null);
   imageBusy = $state(false);
   imageError = $state<string | null>(null);
   streamAction = $state<'idle' | 'starting' | 'stopping'>('idle');

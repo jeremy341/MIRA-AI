@@ -53,7 +53,7 @@
 <style>
   .input {
     width: 100%;
-    min-height: 2.5rem;
+    min-height: var(--target);
     padding: 0 var(--space-3);
     border: 1px solid var(--control-edge);
     border-radius: var(--radius-control);

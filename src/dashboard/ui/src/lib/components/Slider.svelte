@@ -63,7 +63,7 @@
   }
   .range {
     width: 100%;
-    min-height: 1.5rem;
+    min-height: var(--target);
     margin: 0;
     appearance: none;
     background: transparent;

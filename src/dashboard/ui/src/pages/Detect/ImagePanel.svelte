@@ -73,7 +73,12 @@
       </p>
       <div class="actions">
         {#if stale}
-          <Button variant="secondary" busy={detect.imageBusy} onclick={() => input?.click()}>Run again</Button>
+          <Button
+            variant="secondary"
+            busy={detect.imageBusy}
+            disabled={blockedReason !== null || detect.imageFile === null}
+            onclick={() => detect.imageFile && void detectImage(detect.imageFile)}>Run again</Button
+          >
         {/if}
         <Button variant="ghost" disabled={blockedReason !== null || detect.imageBusy} onclick={() => input?.click()}>
           Choose another image
@@ -83,6 +88,7 @@
     {#if stale}
       <p class="note">The threshold changed. Run the image again to apply it.</p>
     {/if}
+    {#if blockedReason}<p class="blocked">{blockedReason}</p>{/if}
   {:else}
     <div
       class="dropzone"
