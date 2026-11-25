@@ -96,11 +96,11 @@
           </a>
         </div>
 
-        <div class="ml-auto flex min-w-0 items-center gap-1.5">
+        <div class="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5">
           <a href={localePath(lang, '/')} class={topLink}>{dict.nav.home}</a>
           <a href={localePath(lang, '/research')} class={topLink}>{dict.nav.research}</a>
           <a href={localePath(lang, '/package')} class={topLink}>{dict.nav.package}</a>
-          <DocsSearch {lang} {ui} class="w-44 flex-none sm:w-60" />
+          <DocsSearch {lang} {ui} class="max-w-60 min-w-0 flex-1 sm:flex-none sm:basis-60" />
           <a
             href={GITHUB_URL}
             target="_blank"

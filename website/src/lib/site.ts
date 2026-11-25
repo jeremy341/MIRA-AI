@@ -22,12 +22,9 @@ export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 
 /**
  * Latest release published on PyPI (checked against https://pypi.org/pypi/mira-ai/json).
- * The repository's src/version.py is ahead of it (1.0.3, unreleased). Never present the
- * repository version as the PyPI release. Update this when a new version is published.
+ * Keep it equal to src/version.py once a release is published, and update it with every release.
  */
-export const PYPI_LATEST_VERSION = "1.0.2";
-/** Version in the repository's src/version.py, not yet on PyPI. */
-export const REPO_VERSION_UNRELEASED = "1.0.3";
+export const PYPI_LATEST_VERSION = "1.1.0";
 
 /**
  * Last known Hugging Face download count (10,176, read from the Hugging Face API on 2026-11-23).

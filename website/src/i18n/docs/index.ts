@@ -8,7 +8,7 @@ export type { DocBlock, DocGroupId, DocPage, DocSection } from "./types";
 export type { DocsUi } from "./ui";
 
 /** Order of the groups in the sidebar and on the docs index. */
-export const DOC_GROUPS: readonly DocGroupId[] = ["start", "howto", "reference"];
+export const DOC_GROUPS: readonly DocGroupId[] = ["start", "dashboard", "guides", "reference", "help"];
 
 const PAGES: Record<Locale, readonly DocPage[]> = { en: EN_PAGES, de: DE_PAGES };
 

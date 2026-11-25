@@ -93,7 +93,7 @@ export type DocsUi = {
 };
 
 const en: DocsUi = {
-  groups: { start: "Start here", howto: "How-to guides", reference: "Reference" },
+  groups: { start: "Get started", dashboard: "Dashboard", guides: "Guides", reference: "Reference", help: "Help" },
   overview: "Overview",
   sectionName: "Documentation",
   navLabel: "Documentation",
@@ -162,7 +162,7 @@ const en: DocsUi = {
 };
 
 const de: DocsUi = {
-  groups: { start: "Einstieg", howto: "Anleitungen", reference: "Referenz" },
+  groups: { start: "Einstieg", dashboard: "Dashboard", guides: "Anleitungen", reference: "Referenz", help: "Hilfe" },
   overview: "Übersicht",
   sectionName: "Dokumentation",
   navLabel: "Dokumentation",

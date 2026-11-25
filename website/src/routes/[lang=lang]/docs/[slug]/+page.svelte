@@ -20,7 +20,7 @@
 
 <Seo {lang} path={docPath(doc.slug)} title="{doc.title} | {ui.metaSuffix}" description={doc.summary} />
 
-<div class="mx-auto grid w-full max-w-[76rem] justify-center gap-x-14 px-5 pb-24 sm:px-8 xl:grid-cols-[minmax(0,44rem)_14rem]">
+<div class="mx-auto grid w-full max-w-[76rem] grid-cols-[minmax(0,1fr)] justify-center gap-x-14 px-5 pb-24 sm:px-8 xl:grid-cols-[minmax(0,44rem)_14rem]">
   <article aria-labelledby="doc-title" class="min-w-0 pt-4 lg:pt-6">
     <nav aria-label={ui.breadcrumbLabel} class="text-[0.875rem] text-ink-soft">
       <ol class="flex flex-wrap items-center gap-x-2">
