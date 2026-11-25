@@ -45,6 +45,22 @@ export const en = {
       data: "Data and reproducibility",
     },
   },
+  overview: {
+    resultTitle: "The result in one figure",
+    resultNote: "These are validation scores on photos, not a test with a real camera.",
+    cardsTitle: "Read the report",
+    read: "Read",
+    cards: {
+      question: "The question, the five classes and how the scores are measured.",
+      tried: "The four models and the datasets I tried, and why more data did not help.",
+      results: "The headline score, the per-class table and where plastic goes wrong.",
+      runs: "All 19 experiments in one table, with setup and score.",
+      photos: "Real photos with the model's boxes, and the cases where it fails.",
+      edge: "Export for small devices, and what has not been measured yet.",
+      limits: "What the numbers do not show, and what comes next.",
+      data: "Where the data comes from and how to reproduce the runs.",
+    },
+  },
   question: {
     title: "Question and setup",
     p1: "The question behind MIRA is simple. Can a small model look at a camera image and tell glass, metal, paper, plastic and trash apart, well enough to be the eyes of a sorting robot?",

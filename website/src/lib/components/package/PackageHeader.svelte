@@ -9,7 +9,7 @@
   import CopyCommand from '../CopyCommand.svelte';
   import Heading from '../Heading.svelte';
   import Rich from '../Rich.svelte';
-  import { LICENSE_NAME, PACKAGE_VERSION, PYTHON_REQUIREMENT, REPOSITORY_VERSION } from './package-data';
+  import { LICENSE_NAME, PACKAGE_VERSION, PYTHON_REQUIREMENT } from './package-data';
 
   /** Page title, the two-sentence summary, the one-line install, the package facts and the contents list. */
   let { lang, dict, t }: { lang: Locale; dict: Dictionary; t: PackageCopy } = $props();
@@ -59,7 +59,7 @@
           {@render fact(h.facts.bundled, bundledValue)}
         </dl>
         <p class="mt-3 max-w-[46ch] text-micro text-muted-foreground">
-          <Rich text={fmt(h.versionNote, { repoVersion: REPOSITORY_VERSION, version: PACKAGE_VERSION })} {lang} />
+          <Rich text={fmt(h.versionNote, { version: PACKAGE_VERSION })} {lang} />
         </p>
       </div>
     </div>

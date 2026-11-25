@@ -4,7 +4,20 @@
  * Englischen. `docs.parity.test.ts` prüft das. Keine Gedankenstriche (lange oder mittellange) im Text.
  */
 
-import { GITHUB_URL, HF_URL, PYPI_LATEST_VERSION, PYPI_URL, REPO_VERSION_UNRELEASED } from "../../lib/site";
+import { GITHUB_URL, HF_URL, PYPI_LATEST_VERSION, PYPI_URL } from "../../lib/site";
+import {
+  analytics,
+  apiV1,
+  batchImport,
+  compareBenchmark,
+  dashboard,
+  detect,
+  exportPage,
+  faq,
+  sessions,
+  sortingArm,
+  troubleshooting,
+} from "./de-dashboard";
 import { code, h3, lines, list, note, output, p, table, warning } from "./helpers";
 import { MIRA_YAML } from "./shared-code";
 import type { DocPage } from "./types";
@@ -46,7 +59,7 @@ const quickstart: DocPage = {
         ),
         note(
           "Python-Version und Versionsnummer",
-          `Das veröffentlichte Paket verlangt \`>=3.11\`. Das Repository verlangt \`>=3.11,<3.13\`, deshalb steht hier 3.11 oder 3.12. Das Repository steht auf ${REPO_VERSION_UNRELEASED}, das noch nicht veröffentlicht ist. Eine Installation aus dem Quellcode meldet daher ${REPO_VERSION_UNRELEASED}, die Version auf PyPI ist ${PYPI_LATEST_VERSION}.`,
+          `Das veröffentlichte Paket verlangt \`>=3.11\`. Das Repository verlangt \`>=3.11,<3.13\`, deshalb steht hier 3.11 oder 3.12. Das Repository und die neueste Version auf PyPI stehen beide auf ${PYPI_LATEST_VERSION}, eine Installation aus dem Quellcode meldet also dieselbe Nummer.`,
         ),
       ],
     },
@@ -301,7 +314,11 @@ const architecture: DocPage = {
             ],
             [
               "`src/dashboard/frontend/`",
-              "Die Dashboard-Seite, `dashboard.html`, `dashboard.css` und `dashboard.js`, vom Backend ausgeliefert.",
+              "Die bisherige Dashboard-Seite (`dashboard.html`, `dashboard.css`, `dashboard.js`), unter `/legacy` ausgeliefert, und die gebaute Oberfläche in `dist/`.",
+            ],
+            [
+              "`src/dashboard/ui/`",
+              "Quellcode der Dashboard-Oberfläche (Svelte und Vite). Die Version 1 der Backend-API mit Sitzungen, Exporten, Vergleich, Benchmark, Stapel, Hardware und Arm liegt in `src/dashboard/backend/v1/`.",
             ],
             [
               "`src/pipeline/`",
@@ -347,7 +364,7 @@ const architecture: DocPage = {
 const liveInference: DocPage = {
   slug: "live-inference",
   title: "Live-Erkennung starten",
-  group: "howto",
+  group: "guides",
   summary:
     "Ein Webcam-Fenster mit Erkennung öffnen und Kamera, Schwellenwerte und das Überspringen von Bildern einstellen.",
   sections: [
@@ -441,88 +458,10 @@ const liveInference: DocPage = {
   ],
 };
 
-const dashboard: DocPage = {
-  slug: "dashboard",
-  title: "Dashboard verwenden",
-  group: "howto",
-  summary: "Das lokale FastAPI-Dashboard starten, Kamera und Modell einstellen und die Live-Statistik lesen.",
-  lead: "Das Dashboard ist eine lokale Webseite, die `mira dashboard` ausliefert. Kamerabilder und Erkennungen bleiben auf Ihrem Rechner. Die Seite selbst lädt Chart.js vom jsDelivr-CDN und ihre Schriften von Google Fonts, der Browser braucht für Diagramme und Schriften also Internetzugang. Ein vollständig offline betriebenes Dashboard wurde nicht getestet.",
-  sections: [
-    {
-      id: "start",
-      title: "Starten",
-      blocks: [
-        code(lines("mira dashboard", "mira dashboard --port 8080", "mira dashboard --host 0.0.0.0")),
-        p(
-          "Die Standardwerte sind `--host 127.0.0.1` und `--port 8000`, die Seite liegt also unter `http://127.0.0.1:8000`.",
-        ),
-        warning(
-          "Binden an 0.0.0.0",
-          "`--host 0.0.0.0` macht das Dashboard aus Ihrem Netzwerk erreichbar. Es hat keine Anmeldung, und jeder, der es erreicht, kann Ihre Kamera starten. Behalten Sie den Standardwert, außer Sie brauchen Fernzugriff in einem vertrauenswürdigen Netzwerk.",
-        ),
-      ],
-    },
-    {
-      id: "stream",
-      title: "Einen Stream starten",
-      blocks: [
-        list(
-          [
-            "Öffnen Sie **Settings**. Wählen Sie unter Camera Settings Kameraindex, Auflösung (`640x360`, `640x480` oder `1280x720`), FPS, Autofokus und automatische Belichtung und klicken Sie auf **Apply**.",
-            "Wählen Sie unter Model Settings ein Modell, die Schwellenwerte für Konfidenz, Ablehnung und IoU, das Tracking und die Ziel-Latenz und klicken Sie auf **Apply**. Das Modell wird beim Anwenden geladen.",
-            "Öffnen Sie **Dashboard** und klicken Sie auf **Start Stream**.",
-          ],
-          true,
-        ),
-        p(
-          "Die Schnittstelle verweigert den Start eines Streams, solange Kamera und Modell nicht bereit sind. Änderungen an Kamera und Modell werden abgelehnt, solange ein Stream läuft. Klicken Sie zuerst auf **Stop**.",
-        ),
-      ],
-    },
-    {
-      id: "pages",
-      title: "Was es zeigt",
-      blocks: [
-        table(
-          "Seiten des Dashboards",
-          ["Seite", "Inhalt"],
-          [
-            [
-              "Dashboard",
-              "Live-Kamerabild mit FPS, Latenz, Objektanzahl und Konfidenz, die Klassenverteilung und eine Liste der letzten Erkennungen.",
-            ],
-            [
-              "Analytics",
-              "Gesamtzahl der Erkennungen, Sitzungsdauer, häufigste Klasse und mittlere Konfidenz, ein Erkennungsverlauf, eine Aufschlüsselung nach Klassen sowie Diagramme zu Leistung und System (FPS, Latenz, CPU, Speicher).",
-            ],
-            ["Settings", "Formulare für Kamera und Modell."],
-          ],
-        ),
-      ],
-    },
-    {
-      id: "behaviour",
-      title: "Gut zu wissen",
-      blocks: [
-        list([
-          "Die Modellliste zeigt nur `.pt`- und `.tflite`-Dateien aus dem Modellordner. INT8-TFLite-Dateien sind als empfohlen für kleine Geräte markiert.",
-          "Erkennungen unter dem größeren der Schwellenwerte für Konfidenz und Ablehnung werden verworfen, bevor sie gezählt oder an den Browser gesendet werden.",
-          "Bei INT8-TFLite-Modellen ist der Konfidenz-Schwellenwert auf 0.25 begrenzt, und bei jedem TFLite-Modell ist das Tracking aus.",
-          "Die Standardwerte der Schnittstelle sind 0.25 Konfidenz, 0.25 Ablehnung, 0.45 IoU, Tracking an und 1000 ms Ziel-Latenz. Das Formular unter Settings startet mit 0.50, 0.55 und 0.45 für die drei Schwellenwerte, prüfen Sie also die Regler vor dem Anwenden.",
-          "Das Backend hält die letzten 1000 Erkennungen und die letzten 100 Messwerte im Speicher. Sie gehen verloren, wenn der Server stoppt.",
-        ]),
-        p(
-          "Alles, was die Seite tut, ist auch per HTTP und WebSocket möglich. Siehe die [Dashboard-API](/docs/dashboard-api).",
-        ),
-      ],
-    },
-  ],
-};
-
 const datasets: DocPage = {
   slug: "datasets",
   title: "Datensätze vorbereiten",
-  group: "howto",
+  group: "guides",
   summary: "Registrierte Datensatzquellen auflisten, zu einem YOLO-Datensatz zusammenführen und das Ergebnis prüfen.",
   lead: "Datensatzdateien liegen nicht in Git, und die Registry-Dateien und Zusammenführungs-Befehle sind im GitHub-Repository und nicht im PyPI-Paket. Arbeiten Sie in einem Klon.",
   sections: [
@@ -616,7 +555,7 @@ const datasets: DocPage = {
 const trainEvaluate: DocPage = {
   slug: "train-evaluate",
   title: "Training und Auswertung",
-  group: "howto",
+  group: "guides",
   summary: "Einen YOLO-Detektor aus einer Experimentdatei trainieren, dann auswerten und vergleichen.",
   lead: 'Für das Training brauchen Sie einen Klon des Repositorys, einen vorbereiteten Datensatz und für einen GPU-Lauf einen CUDA-Build von PyTorch. Installieren Sie mit `pip install -e ".[train]"`.',
   sections: [
@@ -720,7 +659,7 @@ const trainEvaluate: DocPage = {
 const exportEdge: DocPage = {
   slug: "export-edge",
   title: "Export für Edge-Geräte",
-  group: "howto",
+  group: "guides",
   summary:
     "Ein PyTorch-Modell nach INT8-TFLite oder ONNX konvertieren und vor dem Einsatz auf einem Edge-Gerät, einem kleinen Rechner wie dem Raspberry Pi, prüfen.",
   sections: [
@@ -1136,7 +1075,7 @@ const dashboardApi: DocPage = {
             },
           ],
         },
-        p("Der Server liefert außerdem die Seite unter `/` sowie `/dashboard.css` und `/dashboard.js` aus."),
+        p("Der Server liefert die gebaute Oberfläche unter `/` aus, die bisherige Seite unter `/legacy` und Version 1 der API unter `/api/v1`. Siehe [Dashboard-API v1](/docs/api-v1)."),
       ],
     },
     {
@@ -1290,7 +1229,7 @@ const limitations: DocPage = {
           "Nur USB-Kameras sind mit CLI und Dashboard verbunden.",
           "Das Dashboard hat Unit-Tests, aber keinen festgehaltenen End-to-End-Lauf mit echter Kamera und Browser.",
           "Das Dashboard hat keine Authentifizierung. Lassen Sie es auf `127.0.0.1`, außer Sie vertrauen dem Netzwerk.",
-          "Die Dashboard-Seite lädt Chart.js und ihre Schriften aus dem Internet. Der Betrieb ohne Internet wurde nicht getestet.",
+          "Die Dashboard-Oberfläche bringt ihre Schriften und Diagramme mit und stellt keine Anfragen an andere Websites. Der Betrieb ganz ohne Netzwerk wurde nicht getestet.",
           "Python 3.11 und 3.12 sind die vorgesehenen Versionen. Das veröffentlichte Paket verlangt `>=3.11`, das Repository verlangt `>=3.11,<3.13`.",
         ]),
       ],
@@ -1315,13 +1254,23 @@ export const DE_PAGES: readonly DocPage[] = [
   quickstart,
   configuration,
   architecture,
-  liveInference,
   dashboard,
+  detect,
+  sessions,
+  exportPage,
+  compareBenchmark,
+  batchImport,
+  analytics,
+  sortingArm,
+  liveInference,
   datasets,
   trainEvaluate,
   exportEdge,
   models,
   cli,
   dashboardApi,
+  apiV1,
   limitations,
+  troubleshooting,
+  faq,
 ];

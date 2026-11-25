@@ -1,10 +1,18 @@
 import { LOCALES, localePath } from "../i18n/config";
 import { docPath } from "./docs-content";
 import { DOC_SLUGS } from "./docs-content-pages";
+import { researchPath, RESEARCH_SECTION_IDS } from "./research-sections";
 
 /** Every page of the site as a path without a language prefix ("/" is the Home page). */
 export function sitePaths(): string[] {
-  return ["/", "/research", "/package", "/docs", ...DOC_SLUGS.map((slug) => docPath(slug))];
+  return [
+    "/",
+    "/research",
+    ...RESEARCH_SECTION_IDS.map((id) => researchPath(id)),
+    "/package",
+    "/docs",
+    ...DOC_SLUGS.map((slug) => docPath(slug)),
+  ];
 }
 
 /** One sitemap entry per page and language, each listing all language versions as hreflang alternates. */

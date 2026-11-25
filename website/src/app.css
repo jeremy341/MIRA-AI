@@ -347,3 +347,32 @@
     scroll-behavior: auto !important;
   }
 }
+
+/*
+  The experiment landscape (home page) reads its colours from these names. They point at the site tokens, so the
+  chart follows the site's palette. The two stage greys are data colours: classifiers lighter, detectors darker.
+*/
+:root {
+  --mira-accent: var(--accent);
+  --mira-accent-hover: var(--accent-hover);
+  --mira-stage-a: #8a8a8a;
+  --mira-stage-b: #4d4d4d;
+  --mira-border: var(--rule);
+  --mira-border-strong: var(--rule-strong);
+  --mira-text: var(--ink);
+  --mira-muted: var(--ink-soft);
+  --mira-bg: var(--app);
+  --mira-surface: var(--surface);
+  --mira-raised: var(--raised);
+  --mira-focus: var(--accent);
+  --mira-link: var(--accent-strong);
+  --mira-badge-bg: var(--accent-subtle);
+  --mira-badge-text: var(--accent-strong);
+  --mira-note-bg: var(--sunken);
+  --mira-note-title: var(--ink);
+  --mira-table-head: var(--sunken);
+  --mira-font-mono: var(--font-mono);
+  --mira-font-sans: var(--font-sans);
+  --mira-radius-control: 0.625rem;
+  --mira-shadow-raised: var(--shadow-raised);
+}

@@ -6,7 +6,7 @@
  * prefix ("/docs/models"); the renderer adds it.
  */
 
-export type DocGroupId = "start" | "howto" | "reference";
+export type DocGroupId = "start" | "dashboard" | "guides" | "reference" | "help";
 
 export type DocBlock =
   | { type: "p"; text: string }
@@ -15,7 +15,7 @@ export type DocBlock =
   | { type: "list"; items: string[]; ordered?: boolean }
   | { type: "callout"; tone: "note" | "warning"; title: string; text: string }
   | { type: "table"; caption: string; head: string[]; rows: string[][] }
-  | { type: "endpoints"; items: { method: "GET" | "POST" | "WS"; path: string; text: string }[] }
+  | { type: "endpoints"; items: { method: "GET" | "POST" | "PATCH" | "DELETE" | "WS"; path: string; text: string }[] }
   | { type: "flow"; label: string; steps: { title: string; detail: string }[] }
   | { type: "classes" };
 

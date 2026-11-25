@@ -23,7 +23,7 @@ export const packageDe: PackageCopy = {
       bundledValue: "3 Detektor-Gewichte, kein Modell-Download",
     },
     versionNote:
-      "Das Repository steht schon bei {repoVersion}, das ist nicht veröffentlicht. `pip install mira-ai` installiert {version}.",
+      "`pip install mira-ai` installiert {version}, dieselbe Version, auf der das Repository steht.",
     contentsLabel: "Auf dieser Seite",
   },
   contents: {
@@ -88,7 +88,7 @@ export const packageDe: PackageCopy = {
     modelNote:
       "`mira_exp014.pt` ist das Standardmodell der Demo in der README. Verwenden Sie `mira_exp019.pt` für das Modell mit dem höheren Validierungswert, oder lassen Sie `--model` weg und wählen Sie aus einer Liste.",
     dashboard:
-      "Für die Browseroberfläche starten Sie `mira dashboard` und öffnen `http://127.0.0.1:8000`. Die noch nicht veröffentlichte Repository-Version erkennt auch Objekte in lokalen JPEG- und PNG-Dateien.",
+      "Für die Browseroberfläche starten Sie `mira dashboard` und öffnen `http://127.0.0.1:8000`. Sie erkennt auch Objekte in lokalen JPEG- und PNG-Dateien.",
   },
   judged: {
     title: "Wie eine Erkennung bewertet wird",

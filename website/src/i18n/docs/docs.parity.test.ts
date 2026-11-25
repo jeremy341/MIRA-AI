@@ -84,7 +84,7 @@ function textPairs(en: DocBlock, de: DocBlock): [string, string][] {
 describe("docs content parity (en, de)", () => {
   it("has the same pages in the same order with the same slug and group", () => {
     expect(DE_PAGES.map((page) => [page.slug, page.group])).toEqual(EN_PAGES.map((page) => [page.slug, page.group]));
-    expect(DE_PAGES).toHaveLength(12);
+    expect(DE_PAGES).toHaveLength(22);
   });
 
   it("has the same sections, headings ids, block types and block counts", () => {
