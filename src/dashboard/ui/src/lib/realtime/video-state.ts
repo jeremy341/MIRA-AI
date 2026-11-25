@@ -169,10 +169,21 @@ export function reduceLive(state: LiveState, message: VideoSocketMessage, now: n
 }
 
 /** Frames per second over the last `windowMs`, from the receive times in `frameTimes`. */
-export function clientFps(frameTimes: readonly number[], now: number, windowMs = 1000): number {
+/** A wide window: a Raspberry Pi stream can run at well under 1 frame per second. */
+export const FPS_WINDOW_MS = 3000;
+/** A frame this recent means the stream is live. Slow streams still count as live. */
+export const FRESH_FRAME_MS = 5000;
+
+/** Frames per second over the last `windowMs`, from the receive times in `frameTimes`. */
+export function clientFps(frameTimes: readonly number[], now: number, windowMs = FPS_WINDOW_MS): number {
   const recent = frameTimes.filter((t) => now - t <= windowMs && t <= now);
   if (recent.length < 2) return 0;
   const span = (recent[recent.length - 1] - recent[0]) / 1000;
   if (span <= 0) return 0;
   return (recent.length - 1) / span;
+}
+
+/** True when a frame arrived within `maxAgeMs`. Independent of the frame rate. */
+export function framesFresh(lastFrameAt: number | null, now: number, maxAgeMs = FRESH_FRAME_MS): boolean {
+  return lastFrameAt !== null && now - lastFrameAt <= maxAgeMs;
 }

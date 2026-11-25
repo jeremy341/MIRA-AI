@@ -7,9 +7,8 @@
 
   const model = $derived(describeModel(system.status, settings.saved.model.name || null, system.statusError));
   const connection = $derived(describeConnection(live.link, live.linkInfo, system.statusError));
-  // Frames arrive at a steady rate while the stream runs. `live.fps` is refreshed twice a second, so it
-  // tells the bar whether frames are flowing now, not just whether the stream was started.
-  const stream = $derived(describeStream(system.status, live.fps > 0));
+  // "Live" means a frame arrived in the last few seconds, so slow streams (well under 1 fps) still read as live.
+  const stream = $derived(describeStream(system.status, live.fresh));
   const session = $derived(describeSession(system.activeSession, system.sessions));
 </script>
 

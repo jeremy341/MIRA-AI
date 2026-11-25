@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clientFps, frameSrc, initialLiveState, MAX_FRAME_CHARS, normalizeDetections, parseVideoMessage, reduceLive } from './video-state';
+import { clientFps, frameSrc, framesFresh, initialLiveState, MAX_FRAME_CHARS, normalizeDetections, parseVideoMessage, reduceLive } from './video-state';
 import { parseEventMessage } from './events-feed';
 import { toWebSocketUrl } from './transport';
 
@@ -107,11 +107,23 @@ describe('reduceLive', () => {
 });
 
 describe('clientFps and frameSrc', () => {
-  it('counts frames in the last second', () => {
+  it('counts frames in the window', () => {
     const times = [0, 100, 200, 300, 400];
     expect(clientFps(times, 400)).toBeCloseTo(10, 5);
     expect(clientFps(times, 5000)).toBe(0);
     expect(clientFps([], 100)).toBe(0);
+  });
+
+  it('reports sparse streams below 1 fps instead of zero', () => {
+    // A frame every 2 s, which is 0.5 fps. The old 1 s window reported 0 here.
+    expect(clientFps([0, 2000], 2500)).toBeCloseTo(0.5, 5);
+    expect(clientFps([0, 2000, 4000, 6000], 6500)).toBeCloseTo(0.5, 5);
+  });
+
+  it('treats a frame as fresh for a few seconds, whatever the frame rate', () => {
+    expect(framesFresh(null, 1000)).toBe(false);
+    expect(framesFresh(1000, 5000)).toBe(true);
+    expect(framesFresh(1000, 6001)).toBe(false);
   });
 
   it('adds the JPEG data prefix only when it is missing', () => {

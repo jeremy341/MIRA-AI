@@ -1,6 +1,6 @@
 import { openWebSocket } from '../realtime/transport';
 import { ReconnectingSocket, type LinkInfo, type LinkState } from '../realtime/reconnect';
-import { clientFps, initialLiveState, parseVideoMessage, reduceLive, type LiveState } from '../realtime/video-state';
+import { clientFps, framesFresh, initialLiveState, parseVideoMessage, reduceLive, type LiveState } from '../realtime/video-state';
 
 export const VIDEO_PATH = '/ws/video';
 /** The server answers "ping" with "pong"; a steady ping keeps idle proxies from closing the socket. */
@@ -15,6 +15,8 @@ class LiveStore {
   link = $state<LinkState>('closed');
   linkInfo = $state.raw<LinkInfo>({ attempt: 0, retryInMs: null });
   fps = $state(0);
+  /** A frame arrived in the last few seconds. Updated twice a second. */
+  fresh = $state(false);
   /** The last minute of client frame rates, sampled twice a second (for the trend line). */
   fpsHistory = $state.raw<number[]>([]);
   private socket: ReconnectingSocket | null = null;
@@ -34,7 +36,9 @@ class LiveStore {
     });
     this.socket.start();
     this.fpsTimer = setInterval(() => {
-      this.fps = clientFps(this.state.frameTimes, Date.now());
+      const now = Date.now();
+      this.fps = clientFps(this.state.frameTimes, now);
+      this.fresh = framesFresh(this.state.lastFrameAt, now);
       this.fpsHistory = [...this.fpsHistory, this.fps].slice(-120);
     }, 500);
   }
