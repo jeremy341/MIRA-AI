@@ -115,7 +115,7 @@ The language switch keeps the URL `#hash` (read from `location` on the client, u
 
 ## Metadata, sitemap, robots
 
-Every page renders `<Seo lang path title description />` once. It is the only place that writes title, description, canonical, hreflang (`en`, `de`, `x-default`), Open Graph (type, site name, title, description, url, locale, image with size and alt) and Twitter card tags, from `pageMetadata()`. Home keeps its title, other pages get ` | MIRA`. Share cards are `static/og-en.png` and `og-de.png` (1200 x 630); the HTML sources for them are in `scripts/og/` (render each at 1200 x 630 in a browser). `SITE_URL` in `src/lib/site.ts` is the single place for the domain. `sitemap.xml` and `robots.txt` are prerendered from `src/lib/sitemap-data.ts`.
+Each indexable localized page renders `<Seo lang path title description />` once. It writes the title, description, canonical, hreflang (`en`, `de`, `x-default`), Open Graph, Twitter card and JSON-LD tags. The JSON-LD connects the page and website to the MIRA `SoftwareApplication`, its GitHub source, PyPI package and Hugging Face model repository, and cites the experiment log and dataset origins. Home and Research also identify the EXP-019 mAP50 result with its validation split, image count and real-world accuracy caveat. The root language selector has its own descriptive metadata and the same software identity graph. No FAQ markup is emitted because the site has no FAQ page. Home keeps its title, other pages get ` | MIRA`. Share cards are `static/og-en.png` and `og-de.png` (1200 x 630); the HTML sources for them are in `scripts/og/` (render each at 1200 x 630 in a browser). `SITE_URL` in `src/lib/site.ts` is the single place for the domain. `sitemap.xml` and `robots.txt` are prerendered from `src/lib/sitemap-data.ts`.
 
 ## 404
 
@@ -136,6 +136,8 @@ Every page renders `<Seo lang path title description />` once. It is the only pl
 ## Deployment (Vercel)
 
 `vercel.json` sets `framework: null`, `outputDirectory: "build"`, clean URLs, no trailing slash, redirects from the old `/research.html`, `/docs.html`, `/index.html`, the usual security headers, immutable caching for `/_app/immutable/*` and 30-day caching for `/figures/*`. Not verified here: that Vercel serves `/en` from `en.html`, `/en/research` from `en/research.html` and `404.html` for unknown URLs. Check `/en`, `/de/docs`, an unknown URL and the response headers on the first deployment. There is no Content Security Policy yet; the site contacts huggingface.co (counter) and, if a YouTube video is set, youtube-nocookie.com after a click.
+
+For this SvelteKit site, the recommended Vercel Project Root Directory is `website/`, so this folder's `vercel.json` and `build/` output are used. The repo cannot set or confirm the Root Directory stored in Vercel project settings; check that external setting before treating these SEO changes as live. This is the source for the current SvelteKit implementation, not proof that the current production deployment has switched from Next.js.
 
 ### Not written yet: legal pages
 

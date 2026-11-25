@@ -3,7 +3,23 @@
   import { pickLocale } from '$i18n/config';
   import { de } from '$i18n/de';
   import { en } from '$i18n/en';
-  import { SITE_URL } from '$lib/site';
+  import { OG_IMAGE_SIZE, ogImagePath } from '$lib/metadata';
+  import { SITE_NAME, SITE_TITLE, SITE_URL } from '$lib/site';
+  import { structuredDataScript } from '$lib/structured-data';
+
+  const rootDescription =
+    'Open-source MIRA detects glass, metal, paper, plastic and trash in camera images. Explore its experiments and the mira-ai Python package. English / Deutsch.';
+  const rootUrl = `${SITE_URL}/`;
+  const rootImage = `${SITE_URL}${ogImagePath('en')}`;
+  const rootImageAlt = `${SITE_NAME}: ${en.meta.ogTagline}`;
+  const structuredData = structuredDataScript({
+    lang: 'en',
+    inLanguage: ['en', 'de'],
+    path: null,
+    canonicalUrl: rootUrl,
+    title: SITE_TITLE,
+    description: rootDescription
+  });
 
   /**
    * "/" sends the visitor to the first supported language in the browser's language list (pickLocale), else to
@@ -19,12 +35,30 @@
 </script>
 
 <svelte:head>
-  <title>MIRA</title>
-  <meta name="description" content="MIRA: Machine Intelligence for Recycling Automation. English / Deutsch." />
-  <link rel="canonical" href="{SITE_URL}/" />
+  <title>{SITE_TITLE}</title>
+  <meta name="description" content={rootDescription} />
+  <link rel="canonical" href={rootUrl} />
   <link rel="alternate" hreflang="en" href="{SITE_URL}/en" />
   <link rel="alternate" hreflang="de" href="{SITE_URL}/de" />
   <link rel="alternate" hreflang="x-default" href="{SITE_URL}/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content={SITE_NAME} />
+  <meta property="og:title" content={SITE_TITLE} />
+  <meta property="og:description" content={rootDescription} />
+  <meta property="og:url" content={rootUrl} />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:locale:alternate" content="de_DE" />
+  <meta property="og:image" content={rootImage} />
+  <meta property="og:image:width" content={String(OG_IMAGE_SIZE.width)} />
+  <meta property="og:image:height" content={String(OG_IMAGE_SIZE.height)} />
+  <meta property="og:image:alt" content={rootImageAlt} />
+  <meta property="og:image:type" content="image/png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={SITE_TITLE} />
+  <meta name="twitter:description" content={rootDescription} />
+  <meta name="twitter:image" content={rootImage} />
+  <meta name="twitter:image:alt" content={rootImageAlt} />
+  {@html `<script type="application/ld+json">${structuredData}</script>`}
 </svelte:head>
 
 <main class="mx-auto flex min-h-dvh max-w-[34rem] flex-col justify-center gap-6 px-5 py-12">
