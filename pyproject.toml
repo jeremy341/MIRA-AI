@@ -5,12 +5,23 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mira-ai"
 dynamic = ["version"]
-description = "Machine Intelligence for Recycling Automation - Jugend Forscht 2027"
-authors = [{name = "Jeremy Darko", email = "jeremy@example.com"}]
+description = "Machine Intelligence for Recycling Automation: YOLO11 waste detection (glass, metal, paper, plastic, trash) with a live dashboard and CLI."
+authors = [{name = "Jeremy Darko"}]
 license = "MIT"
 license-files = ["LICENSE"]
 readme = "README.md"
-keywords = ["recycling", "edge-ai", "yolo", "computer-vision", "waste-sorting"]
+keywords = ["recycling", "edge-ai", "yolo", "yolo11", "object-detection", "computer-vision", "waste-sorting", "waste-detection", "tflite", "onnx"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
 requires-python = ">=3.11,<3.13"
 dependencies = [
     "ultralytics>=8.3.0",
@@ -44,7 +55,11 @@ dev = ["pytest==8.3.5", "pytest-asyncio==0.24.0", "pytest-mock==3.14.0", "ruff==
 
 [project.urls]
 Homepage = "https://jeremydarko.me"
+Documentation = "https://mira-vision.vercel.app/"
 Repository = "https://github.com/jeremy341/MIRA-AI"
+Issues = "https://github.com/jeremy341/MIRA-AI/issues"
+Changelog = "https://github.com/jeremy341/MIRA-AI/blob/main/CHANGELOG.md"
+"Hugging Face" = "https://huggingface.co/Jeremy341/MIRA-AI"
 
 [project.scripts]
 mira = "src.cli:main"

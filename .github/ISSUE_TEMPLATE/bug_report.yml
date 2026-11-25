@@ -1,0 +1,37 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: The exact command, for example `mira live --model mira_exp019.pt`.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: MIRA version
+      description: Output of `pip show mira-ai`.
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Python and OS
+      placeholder: Python 3.12, Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or traceback
+      render: shell
