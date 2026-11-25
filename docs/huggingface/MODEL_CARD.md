@@ -170,7 +170,7 @@ covered by this repository's license.
 EXP-007, EXP-010 and EXP-012 are INT8 quantizations of other runs, so they have no
 training results of their own. EXP-007 and EXP-012 are the files
 `mira_exp006_int8.tflite` and `mira_exp011_int8.tflite`. EXP-005 and EXP-008
-were trained, but their weights were not kept and are not published.
+were trained, but their weights are not currently available and are not published.
 
 The main lesson was that adding more data did not automatically improve the
 model. Removing inconsistent examples and building a cleaner, more balanced
