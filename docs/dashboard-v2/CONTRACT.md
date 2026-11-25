@@ -63,7 +63,7 @@ now. New work goes under `/api/v1` and `/ws/v1`. The old UI files in `src/dashbo
 - Commit on your branch with clear messages, in small steps. Leave the worktree clean.
 - Do not edit files owned by another area (section 4). If you need a change there, describe it in
   your report. Shared files (`v1/__init__.py`, `main.py`, `state.py`, `storage.py`, `jobs.py`,
-  `events.py`, `0001_core.sql`) are coordinator-owned: only the areas that say so may touch them.
+  `events.py`, `model_runner.py`, `0001_core.sql`) are coordinator-owned: only the areas that say so may touch them.
 
 ## 4. Ownership
 
@@ -71,7 +71,7 @@ now. New work goes under `/api/v1` and `/ws/v1`. The old UI files in `src/dashbo
 |---|---|---|
 | **core** | B1 | `camera_service.py` refactor, `v1/routers/sessions.py`, `v1/recorder.py`, `migrations/0010_sessions.sql`, `tests/dashboard_v2/test_sessions.py` |
 | **export** | B2 | `v1/routers/exports.py`, `v1/reports/`, `migrations/0020_export.sql` (only if needed), `tests/dashboard_v2/test_exports.py` |
-| **compare + benchmark** | B3 | `v1/routers/compare.py`, `v1/routers/benchmark.py`, `v1/model_runner.py`, `migrations/0030_compare_benchmark.sql`, `tests/dashboard_v2/test_compare.py`, `test_benchmark.py` |
+| **compare + benchmark** | B3 | `v1/routers/compare.py`, `v1/routers/benchmark.py`, `migrations/0030_compare_benchmark.sql`, `tests/dashboard_v2/test_compare.py`, `test_benchmark.py` |
 | **batch** | B4 | `v1/routers/batch.py`, `v1/routers/jobs.py`, `v1/batch_runner.py`, `migrations/0040_batch.sql` (only if needed), `tests/dashboard_v2/test_batch.py`, `test_jobs.py` |
 | **hardware + arm + events** | B5 | `v1/routers/hardware.py`, `v1/routers/arm.py`, `v1/routers/events.py`, `v1/hardware_sampler.py`, `v1/arm.py`, `migrations/0050_hardware_arm.sql`, `tests/dashboard_v2/test_hardware.py`, `test_arm.py`, `test_events.py` |
 | **UI shell** | U1 | `src/dashboard/ui/` (everything) until U2 starts |
@@ -248,3 +248,19 @@ Indexes exist on `detections(session_id, ts)`, `metrics(session_id, ts)`, `hardw
   **Analytics** (session and hardware charts, arm event log), **Settings** (camera, model,
   thresholds). Charts are hand-rolled SVG or a tiny dependency-free helper; no chart library.
 - Copy: plain, specific, no marketing tone, no em dashes. English only for now.
+
+## 9. Skeleton notes (what exists after the coordinator commit)
+
+- `v1/model_runner.py` (coordinator-owned): `list_models()`, `resolve_model_path(name)`,
+  `load_model(name)` (cached, 2 models), `predict_frame(name, frame_bgr, confidence, iou) ->
+  RunnerResult(detections: list[RunnerDetection], latency_ms)`, `set_model_factory(fn)` for tests.
+  **Compare, benchmark and batch must load and run models through it**, not through
+  `camera_service` (which core is refactoring) and not by calling `YOLO(...)` directly.
+- Routers use paths relative to their prefix: `/api/v1` for HTTP routers, `/ws/v1` for
+  `routers/events.py`. Write `@router.get("/sessions")`, not `"/api/v1/sessions"`.
+- A router module may define `async def on_startup()` / `async def on_shutdown()`; `v1.startup()`
+  and `v1.shutdown()` call them from the FastAPI lifespan. Use this for background workers.
+- `tests/conftest.py` points `MIRA_DASHBOARD_DB` at a temp file for every test and resets the
+  singletons, so tests never touch `~/.mira`. Use `TestClient(app)` as a context manager so the
+  lifespan runs.
+- Tests: `tests/dashboard_v2/test_skeleton.py` shows how storage, jobs and events are exercised.
