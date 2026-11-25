@@ -87,6 +87,9 @@ def _statistics_payload(period: int) -> dict:
 
     stats = camera_service.get_statistics(period)
     stats_dict = stats.model_dump(mode="json")
+    from src.dashboard.backend.v1.routers.arm import get_accuracy_summary
+
+    stats_dict["sorting_accuracy"] = get_accuracy_summary()["accuracy"]
     total = sum(stats.class_counts.values())
     if total and stats.avg_confidence:
         stats_dict["average_confidence"] = (
