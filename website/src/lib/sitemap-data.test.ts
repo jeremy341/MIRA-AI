@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { DOC_SLUGS } from "./docs-content-pages";
+import { RESEARCH_SECTION_IDS } from "./research-sections";
 import { buildSitemap, sitePaths } from "./sitemap-data";
 
 describe("sitemap", () => {
   const entries = buildSitemap("https://example.test/");
 
   it("lists every page in both languages", () => {
-    expect(sitePaths()).toHaveLength(4 + DOC_SLUGS.length);
+    expect(sitePaths()).toHaveLength(4 + RESEARCH_SECTION_IDS.length + DOC_SLUGS.length);
     expect(entries).toHaveLength(sitePaths().length * 2);
     const urls = entries.map((entry) => entry.url);
     expect(urls).toContain("https://example.test/en");

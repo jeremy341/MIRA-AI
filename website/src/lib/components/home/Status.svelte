@@ -10,10 +10,9 @@
     PYPI_LATEST_VERSION,
     PYPI_URL
   } from '$lib/site';
-  import Chapter from '../Chapter.svelte';
   import ExtLink from '../ExtLink.svelte';
-  import Prose from '../Prose.svelte';
   import Rich from '../Rich.svelte';
+  import HomeSection from './HomeSection.svelte';
 
   let { dict }: { dict: Dictionary } = $props();
 
@@ -26,46 +25,48 @@
     { href: DATASET_ORIGINS_URL, name: t.links.datasets.name, text: t.links.datasets.text },
     { href: EXPERIMENT_LOG_URL, name: t.links.log.name, text: t.links.log.text }
   ]);
+
+  const card = 'rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7';
 </script>
 
 {#snippet bullets(items: readonly string[])}
-  <ul class="space-y-2.5 text-[1.0625rem] leading-snug text-ink-soft marker:text-ink">
+  <ul class="space-y-2.5 text-[0.9375rem] leading-snug text-ink-soft marker:text-ink">
     {#each items as item (item)}
       <li class="ml-5 list-disc pl-1"><Rich text={item} /></li>
     {/each}
   </ul>
 {/snippet}
 
-<Chapter id="status" title={t.title}>
-  <div class="grid gap-10 md:grid-cols-2 md:gap-16">
-    <div>
-      <h3 class="font-serif text-title text-ink">{t.worksTitle}</h3>
+<HomeSection id="status" title={t.title}>
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2">
+    <div class={card}>
+      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.worksTitle}</h3>
       <div class="mt-4">{@render bullets(t.works)}</div>
     </div>
-    <div>
-      <h3 class="font-serif text-title text-ink">{t.openTitle}</h3>
+    <div class={card}>
+      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.openTitle}</h3>
       <div class="mt-4">{@render bullets(t.open)}</div>
     </div>
   </div>
 
-  <Prose class="mt-10 border-t border-rule pt-8">
-    <p><Rich text={t.planned} /></p>
-  </Prose>
+  <p class="mt-3 rounded-2xl border border-accent/25 bg-accent-soft px-5 py-4 text-[0.9375rem] leading-[1.6] text-ink/85 sm:px-7">
+    <Rich text={t.planned} />
+  </p>
 
-  <div class="mt-10 grid gap-10 border-t border-ink pt-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,6fr)] lg:gap-16">
-    <div>
-      <h3 class="font-serif text-title text-ink">{t.whoTitle}</h3>
-      <Prose class="mt-3">
+  <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
+    <div class={card}>
+      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.whoTitle}</h3>
+      <div class="mt-3 space-y-3 text-[0.9375rem] leading-[1.6] text-ink-soft">
         <p><Rich text={t.who} /></p>
         <p><Rich text={t.transparency} /></p>
         <p><ExtLink href={LICENSE_URL} {hint}>{t.licence}</ExtLink></p>
-      </Prose>
+      </div>
     </div>
-    <div>
-      <h3 class="font-serif text-title text-ink">{t.linksTitle}</h3>
-      <ul class="mt-3 space-y-3.5">
+    <div class={card}>
+      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.linksTitle}</h3>
+      <ul class="mt-3 divide-y divide-rule">
         {#each links as link (link.href)}
-          <li class="text-[0.9375rem] leading-snug">
+          <li class="py-2.5 text-[0.9375rem] leading-snug first:pt-0 last:pb-0">
             <ExtLink href={link.href} {hint} class="font-medium">{link.name}</ExtLink>
             <span class="block text-ink-soft">{link.text}</span>
           </li>
@@ -73,4 +74,4 @@
       </ul>
     </div>
   </div>
-</Chapter>
+</HomeSection>

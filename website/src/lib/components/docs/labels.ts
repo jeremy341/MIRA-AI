@@ -28,3 +28,42 @@ export function tocItemsFor(page: DocPage): TocItem[] {
     ),
   ]);
 }
+
+import type { DocIconName } from "./DocIcon.svelte";
+
+/** Icon of each page in the sidebar and on the cards. A page without an entry gets the plain document icon. */
+export const DOC_ICONS: Record<string, DocIconName> = {
+  quickstart: "rocket",
+  configuration: "sliders",
+  architecture: "layers",
+  dashboard: "monitor",
+  detect: "camera",
+  sessions: "clock",
+  export: "download",
+  "compare-benchmark": "compare",
+  "batch-import": "upload",
+  analytics: "chart",
+  "sorting-arm": "arm",
+  "live-inference": "camera",
+  datasets: "database",
+  "train-evaluate": "train",
+  "export-edge": "chip",
+  "raspberry-pi": "chip",
+  models: "box",
+  cli: "terminal",
+  "dashboard-api": "plug",
+  limitations: "alert",
+  troubleshooting: "alert",
+  faq: "help",
+  changelog: "list",
+  question: "help",
+  tried: "train",
+  results: "chart",
+  runs: "list",
+  photos: "camera",
+  edge: "chip",
+  limits: "alert",
+  data: "database",
+};
+
+export const docIcon = (slug: string): DocIconName => DOC_ICONS[slug] ?? "doc";

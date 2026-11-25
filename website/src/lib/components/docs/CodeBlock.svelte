@@ -72,7 +72,7 @@
 </script>
 
 <figure
-  class="my-6 max-w-full min-w-0 overflow-hidden rounded-lg border border-rule bg-surface shadow-[var(--shadow-raised)]"
+  class="my-6 max-w-full min-w-0 overflow-hidden rounded-xl border border-rule bg-surface shadow-[var(--shadow-raised)]"
 >
   <figcaption
     id={captionId}
@@ -84,7 +84,7 @@
         type="button"
         onclick={copy}
         aria-label={fmt(labels.copyCodeLabel, { title })}
-        class="inline-flex h-10 min-w-[5.5rem] shrink-0 items-center justify-center px-2.5 text-[0.8125rem] font-medium text-ink underline underline-offset-[0.25em] transition-colors duration-(--dur-fast) ease-out hover:bg-marker"
+        class="inline-flex h-10 min-w-[5.5rem] shrink-0 items-center justify-center px-2.5 text-[0.8125rem] font-medium text-ink rounded-lg transition-colors duration-(--dur-fast) ease-out hover:bg-hover/60"
       >
         <span aria-hidden="true">{state === 'copied' ? labels.copied : state === 'failed' ? labels.failed : labels.copy}</span>
       </button>

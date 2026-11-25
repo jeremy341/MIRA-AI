@@ -12,13 +12,11 @@
  *   thresholds      src/cli/inference.py, src/config.py, src/visualize.py, mira.yaml
  */
 
-import { PYPI_LATEST_VERSION, REPO_VERSION_UNRELEASED } from "$lib/site";
+import { PYPI_LATEST_VERSION } from "$lib/site";
 
-/** Latest release on PyPI. The repository (src/version.py) is ahead of it and unreleased. */
+/** Latest release on PyPI. It matches src/version.py in the repository. */
 export const PACKAGE_VERSION = PYPI_LATEST_VERSION;
-/** Unreleased version in the repository. Always label it as such. */
-export const REPOSITORY_VERSION = REPO_VERSION_UNRELEASED;
-/** requires_python of the latest PyPI release. The unreleased repository version declares >=3.11,<3.13. */
+/** requires_python of the latest PyPI release. The repository declares >=3.11,<3.13. */
 export const PYTHON_REQUIREMENT = ">=3.11";
 export const LICENSE_NAME = "MIT";
 

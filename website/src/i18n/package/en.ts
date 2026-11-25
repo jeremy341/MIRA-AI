@@ -24,7 +24,7 @@ export const packageEn = {
       bundledValue: "3 detector weights, no model download",
     },
     versionNote:
-      "The repository is already at {repoVersion}, which is not released. `pip install mira-ai` gives you {version}.",
+      "`pip install mira-ai` installs {version}, the same version the repository is at.",
     contentsLabel: "On this page",
   },
   contents: {
@@ -88,7 +88,7 @@ export const packageEn = {
     modelNote:
       "`mira_exp014.pt` is the demo default in the README. Swap in `mira_exp019.pt` for the model with the higher validation score, or leave out `--model` to pick from a list.",
     dashboard:
-      "For a browser interface, run `mira dashboard` and open `http://127.0.0.1:8000`. The unreleased repository version also supports local JPEG and PNG detection.",
+      "For a browser interface, run `mira dashboard` and open `http://127.0.0.1:8000`. It also checks local JPEG and PNG files.",
   },
   judged: {
     title: "How a detection is judged",

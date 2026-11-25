@@ -15,13 +15,11 @@
   import type { Dictionary } from '$i18n';
   import type { Locale } from '$i18n/config';
   import { hasDemoVideo } from '$lib/demo-video';
-  import Chapter from '../Chapter.svelte';
   import CopyCommand from '../CopyCommand.svelte';
   import DemoVideo from '../DemoVideo.svelte';
   import DownloadsStat from '../DownloadsStat.svelte';
-  import MarginNote from '../MarginNote.svelte';
-  import Prose from '../Prose.svelte';
   import Rich from '../Rich.svelte';
+  import HomeSection from './HomeSection.svelte';
 
   let { lang, dict }: { lang: Locale; dict: Dictionary } = $props();
 
@@ -47,12 +45,10 @@
   });
 </script>
 
-<Chapter id="try" title={t.title}>
-  <div class={withVideo ? 'grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16' : ''}>
-    <div>
-      <Prose>
-        <p><Rich text={t.p1} /></p>
-      </Prose>
+<HomeSection id="try" title={t.title}>
+  <div class={withVideo ? 'grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]' : 'grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2'}>
+    <div class="rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7">
+      <p class="max-w-[56ch] text-[1rem] leading-[1.65] text-ink-soft"><Rich text={t.p1} /></p>
       <ol class="mt-6 max-w-[34rem] space-y-5">
         {#each t.steps as step (step.command)}
           <li>
@@ -61,15 +57,16 @@
           </li>
         {/each}
       </ol>
-      <MarginNote inline class="mt-6 max-w-[34rem]"><Rich text={t.defaultNote} /></MarginNote>
-
-      <div class="mt-8 max-w-[34rem] border-t border-rule pt-5">
-        <h3 class="font-serif text-title text-ink">{t.downloadsTitle}</h3>
-        <DownloadsStat {lang} labels={downloadsLabels} />
-      </div>
+      <p class="mt-6 max-w-[34rem] border-l-2 border-accent pl-3 text-[0.875rem] leading-[1.5] text-ink-soft">
+        <Rich text={t.defaultNote} />
+      </p>
+    </div>
+    <div class="rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7">
+      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.downloadsTitle}</h3>
+      <DownloadsStat {lang} labels={downloadsLabels} />
     </div>
     {#if withVideo}
-      <div class="min-w-0">
+      <div class="min-w-0 lg:col-span-2">
         <DemoVideo
           {...DEMO_VIDEO}
           captionsLang={lang}
@@ -86,4 +83,4 @@
       </div>
     {/if}
   </div>
-</Chapter>
+</HomeSection>

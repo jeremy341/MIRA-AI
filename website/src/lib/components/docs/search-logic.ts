@@ -18,6 +18,9 @@ type KeyLike = { key: string; code?: string; altKey: boolean; ctrlKey: boolean; 
  * `code` covers layouts where "/" needs Shift (German) and macOS, where Option + "/" produces another character.
  */
 export function isSearchShortcut(event: KeyLike): boolean {
+  // Ctrl+K or Cmd+K, the shortcut people know from other docs sites.
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "k") return true;
+  // Alt+/ stays as the second chord (it also works on layouts where Ctrl+K is taken).
   if (!event.altKey || event.ctrlKey || event.metaKey) return false;
   return event.key === "/" || event.code === "Slash";
 }

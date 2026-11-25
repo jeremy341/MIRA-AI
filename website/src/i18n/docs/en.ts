@@ -7,7 +7,20 @@
  * must keep the same structure. No em dashes or en dashes in any text.
  */
 
-import { GITHUB_URL, HF_URL, PYPI_LATEST_VERSION, PYPI_URL, REPO_VERSION_UNRELEASED } from "../../lib/site";
+import { GITHUB_URL, HF_URL, PYPI_LATEST_VERSION, PYPI_URL } from "../../lib/site";
+import {
+  analytics,
+  apiV1,
+  batchImport,
+  compareBenchmark,
+  dashboard,
+  detect,
+  exportPage,
+  faq,
+  sessions,
+  sortingArm,
+  troubleshooting,
+} from "./en-dashboard";
 import { code, h3, lines, list, note, output, p, table, warning } from "./helpers";
 import { MIRA_YAML } from "./shared-code";
 import type { DocPage } from "./types";
@@ -49,7 +62,7 @@ const quickstart: DocPage = {
         ),
         note(
           "Python version and release number",
-          `The published package declares \`>=3.11\`. The repository declares \`>=3.11,<3.13\`, which is why this page says 3.11 or 3.12. The repository is at ${REPO_VERSION_UNRELEASED}, which is not released yet, so a source install prints ${REPO_VERSION_UNRELEASED} while the PyPI release is ${PYPI_LATEST_VERSION}.`,
+          `The published package declares \`>=3.11\`. The repository declares \`>=3.11,<3.13\`, which is why this page says 3.11 or 3.12. The repository and the newest PyPI release are both at ${PYPI_LATEST_VERSION}, so a source install prints the same number.`,
         ),
       ],
     },
@@ -297,7 +310,11 @@ const architecture: DocPage = {
             ],
             [
               "`src/dashboard/frontend/`",
-              "The dashboard page, `dashboard.html`, `dashboard.css` and `dashboard.js`, served by the backend.",
+              "The previous dashboard page (`dashboard.html`, `dashboard.css`, `dashboard.js`), served at `/legacy`, and the built interface in `dist/`.",
+            ],
+            [
+              "`src/dashboard/ui/`",
+              "Source of the dashboard interface (Svelte and Vite). The backend's version 1 API, with sessions, exports, compare, benchmark, batch, hardware and the arm, is in `src/dashboard/backend/v1/`.",
             ],
             [
               "`src/pipeline/`",
@@ -340,7 +357,7 @@ const architecture: DocPage = {
 const liveInference: DocPage = {
   slug: "live-inference",
   title: "Run live inference",
-  group: "howto",
+  group: "guides",
   summary: "Open a webcam detection window and tune the camera, thresholds and frame skipping.",
   sections: [
     {
@@ -430,86 +447,10 @@ const liveInference: DocPage = {
   ],
 };
 
-const dashboard: DocPage = {
-  slug: "dashboard",
-  title: "Use the dashboard",
-  group: "howto",
-  summary: "Start the local FastAPI dashboard, configure a camera and model, and read the live statistics.",
-  lead: "The dashboard is a local web page served by `mira dashboard`. Camera frames and detections stay on your computer. The page itself loads Chart.js from the jsDelivr CDN and its typefaces from Google Fonts, so the browser needs internet access for the charts and fonts. Fully offline use has not been tested.",
-  sections: [
-    {
-      id: "start",
-      title: "Start it",
-      blocks: [
-        code(lines("mira dashboard", "mira dashboard --port 8080", "mira dashboard --host 0.0.0.0")),
-        p("The defaults are `--host 127.0.0.1` and `--port 8000`, so the page is at `http://127.0.0.1:8000`."),
-        warning(
-          "Binding to 0.0.0.0",
-          "`--host 0.0.0.0` makes the dashboard reachable from your network. It has no login, and anyone who can reach it can start your camera. Keep the default unless you need remote access on a trusted network.",
-        ),
-      ],
-    },
-    {
-      id: "stream",
-      title: "Start a stream",
-      blocks: [
-        list(
-          [
-            "Open **Settings**. Under Camera Settings choose the camera index, resolution (`640x360`, `640x480` or `1280x720`), FPS, autofocus and auto exposure, then press **Apply**.",
-            "Under Model Settings choose a model, confidence, reject and IoU thresholds, tracking and the target latency, then press **Apply**. The model is loaded when you apply.",
-            "Open **Dashboard** and press **Start Stream**.",
-          ],
-          true,
-        ),
-        p(
-          "The API refuses to start a stream until a camera and a model are ready. Camera and model changes are refused while a stream runs, so press **Stop** first.",
-        ),
-      ],
-    },
-    {
-      id: "pages",
-      title: "What it shows",
-      blocks: [
-        table(
-          "Dashboard pages",
-          ["Page", "Contents"],
-          [
-            [
-              "Dashboard",
-              "Live camera feed with FPS, latency, object count and confidence, the class distribution, and a list of recent detections.",
-            ],
-            [
-              "Analytics",
-              "Total detections, session duration, top class and average confidence, a detection trend, a class breakdown, and performance and system charts (FPS, latency, CPU, memory).",
-            ],
-            ["Settings", "Camera and model forms."],
-          ],
-        ),
-      ],
-    },
-    {
-      id: "behaviour",
-      title: "Behaviour to know",
-      blocks: [
-        list([
-          "The model list shows only `.pt` and `.tflite` files from the model folder. INT8 TFLite files are marked as recommended for small devices.",
-          "Detections below the larger of the confidence and reject thresholds are discarded before they are counted or sent to the browser.",
-          "For INT8 TFLite models the confidence threshold is capped at 0.25, and tracking is off for every TFLite model.",
-          "The API defaults are 0.25 confidence, 0.25 reject, 0.45 IoU, tracking on and 1000 ms target latency. The Settings form starts with 0.50, 0.55 and 0.45 for the three thresholds, so check the sliders before applying.",
-          "The backend keeps the last 1000 detections and the last 100 metric samples in memory. They are lost when the server stops.",
-        ]),
-        p(
-          "Everything the page does is available over HTTP and WebSocket. See the [Dashboard API](/docs/dashboard-api).",
-        ),
-      ],
-    },
-  ],
-};
-
 const datasets: DocPage = {
   slug: "datasets",
   title: "Prepare datasets",
-  group: "howto",
+  group: "guides",
   summary: "List registered dataset sources, merge them into one YOLO dataset, and validate the result.",
   lead: "Dataset files are not stored in Git, and the registry files and merge commands are in the GitHub repository rather than the PyPI package. Work from a clone.",
   sections: [
@@ -599,7 +540,7 @@ const datasets: DocPage = {
 const trainEvaluate: DocPage = {
   slug: "train-evaluate",
   title: "Train and evaluate",
-  group: "howto",
+  group: "guides",
   summary: "Train a YOLO detector from an experiment file, then evaluate and benchmark it.",
   lead: 'Training needs a clone of the repository, a prepared dataset and, for a GPU run, a CUDA build of PyTorch. Install with `pip install -e ".[train]"`.',
   sections: [
@@ -703,7 +644,7 @@ const trainEvaluate: DocPage = {
 const exportEdge: DocPage = {
   slug: "export-edge",
   title: "Export for edge devices",
-  group: "howto",
+  group: "guides",
   summary:
     "Convert a PyTorch model to INT8 TFLite or ONNX and check it before using it on an edge device, a small computer such as a Raspberry Pi.",
   sections: [
@@ -1085,7 +1026,7 @@ const dashboardApi: DocPage = {
             },
           ],
         },
-        p("The server also serves the page at `/`, plus `/dashboard.css` and `/dashboard.js`."),
+        p("The server serves the built interface at `/`, the previous page at `/legacy`, and version 1 of the API under `/api/v1`. See [Dashboard API v1](/docs/api-v1)."),
       ],
     },
     {
@@ -1239,7 +1180,7 @@ const limitations: DocPage = {
           "Only USB cameras are connected to the CLI and dashboard.",
           "The dashboard has unit tests but no recorded end-to-end run with a real camera and browser.",
           "The dashboard has no authentication. Keep it on `127.0.0.1` unless you trust the network.",
-          "The dashboard page loads Chart.js and its fonts from the internet. Offline use has not been tested.",
+          "The dashboard interface bundles its fonts and charts and makes no requests to other sites. Running it with no network at all has not been tested.",
           "Python 3.11 and 3.12 are the intended versions. The published package declares `>=3.11`, the repository declares `>=3.11,<3.13`.",
         ]),
       ],
@@ -1264,13 +1205,23 @@ export const EN_PAGES: readonly DocPage[] = [
   quickstart,
   configuration,
   architecture,
-  liveInference,
   dashboard,
+  detect,
+  sessions,
+  exportPage,
+  compareBenchmark,
+  batchImport,
+  analytics,
+  sortingArm,
+  liveInference,
   datasets,
   trainEvaluate,
   exportEdge,
   models,
   cli,
   dashboardApi,
+  apiV1,
   limitations,
+  troubleshooting,
+  faq,
 ];

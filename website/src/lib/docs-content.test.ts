@@ -420,7 +420,7 @@ describe.each(LANGS)("docs content integrity (%s)", (lang) => {
     expect(text).not.toContain("mira diagnostics");
     expect(text).toContain("mira download");
     expect(text).toContain(">=3.11,<3.13");
-    expect(text).toContain("1.0.2");
+    expect(text).toContain("1.1.0");
   });
 });
 
