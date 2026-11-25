@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from src.dashboard.backend.camera_service import CameraService, ImageDetectionUnavailableError
 from src.dashboard.backend.command_service import DashboardCommandService
+from src.dashboard.backend import v1
 from src.dashboard.backend.models import CameraConfig, ModelConfig
 from src.dashboard.backend.websocket_handler import WebSocketHandler
 
@@ -25,7 +26,9 @@ async def lifespan(app: FastAPI):
     camera_service._loop = asyncio.get_running_loop()
     websocket_handler._loop = asyncio.get_running_loop()
     await websocket_handler.start()
+    await v1.startup()
     yield
+    await v1.shutdown()
     print("Shutting down MIRA Control Center...")
     await websocket_handler.stop()
     await camera_service.shutdown()
@@ -45,6 +48,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(v1.api_router, prefix="/api/v1")
+app.include_router(v1.ws_router, prefix="/ws/v1")
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
