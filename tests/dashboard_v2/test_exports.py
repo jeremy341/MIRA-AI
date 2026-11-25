@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import io
 import re
@@ -11,14 +12,20 @@ from urllib.parse import quote
 import pytest
 from fastapi.testclient import TestClient
 
-from src.dashboard.backend.main import app
+from src.dashboard.backend.main import app, websocket_handler
 from src.dashboard.backend.v1.state import get_db
 
 
-@pytest.fixture
-def client():
-    with TestClient(app) as test_client:
-        yield test_client
+@pytest.fixture(scope="module")
+def client(tmp_path_factory):
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setenv("MIRA_DASHBOARD_DB", str(tmp_path_factory.mktemp("export-client") / "dashboard.db"))
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        websocket_handler._broadcast_queue = asyncio.Queue(maxsize=32)
+        monkeypatch.undo()
 
 
 def _insert_session(
@@ -116,6 +123,20 @@ def test_csv_prefixes_formula_like_text_cells(client, formula):
     assert row["class_name"] == f"'{formula}"
 
 
+def test_csv_guards_formula_like_text_in_other_columns(client):
+    session_id = "formula-frame"
+    _insert_session(session_id)
+    get_db().execute(
+        "INSERT INTO detections (session_id, ts, frame_index, class_name, confidence) VALUES (?, ?, ?, ?, ?)",
+        (session_id, 1_001, "=1+1", "glass", 0.9),
+    )
+
+    response = client.get(f"/api/v1/sessions/{session_id}/export.csv")
+    row = next(csv.DictReader(io.StringIO(response.text)))
+
+    assert row["frame_index"] == "'=1+1"
+
+
 def test_json_export_uses_contract_session_fields_and_includes_metrics(client):
     session_id = "json-session"
     _insert_session(session_id, notes="Checked by hand")
@@ -151,6 +172,7 @@ def test_json_export_uses_contract_session_fields_and_includes_metrics(client):
     assert payload["session"]["config"] == {"confidence": 0.25}
     assert payload["session"]["notes"] == "Checked by hand"
     assert payload["session"]["total_detections"] == 1
+    assert set(payload["session"]["class_counts"]) == {"glass", "metal", "paper", "plastic", "trash"}
     assert payload["class_counts"]["glass"] == 1
     assert payload["detections"][0]["ts"] == "1970-01-01T00:16:42+00:00"
     assert payload["detections"][0]["bbox"] == [1, 2, 30, 40]
@@ -160,7 +182,12 @@ def test_json_export_uses_contract_session_fields_and_includes_metrics(client):
 
 def test_report_escapes_user_text_and_has_no_external_resources(client):
     session_id = "report-xss"
-    _insert_session(session_id, name="<script>alert(1)</script>", notes="<img src=x onerror=alert(1)>")
+    _insert_session(
+        session_id,
+        name="<script>alert(1)</script>",
+        model_name="<b>model</b>",
+        notes="<img src=x onerror=alert(1)>",
+    )
     _insert_detection(session_id, ts=1_001)
 
     response = client.get(f"/api/v1/sessions/{session_id}/report.html")
@@ -168,6 +195,8 @@ def test_report_escapes_user_text_and_has_no_external_resources(client):
     assert response.status_code == 200
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in response.text
     assert "<script>alert(1)</script>" not in response.text
+    assert "&lt;b&gt;model&lt;/b&gt;" in response.text
+    assert "<b>model</b>" not in response.text
     assert "&lt;img src=x onerror=alert(1)&gt;" in response.text
     assert "http://" not in response.text
     assert "https://" not in response.text
