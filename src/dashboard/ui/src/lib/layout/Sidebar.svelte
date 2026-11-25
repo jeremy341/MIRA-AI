@@ -168,8 +168,10 @@
       bottom: 0;
       width: 100%;
       max-width: 100vw;
-      height: auto;
+      /* Fixed height, so the toast region can sit exactly above it. */
+      height: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
       flex-direction: row;
+      align-items: stretch;
       padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom, 0px));
       border-right: 0;
       border-top: 1px solid var(--rule);

@@ -360,18 +360,18 @@
     font-size: var(--text-micro);
     color: var(--ink-soft);
   }
+  /* A footer row under both cards. It is in the normal flow, so it never covers the form it applies. */
   .actions-bar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
+    margin-top: var(--space-5);
     padding: var(--space-4) var(--space-5);
     border-radius: var(--radius-card);
     background: var(--surface);
     box-shadow: var(--shadow-raised);
-    position: sticky;
-    bottom: 1rem;
   }
   .state {
     font-size: var(--text-small);
@@ -386,10 +386,6 @@
   @media (max-width: 899px) {
     .grid {
       grid-template-columns: minmax(0, 1fr);
-    }
-    /* On a phone the bar scrolls with the form; a sticky bar would cover the fields. */
-    .actions-bar {
-      position: static;
     }
   }
 </style>

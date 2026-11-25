@@ -53,6 +53,8 @@
   /* Layout */
   --sidebar-width: 14.5rem;
   --topbar-height: 3.5rem;
+  /* The bottom tab bar below 900 px. Toasts and the page's bottom padding are measured from it. */
+  --tabbar-height: 4rem;
   --content-max: 74rem;
   --page-pad: 1.25rem;
   --measure: 66ch;

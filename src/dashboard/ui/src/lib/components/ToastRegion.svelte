@@ -17,11 +17,15 @@
 </div>
 
 <style>
-  /* Desktop: top right, under the status bar, so toasts never cover the sticky action bars at the bottom. */
+  /*
+    Desktop: bottom right, the corner the page content rarely fills, so toasts do not cover the controls
+    at the top of a page (the camera and image switch, for example). Newest at the bottom.
+    Phone: just above the bottom tab bar. At most three are shown; each one dismisses itself.
+  */
   .region {
     position: fixed;
     right: var(--space-4);
-    top: calc(var(--topbar-height) + var(--space-3));
+    bottom: var(--space-4);
     z-index: var(--z-toast);
     display: grid;
     gap: var(--space-2);
@@ -73,8 +77,7 @@
   }
   @media (max-width: 899px) {
     .region {
-      top: auto;
-      bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+      bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-3));
       left: var(--space-4);
       right: var(--space-4);
       width: auto;
