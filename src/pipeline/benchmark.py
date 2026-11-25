@@ -329,8 +329,8 @@ def _compute_ap_for_class(
         else:
             false_positive_flags[detection_index] = 1
 
-    cumulative_true_positives = np.cumsum(true_positive_flags)
-    cumulative_false_positives = np.cumsum(false_positive_flags)
+    cumulative_true_positives: np.ndarray = np.cumsum(true_positive_flags)
+    cumulative_false_positives: np.ndarray = np.cumsum(false_positive_flags)
     recall_values = cumulative_true_positives / num_gt
     precision_denominators = cumulative_true_positives + cumulative_false_positives
     precision_values = cumulative_true_positives / np.maximum(precision_denominators, 1e-6)
