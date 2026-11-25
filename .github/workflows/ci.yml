@@ -29,3 +29,21 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e .[dev]
       - run: pytest tests/ -v --tb=short
+
+  ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/dashboard/ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm build
+      - name: No mock code in the production bundle
+        run: "! grep -rq mira-mock-layer-v1 ../frontend/dist"
