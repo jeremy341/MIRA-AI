@@ -67,13 +67,15 @@ mira = "src.cli:main"
 [tool.setuptools.packages.find]
 include = ["src", "src.*"]
 exclude = ["tests*", "scripts*", "src.dashboard.frontend*"]
+namespaces = true
 
 [tool.setuptools.dynamic]
 version = {attr = "src.version.__version__"}
 
 [tool.setuptools.package-data]
 "src" = ["assets/*.yaml", "assets/models/detection/*.pt", "assets/models/detection/*.yaml"]
-"src.dashboard" = ["frontend/**/*"]
+"src.dashboard" = ["frontend/**/*", "frontend/dist/**/*"]
+"src.dashboard.backend.v1" = ["migrations/*.sql"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
