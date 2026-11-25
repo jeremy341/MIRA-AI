@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [svelte()],
     resolve: { conditions: ['browser'] },
     define: {
-      'import.meta.env.VITE_MOCK': JSON.stringify(mock),
+      __MIRA_MOCK__: JSON.stringify(mock === '1'),
     },
     server: {
       host: '127.0.0.1',

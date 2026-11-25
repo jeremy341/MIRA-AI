@@ -15,6 +15,8 @@ class LiveStore {
   link = $state<LinkState>('closed');
   linkInfo = $state.raw<LinkInfo>({ attempt: 0, retryInMs: null });
   fps = $state(0);
+  /** The last minute of client frame rates, sampled twice a second (for the trend line). */
+  fpsHistory = $state.raw<number[]>([]);
   private socket: ReconnectingSocket | null = null;
   private fpsTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -33,6 +35,7 @@ class LiveStore {
     this.socket.start();
     this.fpsTimer = setInterval(() => {
       this.fps = clientFps(this.state.frameTimes, Date.now());
+      this.fpsHistory = [...this.fpsHistory, this.fps].slice(-120);
     }, 500);
   }
 

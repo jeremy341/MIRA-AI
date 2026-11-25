@@ -2,7 +2,6 @@
  * Opens WebSockets for the app. In mock mode the socket is a fake that follows the same
  * protocol (see lib/mock/mock-socket.ts). Covered by transport.test.ts for URL building.
  */
-import { MOCK_MODE } from '../env';
 
 export interface LocationLike {
   protocol: string;
@@ -16,7 +15,7 @@ export function toWebSocketUrl(path: string, location: LocationLike): string {
 }
 
 export async function openWebSocket(path: string): Promise<WebSocket> {
-  if (MOCK_MODE) {
+  if (__MIRA_MOCK__) {
     const { openMockSocket } = await import('../mock/mock-socket');
     return openMockSocket(path) as unknown as WebSocket;
   }

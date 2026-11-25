@@ -3,6 +3,7 @@
  * backend, and returns a real Response, so the typed client's error handling runs unchanged.
  */
 import { handleMockRequest } from './backend';
+import { MOCK_MARKER } from './fixtures';
 
 /** Simulated network time. Long enough for loading states to be visible in screenshots. */
 export const MOCK_LATENCY_MS = 140;
@@ -70,10 +71,10 @@ export async function mockFetch(input: string, init?: RequestInit): Promise<Resp
   });
 
   if (reply.body === undefined) {
-    return new Response(null, { status: reply.status });
+    return new Response(null, { status: reply.status, headers: { 'X-Mira-Mock': MOCK_MARKER } });
   }
   return new Response(JSON.stringify(reply.body), {
     status: reply.status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Mira-Mock': MOCK_MARKER },
   });
 }
