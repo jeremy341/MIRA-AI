@@ -100,6 +100,7 @@ All detectors below are at the repository root and are mirrored under
 | `mira_exp006.pt` | PyTorch | 6.2 MB | EXP-006: YOLOv8n, fused Wild + TrashNet |
 | `mira_exp006_int8.tflite` | TFLite INT8 | 3.3 MB | EXP-006: YOLOv8n, fused Wild + TrashNet |
 | `mira_exp009_int8.tflite` | TFLite INT8 | 3.3 MB | EXP-009: YOLOv8n, TrashNet |
+| `mira_exp010_int8.tflite` | TFLite INT8 | 3.3 MB | EXP-010: INT8 export of EXP-006, wild-data calibration |
 | `mira_exp011.pt` | PyTorch | 6.2 MB | EXP-011: YOLOv8n, TACO |
 | `mira_exp011_int8.tflite` | TFLite INT8 | 3.3 MB | EXP-011: YOLOv8n, TACO |
 | `mira_exp013.pt` | PyTorch | 5.5 MB | EXP-013: YOLO11n, TACO + TrashNet |
@@ -152,8 +153,12 @@ covered by this repository's license.
 |---|---|---|---:|---|
 | EXP-005 | YOLOv8n | Custom + TrashNet | 82.3% | not published |
 | EXP-006 | YOLOv8n | Fused Wild + TrashNet | 39.4% | yes |
+| EXP-007 | YOLOv8n INT8 | Quantized EXP-006 | not recorded | `mira_exp006_int8.tflite` |
+| EXP-008 | YOLOv8n | Tabletop, human-annotated labels | 39.6% | not published |
 | EXP-009 | YOLOv8n | TrashNet | 72.8% | TFLite only |
+| EXP-010 | YOLOv8n INT8 | EXP-006 quantized with wild-data calibration | not recorded | `mira_exp010_int8.tflite` |
 | EXP-011 | YOLOv8n | TACO | 35.0% | yes |
+| EXP-012 | YOLOv8n INT8 | Quantized EXP-011 | not recorded | `mira_exp011_int8.tflite` |
 | EXP-013 | YOLO11n | TACO + TrashNet | 55.1% | yes |
 | EXP-014 | YOLO11n | Combined dataset | 60.7% | yes |
 | EXP-015 | YOLO11n | Combined dataset with WaRP | 56.0% | yes |
@@ -161,6 +166,11 @@ covered by this repository's license.
 | EXP-017 | YOLO11n | Larger combined dataset | 59.3% | yes |
 | EXP-018 | YOLO11n | Clean balanced dataset | 90.6% | yes |
 | EXP-019 | YOLO11n | Clean balanced repeatability run | 90.58% | yes |
+
+EXP-007, EXP-010 and EXP-012 are INT8 quantizations of other runs, so they have no
+training results of their own. EXP-007 and EXP-012 are the files
+`mira_exp006_int8.tflite` and `mira_exp011_int8.tflite`. EXP-005 and EXP-008
+were trained, but their weights were not kept and are not published.
 
 The main lesson was that adding more data did not automatically improve the
 model. Removing inconsistent examples and building a cleaner, more balanced
