@@ -3,7 +3,7 @@ import asyncio
 import threading
 import time
 from typing import Any
-from collections import deque
+from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 import psutil
 

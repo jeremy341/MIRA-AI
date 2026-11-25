@@ -74,6 +74,10 @@ exclude = ["reference/", ".venv/", "datasets/", "models/"]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
 ignore = ["E501", "E402", "I001", "UP017"]
 
+[tool.ruff.lint.per-file-ignores]
+# Test doubles deliberately mirror the camelCase OpenCV / pycocotools APIs.
+"tests/*" = ["N802", "N803"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

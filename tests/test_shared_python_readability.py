@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 import pytest
 
@@ -34,16 +33,8 @@ def test_notebook_cells_keep_order_and_configuration_text(generator, training_he
     experiment, project = notebook_configurations()
 
     notebook = generator(experiment, project)
-    markdown_cells = [
-        "".join(cell["source"])
-        for cell in notebook["cells"]
-        if cell["cell_type"] == "markdown"
-    ]
-    all_code = "\n".join(
-        "".join(cell["source"])
-        for cell in notebook["cells"]
-        if cell["cell_type"] == "code"
-    )
+    markdown_cells = ["".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "markdown"]
+    all_code = "\n".join("".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code")
 
     assert markdown_cells[0].startswith("# MIRA Training - readability-check")
     assert markdown_cells.index(training_heading) < markdown_cells.index("## Training")
@@ -58,18 +49,14 @@ def test_notebook_cells_keep_order_and_configuration_text(generator, training_he
 def test_label_remapping_preserves_coordinate_text_and_reports_skipped_rows(tmp_path, capsys):
     label_path = tmp_path / "sample.txt"
     label_path.write_text(
-        "2 0.100 0.20 0.3 0.4 extra\n"
-        "5 0.1 0.2 0.3 0.4\n"
-        "bad 0.1 0.2 0.3 0.4\n",
+        "2 0.100 0.20 0.3 0.4 extra\n5 0.1 0.2 0.3 0.4\nbad 0.1 0.2 0.3 0.4\n",
         encoding="utf-8",
     )
 
     remapped_lines = merge_utils.remap_label_file(label_path, {2: 1})
 
     assert remapped_lines == ["1 0.100 0.20 0.3 0.4 extra\n"]
-    assert capsys.readouterr().err == (
-        "Warning: 2 annotations skipped - no valid classes after remap\n"
-    )
+    assert capsys.readouterr().err == ("Warning: 2 annotations skipped - no valid classes after remap\n")
 
 
 def test_train_split_uses_sorted_image_stems_and_seeded_shuffle(tmp_path):

@@ -158,7 +158,7 @@ def cmd_models(args):
     print("-" * 76)
     for m in models:
         size = m.get("size_mb")
-        if isinstance(size, (int, float)):
+        if isinstance(size, int | float):
             size_str = f"{size:.1f} MB"
         else:
             size_str = ""

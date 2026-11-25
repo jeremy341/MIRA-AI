@@ -143,10 +143,7 @@ def print_stats(output_dir, label):
         else:
             percentage = 0
         bar = "#" * int(percentage / 2)
-        print(
-            f"  {CLASS_NAMES[class_id]:8s}: {class_counts[class_id]:5d} "
-            f"({percentage:5.1f}%) {bar}"
-        )
+        print(f"  {CLASS_NAMES[class_id]:8s}: {class_counts[class_id]:5d} ({percentage:5.1f}%) {bar}")
 
 
 def write_dataset_yaml(output_dir):

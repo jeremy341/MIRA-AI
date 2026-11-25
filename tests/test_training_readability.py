@@ -115,7 +115,12 @@ def test_yolo_strategy_preserves_supported_extra_arguments(monkeypatch, tmp_path
         model="model.pt",
         project=str(tmp_path),
         name="sample",
-        extra={"optimizer": "AdamW", "plots": False, "export": {"plots": True}, "augmentation": {"hsv_h": 0.02, "format": "bad"}},
+        extra={
+            "optimizer": "AdamW",
+            "plots": False,
+            "export": {"plots": True},
+            "augmentation": {"hsv_h": 0.02, "format": "bad"},
+        },
     )
 
     result = YOLOStrategy().train(config)
@@ -223,7 +228,7 @@ def test_docker_parameter_defaults_and_generated_output_contracts():
     assert "mosaic=0.5" in entrypoint
     assert "Exporting to TFLite INT8" not in entrypoint
     train_script = generate_train_script(params, exp)
-    assert 'DATASET = Path(\'/tmp/dataset.yaml\')' in train_script
+    assert "DATASET = Path('/tmp/dataset.yaml')" in train_script
     assert "model.val()" in train_script
     assert "model.export(" not in train_script
 

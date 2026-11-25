@@ -10,6 +10,7 @@ import pytest
 
 import src.cli  # noqa: F401
 
+
 def _parse(add_args_func, cmd_args):
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
@@ -405,16 +406,16 @@ def test_help_flag_per_command():
         ), f"Help for '{name}' missing expected content"
 
 
-def test_version_flag():
+def test_version_flag(capsys):
     from src.version import __version__
 
-    parent = argparse.ArgumentParser()
+    parent = argparse.ArgumentParser(prog="mira")
     parent.add_argument("--version", action="version", version=f"MIRA {__version__}")
 
     with pytest.raises(SystemExit):
         parent.parse_args(["--version"])
 
-    assert __version__ == "1.0.2"
+    assert f"MIRA {__version__}" in capsys.readouterr().out
 
 
 def test_doctor_healthy(capsys):

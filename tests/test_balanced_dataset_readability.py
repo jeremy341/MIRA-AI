@@ -4,7 +4,6 @@ import random
 from collections import Counter
 from pathlib import Path
 
-import pytest
 
 from scripts import build_balanced_dataset as builder
 

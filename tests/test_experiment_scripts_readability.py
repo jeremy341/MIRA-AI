@@ -9,9 +9,16 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from scripts import capture_classifier_frames, compare, profile, run_exp020, train_detector_kaggle
+from scripts import capture_classifier_frames, compare, profile, train_detector_kaggle
 from scripts.build_balanced_dataset import Record
 from src.pipeline.benchmark import BenchmarkResult, PerClassMetrics
+
+try:  # scripts/run_exp020.py is a local-only workflow (gitignored), so CI does not have it.
+    from scripts import run_exp020
+except ImportError:
+    run_exp020 = None
+
+requires_exp020 = pytest.mark.skipif(run_exp020 is None, reason="scripts/run_exp020.py is local-only and not tracked")
 
 
 def make_record(source: str, source_id: str, folder: RealPath, image_bytes: bytes = b"image") -> Record:
@@ -22,6 +29,7 @@ def make_record(source: str, source_id: str, folder: RealPath, image_bytes: byte
     return Record(source, "train", source_id, image, labels)
 
 
+@requires_exp020
 def test_exp020_selection_uses_seeded_source_quota_order(tmp_path):
     records_by_source = {
         "roboflow": [make_record("roboflow", str(i), tmp_path / "roboflow") for i in range(14)],
@@ -50,6 +58,7 @@ def test_exp020_selection_uses_seeded_source_quota_order(tmp_path):
     }
 
 
+@requires_exp020
 def test_exp020_selection_fallback_warns_and_fills_remaining_slots(tmp_path, capsys):
     records = [make_record("roboflow", str(i), tmp_path / "roboflow") for i in range(20)]
     with pytest.warns(UserWarning, match="fallback activated"):
@@ -59,6 +68,7 @@ def test_exp020_selection_fallback_warns_and_fills_remaining_slots(tmp_path, cap
     assert "fallback activated" in capsys.readouterr().err
 
 
+@requires_exp020
 def test_exp020_writer_preserves_eval_split_priority_and_output_files(tmp_path, capsys):
     output = tmp_path / "dataset"
     output.mkdir()
@@ -71,10 +81,7 @@ def test_exp020_writer_preserves_eval_split_priority_and_output_files(tmp_path, 
     source_counts = run_exp020.write_dataset(
         {"train": [train_record], "val": [val_record], "test": [test_record]}, output, force=True
     )
-    manifest = [
-        json.loads(line)
-        for line in (output / "manifest.jsonl").read_text(encoding="utf-8").splitlines()
-    ]
+    manifest = [json.loads(line) for line in (output / "manifest.jsonl").read_text(encoding="utf-8").splitlines()]
     assert [item["split"] for item in manifest] == ["val", "test"]
     assert manifest[0]["source"] == "trashnet"
     assert not (output / "old.txt").exists()
@@ -124,14 +131,29 @@ def test_profile_model_returns_existing_latency_metric_keys(monkeypatch, tmp_pat
     assert results["peak_cpu_memory_mb"] == 12.5
     assert results["peak_gpu_memory_mb"] is None
     assert set(results) == {
-        "model", "image", "imgsz", "batch_size", "iterations", "warmup",
-        "mean_latency_ms", "p50_latency_ms", "p90_latency_ms", "p99_latency_ms",
-        "min_latency_ms", "max_latency_ms", "std_latency_ms", "throughput_fps",
-        "throughput_batch_fps", "peak_gpu_memory_mb", "peak_cpu_memory_mb",
-        "cuda_available", "timestamp",
+        "model",
+        "image",
+        "imgsz",
+        "batch_size",
+        "iterations",
+        "warmup",
+        "mean_latency_ms",
+        "p50_latency_ms",
+        "p90_latency_ms",
+        "p99_latency_ms",
+        "min_latency_ms",
+        "max_latency_ms",
+        "std_latency_ms",
+        "throughput_fps",
+        "throughput_batch_fps",
+        "peak_gpu_memory_mb",
+        "peak_cpu_memory_mb",
+        "cuda_available",
+        "timestamp",
     }
 
 
+@requires_exp020
 def test_exp020_training_keeps_model_settings_and_export_arguments(monkeypatch, tmp_path, capsys):
     calls = {}
 
@@ -251,10 +273,27 @@ def test_kaggle_training_selects_matching_dataset_and_keeps_training_arguments(m
     ultralytics.YOLO = FakeModel
     monkeypatch.setitem(sys.modules, "ultralytics", ultralytics)
     monkeypatch.setattr(train_detector_kaggle.subprocess, "check_call", lambda command: calls.update(pip=command))
-    monkeypatch.setattr(sys, "argv", [
-        "train_detector_kaggle.py", "--dataset", "requested", "--model", "custom.pt",
-        "--epochs", "9", "--batch-size", "4", "--img-size", "512", "--patience", "7", "--lr0", "0.02",
-    ])
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "train_detector_kaggle.py",
+            "--dataset",
+            "requested",
+            "--model",
+            "custom.pt",
+            "--epochs",
+            "9",
+            "--batch-size",
+            "4",
+            "--img-size",
+            "512",
+            "--patience",
+            "7",
+            "--lr0",
+            "0.02",
+        ],
+    )
     train_detector_kaggle.main()
     assert calls["model_name"] == "custom.pt"
     assert calls["train"]["data"] == str(work_root / "dataset.yaml")
@@ -293,7 +332,9 @@ def test_capture_loop_saves_selected_class_and_releases_camera(monkeypatch, tmp_
     monkeypatch.setattr(capture_classifier_frames.cv2, "imshow", lambda *args: None)
     keys = iter([ord("1"), ord("q")])
     monkeypatch.setattr(capture_classifier_frames.cv2, "waitKey", lambda delay: next(keys))
-    monkeypatch.setattr(capture_classifier_frames.cv2, "imwrite", lambda path, image: saved.append((path, image)) or True)
+    monkeypatch.setattr(
+        capture_classifier_frames.cv2, "imwrite", lambda path, image: saved.append((path, image)) or True
+    )
     monkeypatch.setattr(capture_classifier_frames.cv2, "destroyAllWindows", lambda: calls.update(destroy=1))
     monkeypatch.setattr(sys, "argv", ["capture_classifier_frames.py"])
     capture_classifier_frames.main()

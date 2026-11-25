@@ -117,8 +117,7 @@ class InferenceEngine:
         if not self.model_path.exists():
             available_names = ", ".join(available)
             error_message = (
-                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\n"
-                f"Available models: {available_names}"
+                f"Model '{self.model_name}' not found in {DETECTION_DIR}.\nAvailable models: {available_names}"
             )
             logger.error(error_message)
             raise FileNotFoundError(error_message)
