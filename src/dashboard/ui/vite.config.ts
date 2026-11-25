@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
     // Relative base: FastAPI serves the build from `/`, but asset paths stay relative.
     base: './',
     plugins: [svelte()],
+    resolve: { conditions: ['browser'] },
     define: {
       'import.meta.env.VITE_MOCK': JSON.stringify(mock),
     },
