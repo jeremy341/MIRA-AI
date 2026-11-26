@@ -81,7 +81,7 @@
     width: auto !important;
     margin: 1.25rem 0 !important;
     border-top: 0 !important;
-    border-left: 2px solid var(--ink) !important;
+    border-left: 2px solid var(--brand) !important;
     padding: 0 0 0 0.75rem !important;
   }
 </style>

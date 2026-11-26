@@ -54,6 +54,8 @@
   --color-tint-strong: var(--tint-strong);
   --color-on-brand-soft: var(--on-brand-soft);
   --color-night: var(--night);
+  --color-warn: var(--warn);
+  --color-warn-rule: var(--warn-rule);
 
   --color-class-glass: var(--class-glass);
   --color-class-paper: var(--class-paper);
@@ -152,6 +154,9 @@
   --tint-strong: #dae3fb;
   --on-brand-soft: #e9eeff;
   --night: #111522;
+  /* The one warning colour: caveat cards. */
+  --warn: #fff8e1;
+  --warn-rule: #ecd48a;
 
   /* Accent: the brand blue, with darker steps for text and hover */
   --accent: #4565b6;
@@ -407,6 +412,12 @@
   .detect-box {
     animation: fade-in var(--dur-base) ease-out both;
   }
+}
+
+/* Inline code in running text on a blue ground. Unlayered, so it wins over the pale utility background. */
+.on-brand p > code {
+  background: rgb(255 255 255 / 16%);
+  color: #ffffff;
 }
 
 @layer utilities {

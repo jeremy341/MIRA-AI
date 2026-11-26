@@ -68,7 +68,7 @@
   const row =
     'flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[0.9375rem] leading-5 transition-colors duration-(--dur-fast) ease-out';
   const rowTone = (active: boolean) =>
-    active ? 'bg-sunken font-semibold text-ink' : 'text-ink-soft hover:bg-hover/60 hover:text-ink';
+    active ? 'bg-brand font-semibold text-white' : 'text-ink-soft hover:bg-tint hover:text-brand-ink';
 </script>
 
 <svelte:window onkeydown={onWindowKeydown} />

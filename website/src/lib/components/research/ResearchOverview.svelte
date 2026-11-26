@@ -7,6 +7,7 @@
   import { docIcon } from '../docs/labels';
   import Figure from '../Figure.svelte';
   import Heading from '../Heading.svelte';
+  import PagePanel from '../PagePanel.svelte';
   import Rich from '../Rich.svelte';
   import Stat from '../Stat.svelte';
   import BarRows, { type BarRowData } from './BarRows.svelte';
@@ -42,15 +43,16 @@
   );
 </script>
 
-<header class="pt-4 lg:pt-6">
-  <p class="font-mono text-[0.8125rem] tracking-[0.08em] text-ink-faint uppercase">{head.eyebrow}</p>
-  <Heading as="h1" size="hero" class="mt-3 max-w-[20ch] text-ink">{head.title}</Heading>
-  <p class="mt-4 max-w-[44ch] text-[1.125rem] leading-[1.6] text-ink-soft">{head.subtitle}</p>
-  <p class="mt-3 max-w-[56ch] text-[0.875rem] leading-snug text-ink-faint">{head.byline}</p>
-</header>
+<div class="pt-2 lg:pt-4">
+  <PagePanel titleId="research-title" title={head.title} eyebrow={head.eyebrow}>
+    <p class="mt-4 max-w-[44ch] text-[1.1875rem] leading-[1.55] text-on-brand-soft">{head.subtitle}</p>
+    <p class="mt-3 max-w-[56ch] text-[0.875rem] leading-snug text-on-brand-soft">{head.byline}</p>
+    <a href="#report" class="btn btn-light btn-lg mt-6">{o.cardsTitle}</a>
+  </PagePanel>
+</div>
 
-<section aria-labelledby="result-title" class="mt-10 rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7">
-  <h2 id="result-title" class="text-[0.8125rem] font-semibold tracking-[0.08em] text-ink uppercase">{o.resultTitle}</h2>
+<section aria-labelledby="result-title" class="card mt-8 p-5 sm:p-8">
+  <h2 id="result-title" class="text-[0.8125rem] font-semibold tracking-[0.08em] text-brand-ink uppercase">{o.resultTitle}</h2>
   <div class="mt-5 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:gap-12">
     <Figure id="fig-1" n={1} label={common.figure}>
       {#snippet caption()}<Rich text={fill(vars, r.chartCaption)} {lang} />{/snippet}
@@ -66,11 +68,8 @@
   </div>
 </section>
 
-<section
-  aria-labelledby="abstract-title"
-  class="mt-4 rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7"
->
-  <h2 id="abstract-title" class="text-[0.8125rem] font-semibold tracking-[0.08em] text-ink uppercase">
+<section aria-labelledby="abstract-title" class="mt-4 rounded-2xl bg-tint p-5 sm:p-8">
+  <h2 id="abstract-title" class="text-[0.8125rem] font-semibold tracking-[0.08em] text-brand-ink uppercase">
     {head.abstractLabel}
   </h2>
   <p class="mt-3 text-[1.0625rem] leading-[1.7] text-ink-soft">
@@ -78,16 +77,16 @@
   </p>
 </section>
 
-<section aria-labelledby="cards-title" class="mt-14">
+<section id="report" aria-labelledby="cards-title" class="mt-14 scroll-mt-20">
   <Heading id="cards-title" as="h2" size="heading" class="text-ink">{o.cardsTitle}</Heading>
-  <ol class="mt-5 grid gap-3 sm:grid-cols-2">
+  <ol class="mt-5 grid gap-4 sm:grid-cols-2">
     {#each RESEARCH_SECTION_IDS as id, index (id)}
       <li>
         <a
           href={localePath(lang, researchPath(id))}
-          class="group flex h-full gap-4 rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] transition-colors duration-(--dur-fast) hover:border-accent"
+          class="group flex h-full gap-4 rounded-2xl bg-tint p-5 transition-colors duration-(--dur-fast) hover:bg-tint-strong"
         >
-          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent-strong">
+          <span class="grid size-10 shrink-0 place-items-center rounded-lg bg-brand text-white">
             <DocIcon name={docIcon(id)} size={20} />
           </span>
           <span class="min-w-0">

@@ -48,7 +48,7 @@
       <div class="flex min-w-0 flex-col justify-center py-1.5">
         <span class="font-mono text-[0.8125rem] leading-tight font-medium text-ink">{row.label}</span>
         {#if row.sub}
-          <span class="mt-0.5 text-[0.75rem] leading-tight text-muted-foreground"><Rich text={row.sub} /></span>
+          <span class="mt-0.5 text-[0.75rem] leading-tight hyphens-auto [overflow-wrap:anywhere] text-muted-foreground"><Rich text={row.sub} /></span>
         {/if}
       </div>
       <div class="relative flex items-center py-1.5">

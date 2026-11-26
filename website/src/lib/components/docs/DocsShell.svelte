@@ -74,9 +74,9 @@
 {#snippet brand()}
   <a href={localePath(lang, '/')} class="flex items-center gap-2.5" aria-label={dict.header.homeLabel}>
     <img src="/mira.svg" alt="" width="30" height="30" class="size-[1.875rem]" />
-    <span class="text-[1.25rem] leading-none font-extrabold tracking-[0.04em] text-ink">MIRA</span>
+    <span class="text-[1.375rem] leading-none font-extrabold tracking-[-0.01em] text-ink">MIRA</span>
   </a>
-  <span class="rounded-md bg-sunken px-2 py-0.5 text-[0.75rem] font-medium text-ink-soft">{badge ?? ui.metaSuffix}</span>
+  <span class="rounded-md bg-tint-strong px-2 py-0.5 text-[0.75rem] font-semibold text-brand-ink">{badge ?? ui.metaSuffix}</span>
 {/snippet}
 
 <div class="min-h-dvh bg-app">

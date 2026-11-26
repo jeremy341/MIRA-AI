@@ -99,7 +99,7 @@
       <p class="text-[1.0625rem] leading-[1.55] font-semibold text-ink"><Rich text={t.plastic} {lang} /></p>
       <p class="mt-3 text-[0.875rem] leading-[1.5] text-ink/80"><Rich text={t.plasticNote} /></p>
     </div>
-    <div class="rounded-2xl border border-[#ecd48a] bg-[#fff8e1] p-5 sm:p-8">
+    <div class="rounded-2xl border border-warn-rule bg-warn p-5 sm:p-8">
       <h3 class="text-[1.0625rem] font-semibold text-ink">{t.caveatTitle}</h3>
       <p class="mt-2 text-[0.9375rem] leading-[1.6] text-ink/80"><Rich text={t.caveat} /></p>
     </div>
