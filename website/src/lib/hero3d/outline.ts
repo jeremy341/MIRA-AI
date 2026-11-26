@@ -6,8 +6,8 @@
 
 export type Pt = readonly [number, number];
 
-const CAP_STEPS = 12;
-const JOIN_STEP = Math.PI / 12;
+const CAP_STEPS = 28;
+const JOIN_STEP = Math.PI / 36;
 
 function direction(from: Pt, to: Pt): Pt {
   const length = Math.hypot(to[0] - from[0], to[1] - from[1]);

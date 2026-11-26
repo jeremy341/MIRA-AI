@@ -72,6 +72,7 @@
 
   /** Cached label widths (they change with the font or the theme, not per frame). */
   const widths = new Map<string, number>();
+  let widthsScale = 0;
   const valueKeys = layout.columns.map((column) => `value:${column.id}`);
   const valueAlign = new Map(layout.anchors.filter((anchor) => anchor.kind === 'value').map((anchor) => [anchor.key, anchor.align]));
   const highlighted = valueKeys.filter((key) => rowById.get(key.slice(6))?.highlight);
@@ -82,7 +83,15 @@
    * from left to right) and a label that would overlap one already shown is hidden. The active column's own label is
    * hidden as well, because the tooltip prints its value.
    */
+  /** Screen pixels per CSS pixel of the 16px design: the label offsets are rem and grow on large screens. */
+  const rootScale = () => parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
+
   function declutter(positions: Map<string, Point>) {
+    const u = rootScale();
+    if (u !== widthsScale) {
+      widths.clear();
+      widthsScale = u;
+    }
     const shown: Array<{ left: number; right: number; top: number; bottom: number }> = [];
     for (const key of [...highlighted, ...others]) {
       const el = labelEls[key];
@@ -94,8 +103,8 @@
         if (width) widths.set(key, width);
       }
       const align = valueAlign.get(key);
-      const left = align === 'end' ? point.x - width + 8 : align === 'start' ? point.x - 8 : point.x - width / 2;
-      const box = { left: left - 3, right: left + width + 3, top: point.y - 20, bottom: point.y - 3 };
+      const left = align === 'end' ? point.x - width + 8 * u : align === 'start' ? point.x - 8 * u : point.x - width / 2;
+      const box = { left: left - 3 * u, right: left + width + 3 * u, top: point.y - 27 * u, bottom: point.y - 10 * u };
       const hit = shown.some((other) => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top);
       const hidden = hit || key === `value:${activeId}`;
       el.dataset.hidden = hidden ? 'true' : 'false';
@@ -114,9 +123,10 @@
         // does not sit on top of the columns around the active one.
         const w = el.offsetWidth;
         const h = el.offsetHeight;
-        const roomAbove = point.y >= h + 22;
+        const u = rootScale();
+        const roomAbove = point.y >= h + 22 * u;
         let side: 'above' | 'left' | 'right' = 'above';
-        if (!roomAbove) side = point.x - w - 24 >= 4 && (point.x > stage.clientWidth / 2 || point.x + w + 24 > stage.clientWidth - 4) ? 'left' : 'right';
+        if (!roomAbove) side = point.x - w - 24 * u >= 4 && (point.x > stage.clientWidth / 2 || point.x + w + 24 * u > stage.clientWidth - 4) ? 'left' : 'right';
         if (side === 'above') {
           x = Math.min(Math.max(x, w / 2 + 8), stage.clientWidth - w / 2 - 8);
         } else {
@@ -431,7 +441,7 @@
     pointer-events: none;
   }
   .ls-id {
-    translate: -50% 5px;
+    translate: -50% 0.3125rem;
     padding: 0.3125rem 0.25rem;
     border-radius: 0.25rem;
     cursor: pointer;
@@ -450,7 +460,7 @@
     outline-offset: 1px;
   }
   .ls-val {
-    translate: -50% calc(-100% - 5px);
+    translate: -50% calc(-100% - 0.75rem);
     color: var(--mira-muted);
     font-weight: 400;
     /* A halo in the card colour keeps the number legible where it crosses a reference line. */
@@ -468,16 +478,17 @@
     visibility: hidden;
   }
   .ls-val.al-end {
-    translate: calc(-100% + 0.5rem) calc(-100% - 5px);
+    translate: calc(-100% + 0.5rem) calc(-100% - 0.75rem);
   }
   .ls-val.al-start {
-    translate: -0.5rem calc(-100% - 5px);
+    translate: -0.5rem calc(-100% - 0.75rem);
   }
   .ls-val.none {
     font-family: var(--mira-font-sans);
   }
   .ls-axis {
-    translate: 0 calc(-100% - 2px);
+    /* Left of its anchor, so the tick does not run into the value above the first column. */
+    translate: calc(-100% - 0.375rem) calc(-100% - 0.125rem);
   }
   .ls-zone {
     translate: -50% 0;
@@ -505,15 +516,15 @@
     background: var(--mira-raised);
     box-shadow: var(--mira-shadow-raised);
     transform: translate3d(var(--x, -999px), var(--y, -999px), 0);
-    translate: -50% calc(-100% - 14px);
+    translate: -50% calc(-100% - 0.875rem);
     pointer-events: none;
     line-height: 1.4;
   }
   .ls-tip:global([data-side='left']) {
-    translate: calc(-100% - 22px) -50%;
+    translate: calc(-100% - 1.375rem) -50%;
   }
   .ls-tip:global([data-side='right']) {
-    translate: 22px -50%;
+    translate: 1.375rem -50%;
   }
   .ls-tip p {
     margin: 0;

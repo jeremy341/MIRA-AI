@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isSoftwareRenderer } from "./renderer";
+import { isSoftwareRenderer, pixelRatio } from "./renderer";
 
 describe("isSoftwareRenderer", () => {
   it("recognises renderers that run on the processor", () => {
@@ -24,5 +24,19 @@ describe("isSoftwareRenderer", () => {
     ]) {
       expect(isSoftwareRenderer(name), name).toBe(false);
     }
+  });
+});
+
+describe("pixelRatio", () => {
+  it("follows the screen up to 2", () => {
+    expect(pixelRatio(1, 600, 600)).toBe(1);
+    expect(pixelRatio(3, 500, 500)).toBe(2);
+    expect(pixelRatio(0, 500, 500)).toBe(1);
+  });
+
+  it("caps the number of pixels of a large canvas", () => {
+    const ratio = pixelRatio(2, 1660, 1660);
+    expect(ratio).toBeLessThan(2);
+    expect((1660 * ratio) ** 2).toBeLessThanOrEqual(4_000_001);
   });
 });

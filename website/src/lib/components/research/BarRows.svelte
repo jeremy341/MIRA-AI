@@ -57,7 +57,7 @@
             <span class="absolute inset-y-0 border-l border-rule" style:left="{t}%"></span>
           {/each}
         </div>
-        <div aria-hidden="true" class="relative h-[18px] {TONE[row.tone]}" style:width="{row.value}%"></div>
+        <div aria-hidden="true" class="relative h-[1.125rem] {TONE[row.tone]}" style:width="{row.value}%"></div>
       </div>
       <div class="flex items-center justify-end py-1.5 font-mono text-[0.8125rem] tabular text-ink">{row.display}</div>
     </div>

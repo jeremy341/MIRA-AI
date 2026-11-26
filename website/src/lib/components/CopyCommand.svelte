@@ -100,7 +100,7 @@
 </script>
 
 <div
-  class="flex max-w-full items-stretch overflow-hidden rounded-lg border font-mono text-[0.875rem] leading-6 {TONES[tone]} {className}"
+  class="copy-command flex items-stretch overflow-hidden rounded-lg border font-mono text-[0.875rem] leading-6 {TONES[tone]} {className}"
 >
   <code class="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 break-words whitespace-pre-wrap">
     {#if prompt}<span aria-hidden="true" class="select-none {dark ? 'text-white/70' : 'text-muted-foreground'}">{prompt}</span>{/if}

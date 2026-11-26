@@ -121,8 +121,8 @@
         {group.label}
         <svg
           viewBox="0 0 12 12"
-          width="10"
-          height="10"
+          width="0.625rem"
+          height="0.625rem"
           fill="none"
           stroke="currentColor"
           stroke-width="1.6"

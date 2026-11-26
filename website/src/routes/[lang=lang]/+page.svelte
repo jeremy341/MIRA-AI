@@ -24,6 +24,7 @@
 
 <Seo {lang} path="/" title={dict.meta.title} description={dict.meta.description} />
 
+<div class="home">
 <Hero {lang} {dict} {downloads} />
 <Downloads {lang} {dict} source={downloads} />
 <WhatItIs {lang} {dict} />
@@ -32,3 +33,11 @@
 <Evidence {lang} {dict} />
 <TryIt {lang} {dict} />
 <Status {dict} />
+</div>
+
+<style>
+  /* One column for the whole home page, so that the left edges of header, hero and sections line up. */
+  .home :global(.shell) {
+    max-width: 90rem;
+  }
+</style>

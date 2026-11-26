@@ -27,7 +27,7 @@
         if (first) activeId = first.id;
       },
       // The band from just under the top bar to the upper third of the viewport.
-      { rootMargin: '-72px 0px -65% 0px' }
+      { rootMargin: `-${4.5 * parseFloat(getComputedStyle(document.documentElement).fontSize)}px 0px -65% 0px` }
     );
     elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();

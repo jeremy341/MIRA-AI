@@ -16,7 +16,7 @@ export type Piece = {
 };
 
 const CENTRE = 16;
-const ARC_STEPS = 10;
+const ARC_STEPS = 24;
 const QUARTER = Math.PI / 2;
 
 /** One viewfinder corner: a straight arm, a quarter circle of radius 2 and a second arm. */
@@ -48,5 +48,5 @@ function piece(id: string, kind: PieceKind, outline: Pt[]): Piece {
 export const PIECES: Piece[] = [
   ...Object.entries(CORNERS).map(([id, line]) => piece(id, "corner", strokeOutline(line, 1.8))),
   piece("letter", "letter", strokeOutline(LETTER, 2.6)),
-  piece("dot", "dot", arc([16, 22.4], 1.9, 0, Math.PI * 2, 48).slice(0, -1)),
+  piece("dot", "dot", arc([16, 22.4], 1.9, 0, Math.PI * 2, 96).slice(0, -1)),
 ];

@@ -82,21 +82,21 @@
         <div class="row-span-2 flex items-center border-t border-rule py-3 text-[0.9375rem]">
           <ClassChip cls={r.cls} label={classNames[r.cls]} />
         </div>
-        <div class="relative flex items-center border-t border-rule pt-3 pb-[3px]">
+        <div class="relative flex items-center border-t border-rule pt-3 pb-[0.1875rem]">
           {@render gridlines()}
-          <div aria-hidden="true" class="relative h-[16px]" style={barStyle(r.cls, true, r.before)}></div>
+          <div aria-hidden="true" class="relative h-[1rem]" style={barStyle(r.cls, true, r.before)}></div>
         </div>
         <div
-          class="flex items-center justify-end border-t border-rule pt-3 pb-[3px] font-mono text-[0.8125rem] tabular text-ink"
+          class="flex items-center justify-end border-t border-rule pt-3 pb-[0.1875rem] font-mono text-[0.8125rem] tabular text-ink"
         >
           <span class="sr-only">{beforeLabel}: </span>
           {r.beforeDisplay}
         </div>
-        <div class="relative flex items-center pt-[3px] pb-3">
+        <div class="relative flex items-center pt-[0.1875rem] pb-3">
           {@render gridlines()}
-          <div aria-hidden="true" class="relative h-[16px]" style={barStyle(r.cls, false, r.after)}></div>
+          <div aria-hidden="true" class="relative h-[1rem]" style={barStyle(r.cls, false, r.after)}></div>
         </div>
-        <div class="flex items-center justify-end pt-[3px] pb-3 font-mono text-[0.8125rem] tabular text-ink">
+        <div class="flex items-center justify-end pt-[0.1875rem] pb-3 font-mono text-[0.8125rem] tabular text-ink">
           <span class="sr-only">{afterLabel}: </span>
           {r.afterDisplay}
         </div>

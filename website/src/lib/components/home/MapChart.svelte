@@ -42,7 +42,7 @@
           {/each}
         </div>
         <div
-          class="relative flex h-[22px] items-center justify-end pr-2 font-mono text-[0.8125rem] font-medium tabular {row.outlined
+          class="relative flex h-[1.375rem] items-center justify-end pr-2 font-mono text-[0.8125rem] font-medium tabular {row.outlined
             ? 'border-[1.5px] border-brand bg-surface text-brand-ink'
             : 'bg-brand text-white'} rounded-r-md"
           style:width="{row.value}%"

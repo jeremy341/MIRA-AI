@@ -22,7 +22,7 @@ import {
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { PIECES, type PieceKind } from "./logo";
 import { ENTRANCE_SECONDS, poseOf } from "./pose";
-import { isSoftwareRenderer } from "./renderer";
+import { isSoftwareRenderer, pixelRatio } from "./renderer";
 
 /** The canvas is this much wider than the 26-unit logo box, so pieces have room to fly and turn. */
 export const BLEED = 1.5;
@@ -161,7 +161,7 @@ export function createHeroScene(options: HeroSceneOptions): HeroScene {
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     if (!width || !height || disposed) return;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(pixelRatio(window.devicePixelRatio, width, height));
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
