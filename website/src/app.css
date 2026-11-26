@@ -415,7 +415,7 @@
 }
 
 /* Inline code in running text on a blue ground. Unlayered, so it wins over the pale utility background. */
-.on-brand p > code {
+.on-brand p > code:not(.on-light *) {
   background: rgb(255 255 255 / 16%);
   color: #ffffff;
 }
