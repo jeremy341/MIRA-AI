@@ -111,18 +111,11 @@ export const de: Dictionary = {
       steps: [
         {
           title: "Ein Bild als Eingabe",
-          text: "Ein Foto oder ein Webcam-Bild. Dieses stammt aus dem öffentlichen Datensatz TrashNet.",
+          text: "Ein Foto oder ein Webcam-Bild.",
         },
         { title: "MIRA sucht Objekte", text: "EXP-019 zeichnet einen Rahmen um jeden Fund und nennt eine von fünf Klassen." },
         { title: "Das Ergebnis", text: "Für jedes Objekt eine Klasse, ein Konfidenzwert und die Lage des Rahmens." },
       ],
-      photoAlt: "Eine dunkelgrüne Glasflasche vor einer hellen Wand.",
-      resultTitle: "Ergebnis",
-      resultCls: "Klasse",
-      resultConf: "Konfidenz",
-      resultBox: "Rahmen, Anteil am Bild",
-      example:
-        "Ein Beispiel, kein Nachweis der Genauigkeit: echte Ausgabe von EXP-019 zu einem TrashNet-Foto, das in den Trainingsdaten gewesen sein kann.",
     },
     problem: {
       title: "Das Problem und was ich versucht habe",

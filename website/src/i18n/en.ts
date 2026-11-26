@@ -114,7 +114,7 @@ export const en = {
       steps: [
         {
           title: "Give it a picture",
-          text: "A photo or a webcam frame. This one comes from the public TrashNet dataset.",
+          text: "A photo or a webcam frame.",
         },
         {
           title: "MIRA looks for objects",
@@ -122,13 +122,6 @@ export const en = {
         },
         { title: "You get the result", text: "A class, a confidence score and the box position for each object." },
       ],
-      photoAlt: "A dark green glass bottle in front of a light wall.",
-      resultTitle: "Result",
-      resultCls: "Class",
-      resultConf: "Confidence",
-      resultBox: "Box, share of the image",
-      example:
-        "An example, not proof of accuracy: real EXP-019 output on a TrashNet photo that may have been in the training data.",
     },
     problem: {
       title: "The problem, and what I tried",
