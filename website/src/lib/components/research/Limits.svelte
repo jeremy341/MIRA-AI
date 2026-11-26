@@ -64,7 +64,7 @@
             <th scope="col">{s.plannedRows.result}</th>
           </tr>
         </thead>
-        <tbody class="{TBODY} border-t-2 border-ink">
+        <tbody class="{TBODY} border-t-2 border-rule-strong">
           {#each ROW_KEYS as key (key)}
             <tr>
               <th scope="row" class="{TD} w-[10rem] font-normal text-muted-foreground">{s.plannedRows[key]}</th>

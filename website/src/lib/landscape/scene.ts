@@ -86,10 +86,10 @@ function readPalette(host: HTMLElement): Palette {
   const css = getComputedStyle(host);
   const read = (name: string, fallback: string) => new Color(css.getPropertyValue(name).trim() || fallback);
   return {
-    accent: read("--mira-accent", "#5173c5"),
+    accent: read("--mira-accent", "#4565b6"),
     accentHover: read("--mira-accent-hover", "#4565b6"),
-    stageA: read("--mira-stage-a", "#8a8a8a"),
-    stageB: read("--mira-stage-b", "#4d4d4d"),
+    stageA: read("--mira-stage-a", "#7e89a8"),
+    stageB: read("--mira-stage-b", "#333c58"),
     tile: read("--mira-border", "#e3e3e3"),
     edge: read("--mira-text", "#1f1f1f"),
     grid: read("--mira-border-strong", "#8a8a8a"),

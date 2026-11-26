@@ -1,29 +1,41 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import Canvas from '../Canvas.svelte';
-  import Heading from '../Heading.svelte';
 
   /**
-   * A homepage section in the docs style: a heading (always an h2, it names the landmark), an optional lede, then
-   * the content as cards. No rules across the page; the space between sections does the separating.
+   * A homepage band: a heading (always an h2, it names the landmark), an optional lede, then the content.
+   * `tone` sets the ground. `align` centres the heading, or `split` leaves the heading to the content.
    */
   let {
     id,
     title,
     lede,
+    tone = 'white',
+    align = 'center',
     class: className = '',
     children
-  }: { id: string; title: string; lede?: string; class?: string; children: Snippet } = $props();
+  }: {
+    id: string;
+    title: string;
+    lede?: string;
+    tone?: 'white' | 'tint' | 'brand';
+    align?: 'center' | 'start';
+    class?: string;
+    children: Snippet;
+  } = $props();
+
+  const GROUND = { white: 'bg-app', tint: 'bg-tint', brand: 'on-brand' } as const;
+  const TITLE = { white: 'text-ink', tint: 'text-brand-ink', brand: 'text-white' } as const;
+  const centred = $derived(align === 'center');
 </script>
 
-<section {id} aria-labelledby="{id}-title" class="scroll-mt-20 py-12 sm:py-16 {className}">
-  <Canvas>
-    <div class="mx-auto max-w-[68rem]">
-      <Heading as="h2" size="heading" id="{id}-title" class="max-w-[28ch] text-ink">{title}</Heading>
-      {#if lede}<p class="mt-3 max-w-[56ch] text-[1.0625rem] leading-[1.6] text-ink-soft">{lede}</p>{/if}
-      <div class="mt-8">
-        {@render children()}
-      </div>
+<section {id} aria-labelledby="{id}-title" class="scroll-mt-20 py-16 sm:py-24 {GROUND[tone]} {className}">
+  <div class="shell">
+    <div class={centred ? 'text-center' : ''}>
+      <h2 id="{id}-title" class="section-title {TITLE[tone]} {centred ? 'mx-auto max-w-[24ch]' : 'max-w-[20ch]'}">{title}</h2>
+      {#if lede}<p class="section-lead {centred ? 'mx-auto' : ''} max-w-[56ch]">{lede}</p>{/if}
     </div>
-  </Canvas>
+    <div class="mt-10 sm:mt-14">
+      {@render children()}
+    </div>
+  </div>
 </section>

@@ -20,9 +20,9 @@
   import { TICKS } from './chart';
 
   const TONE: Record<BarTone, string> = {
-    ink: 'bg-ink',
+    ink: 'bg-brand',
     soft: 'bg-muted-foreground',
-    outline: 'border-[1.5px] border-ink bg-surface'
+    outline: 'border-[1.5px] border-brand bg-surface'
   };
 
   /**
@@ -63,7 +63,7 @@
     </div>
   {/each}
   <div></div>
-  <div aria-hidden="true" class="relative mt-1 h-5 border-t border-ink font-mono text-[0.75rem] text-muted-foreground">
+  <div aria-hidden="true" class="relative mt-1 h-5 border-t border-rule-strong font-mono text-[0.75rem] text-muted-foreground">
     {#each TICKS as t (t)}
       <span
         class="absolute top-1 {t === 0 ? 'left-0' : t === 100 ? 'right-0' : '-translate-x-1/2'}"

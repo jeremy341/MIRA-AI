@@ -42,7 +42,7 @@
         <p class="mt-1.5 max-w-[66ch] text-[0.9375rem] leading-snug text-ink-soft">
           <Rich text={copy.intro} {lang} />
         </p>
-        <dl class="mt-4 border-t border-ink">
+        <dl class="mt-4 border-t border-rule-strong">
           {#each group.rows as row (row.id)}
             <div class="grid gap-x-8 gap-y-1 border-b border-rule py-3 sm:grid-cols-[11rem_minmax(0,1fr)]">
               <dt class="font-mono text-[0.875rem] font-medium text-ink">{row.name}</dt>

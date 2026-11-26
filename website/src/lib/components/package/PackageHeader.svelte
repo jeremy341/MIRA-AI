@@ -9,6 +9,7 @@
   import CopyCommand from '../CopyCommand.svelte';
   import Heading from '../Heading.svelte';
   import Rich from '../Rich.svelte';
+  import Wave from '../Wave.svelte';
   import { LICENSE_NAME, PACKAGE_VERSION, PYTHON_REQUIREMENT } from './package-data';
 
   /** Page title, the two-sentence summary, the one-line install, the package facts and the contents list. */
@@ -18,7 +19,7 @@
 </script>
 
 {#snippet fact(term: string, value: Snippet)}
-  <div class="grid grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-4 border-t border-rule py-3 first:border-ink">
+  <div class="grid grid-cols-[7.5rem_minmax(0,1fr)] items-baseline gap-4 border-t border-rule py-3 first:border-t-0">
     <dt class="text-[0.875rem] text-muted-foreground">{term}</dt>
     <dd class="min-w-0 text-[0.9375rem] text-ink">{@render value()}</dd>
   </div>
@@ -34,8 +35,8 @@
 {#snippet licenceValue()}{LICENSE_NAME}{/snippet}
 {#snippet bundledValue()}{h.facts.bundledValue}{/snippet}
 
-<section aria-labelledby="package-title" class="pb-12 pt-8 sm:pb-16 sm:pt-12">
-  <Canvas>
+<section aria-labelledby="package-title" class="on-brand">
+  <Canvas class="pt-8 pb-10 sm:pt-14 sm:pb-14">
     <div class="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
       <div class="min-w-0">
         <Heading as="h1" size="display" id="package-title" class="max-w-[18ch] text-ink">{h.title}</Heading>
@@ -46,13 +47,14 @@
           command={INSTALL_COMMAND}
           label={h.installLabel}
           labels={dict.common.copy}
+          tone="deep"
           class="mt-7 max-w-[26rem]"
         />
-        <p class="mt-2 max-w-[46ch] text-micro text-muted-foreground">{h.installNote}</p>
+        <p class="mt-2 max-w-[46ch] text-micro text-on-brand-soft">{h.installNote}</p>
       </div>
 
       <div class="min-w-0 self-end">
-        <dl aria-label={h.factsLabel} class="border-b border-rule">
+        <dl aria-label={h.factsLabel} class="card on-light px-5 py-1">
           {@render fact(h.facts.pypi, pypiValue)}
           {@render fact(h.facts.python, pythonValue)}
           {@render fact(h.facts.licence, licenceValue)}
@@ -64,4 +66,5 @@
       </div>
     </div>
   </Canvas>
+  <Wave fill="var(--app)" />
 </section>

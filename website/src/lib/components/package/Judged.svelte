@@ -22,9 +22,9 @@
 
   /** The three outcomes, in the order of the bar: how each one is drawn. */
   const SEGMENT = [
-    'border border-ink bg-transparent',
-    'border border-ink bg-rule',
-    'border border-ink bg-ink'
+    'border border-brand bg-transparent',
+    'border border-brand bg-tint-strong',
+    'border border-brand bg-brand'
   ] as const;
 </script>
 

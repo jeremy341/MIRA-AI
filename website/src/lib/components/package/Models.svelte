@@ -45,7 +45,7 @@
       <table class="w-full min-w-[42rem] border-collapse text-left text-[0.9375rem]">
         <caption class="sr-only">{m.caption}</caption>
         <thead>
-          <tr class="border-b border-ink text-[0.8125rem] font-semibold text-ink">
+          <tr class="border-b border-rule-strong text-[0.8125rem] font-semibold text-ink">
             <th scope="col" class="py-2 pr-4 font-semibold">{m.columns.file}</th>
             <th scope="col" class="px-4 py-2 font-semibold">{m.columns.format}</th>
             <th scope="col" class="px-4 py-2 text-right font-semibold">{m.columns.size}</th>

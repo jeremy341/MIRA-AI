@@ -84,11 +84,11 @@
     {#snippet caption()}<Rich text={fill(vars, s.chartCaption)} {lang} />{/snippet}
     <div class="grid gap-x-14 gap-y-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <div>
-        <h3 class="mb-2 border-b border-ink pb-1.5 font-sans text-[0.875rem] font-semibold text-ink">{s.panelA}</h3>
+        <h3 class="mb-2 border-b border-rule-strong pb-1.5 font-sans text-[0.875rem] font-semibold text-ink">{s.panelA}</h3>
         <BarRows rows={bars('A')} ariaLabel={fill(vars, s.chartAriaA)} cols={BAR_COLS} />
       </div>
       <div>
-        <h3 class="mb-2 border-b border-ink pb-1.5 font-sans text-[0.875rem] font-semibold text-ink">{s.panelB}</h3>
+        <h3 class="mb-2 border-b border-rule-strong pb-1.5 font-sans text-[0.875rem] font-semibold text-ink">{s.panelB}</h3>
         <BarRows rows={bars('B')} ariaLabel={fill(vars, s.chartAriaB)} cols={BAR_COLS} />
       </div>
     </div>

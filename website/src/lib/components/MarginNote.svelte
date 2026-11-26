@@ -21,7 +21,7 @@
 
 <div
   role="note"
-  class="my-5 border-l-2 border-ink pl-3 text-[0.8125rem] leading-[1.45] text-muted-foreground {inline
+  class="my-5 border-l-2 border-brand pl-3 text-[0.8125rem] leading-[1.45] text-muted-foreground {inline
     ? ''
     : 'xl:float-right xl:clear-right xl:-mr-[17rem] xl:ml-6 xl:mb-4 xl:mt-1 xl:w-[14.5rem] xl:border-l-0 xl:border-t xl:pl-0 xl:pt-2'} {className}"
 >
