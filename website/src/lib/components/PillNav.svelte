@@ -14,6 +14,8 @@
   const SHOW_AFTER = 360;
   const pathname = $derived(stripLocale(page.url.pathname));
   let shown = $state(false);
+  /** The package page has its own sticky menu bar below lg, which the pill would cover. */
+  const hasLocalBar = $derived(pathname === '/package');
 
   onMount(() => {
     const update = () => (shown = window.scrollY > SHOW_AFTER);
@@ -26,7 +28,7 @@
     'inline-flex min-h-10 items-center rounded-lg px-2.5 text-[0.9375rem] font-medium transition-colors duration-(--dur-fast) hover:bg-white/14 sm:px-3';
 </script>
 
-<div class="pill-wrap" class:shown inert={!shown}>
+<div class="pill-wrap {hasLocalBar ? 'max-lg:!hidden' : ''}" class:shown inert={!shown}>
   <nav aria-label={dict.nav.label} class="on-brand pill">
     <a
       href={localePath(lang, '/')}

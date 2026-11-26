@@ -13,6 +13,6 @@
   <Heading id="not-found-{lang}" {as} size="display" class="text-ink">{copy.title}</Heading>
   <Prose class="mt-4"><p>{copy.text}</p></Prose>
   <p class="mt-6">
-    <a href="/{lang}" class="btn btn-lg btn-secondary px-1">{copy.home}</a>
+    <a href="/{lang}" class="btn btn-lg btn-secondary">{copy.home}</a>
   </p>
 </section>
