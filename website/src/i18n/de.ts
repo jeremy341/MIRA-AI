@@ -222,6 +222,27 @@ export const de: Dictionary = {
       experiments: "dokumentierte Experimente",
       classes: "Abfallklassen",
     },
+    downloads: {
+      title: "Modell-Downloads auf Hugging Face",
+      allTime: "Downloads insgesamt",
+      last30: "{n} in den letzten 30 Tagen",
+      pill: "{n} Modell-Downloads auf Hugging Face",
+      cta: "Modelle auf Hugging Face ansehen",
+      honest:
+        "Gezählt werden Dateiabrufe aus dem Modell-Repository auf Hugging Face, nicht einzelne Personen. PyPI-Installationen sind nicht enthalten.",
+      status: {
+        checking: "wird geprüft",
+        live: "live",
+        cached: "zwischengespeichert",
+        fallback: "eingebauter Wert",
+        checkingLong: "Hugging Face wird nach dem aktuellen Stand gefragt. Angezeigt wird der zuletzt bekannte Wert.",
+        liveLong: "Live-Zahl, während dieses Besuchs von Hugging Face abgerufen.",
+        cachedLong:
+          "Zwischengespeicherte Zahl. Hugging Face war nicht erreichbar, deshalb ist das der zuletzt bekannte Wert.",
+        fallbackLong:
+          "Eingebaute Zahl. Hugging Face war nicht erreichbar und es war kein früherer Wert gespeichert, deshalb ist das die Zahl, die in der Seite steht.",
+      },
+    },
     tryit: {
       title: "Ausprobieren",
       p1: "Das Paket enthält schon die Gewichte von EXP-014, EXP-018 und EXP-019. Es muss nichts weiter heruntergeladen werden.",
@@ -239,23 +260,6 @@ export const de: Dictionary = {
         unsupported: "Dieser Browser kann das Video nicht abspielen.",
         playLabel: "Video abspielen",
         privacyNote: "Das Video wird erst beim Abspielen von YouTube (youtube-nocookie.com) geladen.",
-      },
-      downloadsTitle: "Downloads auf Hugging Face",
-      downloadsAllTime: "insgesamt",
-      downloadsLast30: "{n} in den letzten 30 Tagen",
-      downloadsHonest:
-        "Gezählt werden Dateiabrufe aus dem Modell-Repository auf Hugging Face, nicht einzelne Personen. PyPI-Installationen sind nicht enthalten.",
-      status: {
-        checking: "wird geprüft",
-        live: "live",
-        cached: "zwischengespeichert",
-        fallback: "eingebauter Wert",
-        checkingLong: "Hugging Face wird nach dem aktuellen Stand gefragt. Angezeigt wird der zuletzt bekannte Wert.",
-        liveLong: "Live-Zahl, gerade eben von Hugging Face abgerufen.",
-        cachedLong:
-          "Zwischengespeicherte Zahl. Hugging Face war nicht erreichbar, deshalb ist das der zuletzt bekannte Wert.",
-        fallbackLong:
-          "Eingebaute Zahl. Hugging Face war nicht erreichbar und es war kein früherer Wert gespeichert, deshalb ist das die Zahl, die in der Seite steht.",
       },
     },
     status: {

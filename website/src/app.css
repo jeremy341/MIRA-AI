@@ -187,6 +187,13 @@
   }
 
   html {
+    /*
+     * Large screens: nearly every size on the site is in rem, so growing the root size scales whole pages. It starts
+     * above 1707px of width and reaches 1.5x at 2560px. The height limit keeps short and ultrawide windows from
+     * growing too much, and 200% is the ceiling. Without a step the text never gets smaller when zooming in.
+     * To change how large 2560px looks, change 0.9375vw (and 1.852vh, which is the same factor for height).
+     */
+    font-size: max(100%, min(0.9375vw, 1.852vh, 200%));
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -374,6 +381,11 @@
     line-height: 1.55;
     color: var(--ink-soft);
   }
+  /* A component class, so that a width utility passed to CopyCommand wins over it. */
+  .copy-command {
+    max-width: 100%;
+  }
+
   .shell {
     width: 100%;
     max-width: 80rem;

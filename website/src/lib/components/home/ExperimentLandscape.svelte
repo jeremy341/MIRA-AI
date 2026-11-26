@@ -4,8 +4,8 @@
    *
    * Isolated on purpose: remove the <Landscape> section from the Home page and nothing else changes. three.js is
    * imported dynamically, and only when the
-   * card is near the viewport (an IntersectionObserver with a 400px margin), the viewer does not prefer reduced motion, the card is wide enough
-   * and WebGL works. In every other case this component renders the same data as flat HTML bars (also the server
+   * card is near the viewport (an IntersectionObserver with a 400px margin), the viewer does not prefer reduced motion, the card is wide enough,
+   * the device is not a phone held sideways, and WebGL works. This is checked again whenever the card or the screen changes. In every other case this component renders the same data as flat HTML bars (also the server
    * output, so it works without JavaScript). The choice never depends on the page language.
    *
    * Props
@@ -17,6 +17,7 @@
   import type { LandscapeRow } from '$lib/landscape-data';
   import type { Locale } from '$i18n/config';
   import { layoutRows } from '$lib/landscape/layout';
+  import { flatReason, SIDEWAYS_PHONE_QUERY } from '$lib/landscape/mode';
   import type { Point, SceneHandle } from '$lib/landscape/scene';
 
   type Labels = {
@@ -71,6 +72,7 @@
 
   /** Cached label widths (they change with the font or the theme, not per frame). */
   const widths = new Map<string, number>();
+  let widthsScale = 0;
   const valueKeys = layout.columns.map((column) => `value:${column.id}`);
   const valueAlign = new Map(layout.anchors.filter((anchor) => anchor.kind === 'value').map((anchor) => [anchor.key, anchor.align]));
   const highlighted = valueKeys.filter((key) => rowById.get(key.slice(6))?.highlight);
@@ -81,7 +83,15 @@
    * from left to right) and a label that would overlap one already shown is hidden. The active column's own label is
    * hidden as well, because the tooltip prints its value.
    */
+  /** Screen pixels per CSS pixel of the 16px design: the label offsets are rem and grow on large screens. */
+  const rootScale = () => parseFloat(getComputedStyle(document.documentElement).fontSize) / 16;
+
   function declutter(positions: Map<string, Point>) {
+    const u = rootScale();
+    if (u !== widthsScale) {
+      widths.clear();
+      widthsScale = u;
+    }
     const shown: Array<{ left: number; right: number; top: number; bottom: number }> = [];
     for (const key of [...highlighted, ...others]) {
       const el = labelEls[key];
@@ -93,8 +103,8 @@
         if (width) widths.set(key, width);
       }
       const align = valueAlign.get(key);
-      const left = align === 'end' ? point.x - width + 8 : align === 'start' ? point.x - 8 : point.x - width / 2;
-      const box = { left: left - 3, right: left + width + 3, top: point.y - 20, bottom: point.y - 3 };
+      const left = align === 'end' ? point.x - width + 8 * u : align === 'start' ? point.x - 8 * u : point.x - width / 2;
+      const box = { left: left - 3 * u, right: left + width + 3 * u, top: point.y - 27 * u, bottom: point.y - 10 * u };
       const hit = shown.some((other) => box.left < other.right && box.right > other.left && box.top < other.bottom && box.bottom > other.top);
       const hidden = hit || key === `value:${activeId}`;
       el.dataset.hidden = hidden ? 'true' : 'false';
@@ -113,9 +123,10 @@
         // does not sit on top of the columns around the active one.
         const w = el.offsetWidth;
         const h = el.offsetHeight;
-        const roomAbove = point.y >= h + 22;
+        const u = rootScale();
+        const roomAbove = point.y >= h + 22 * u;
         let side: 'above' | 'left' | 'right' = 'above';
-        if (!roomAbove) side = point.x - w - 24 >= 4 && (point.x > stage.clientWidth / 2 || point.x + w + 24 > stage.clientWidth - 4) ? 'left' : 'right';
+        if (!roomAbove) side = point.x - w - 24 * u >= 4 && (point.x > stage.clientWidth / 2 || point.x + w + 24 * u > stage.clientWidth - 4) ? 'left' : 'right';
         if (side === 'above') {
           x = Math.min(Math.max(x, w / 2 + 8), stage.clientWidth - w / 2 - 8);
         } else {
@@ -145,33 +156,50 @@
   }
 
   onMount(() => {
-    if (!root) return;
-    let cancelled = false;
-    const cleanups: Array<() => void> = [];
+    const card = root;
+    if (!card) return;
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const sideways = matchMedia(SIDEWAYS_PHONE_QUERY);
 
-    async function start() {
-      if (!root) return;
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return fallback('reduced-motion');
-      if (root.getBoundingClientRect().width < 560) return fallback('narrow');
+    /** 'idle': flat bars, free to try 3D. 'wanted': waiting for the card to come near, loading it, or showing it. */
+    let state: 'idle' | 'wanted' = 'idle';
+    /** Set when 3D failed. A later size change must not try it again. */
+    let broken = false;
+    /** Goes up whenever 3D is torn down, so that a load still in flight knows it is too late. */
+    let generation = 0;
+    let cleanups: Array<() => void> = [];
 
+    function tearDown() {
+      generation += 1;
+      for (const cleanup of cleanups.splice(0)) cleanup();
+      state = 'idle';
+    }
+
+    function fail(why: string) {
+      broken = true;
+      tearDown();
+      fallback(why);
+    }
+
+    async function start(mine: number) {
       mounted3d = true;
       await tick();
-      if (cancelled || !stage) return;
+      if (mine !== generation || !stage) return;
       try {
         // A failed chunk request is retried once, so a network blip does not decide the mode. WebGL support is
         // tested by creating the renderer itself (it throws when there is no context): there is no probe canvas
         // whose context could compete with the real one.
         const module = await import('$lib/landscape/scene').catch(() => import('$lib/landscape/scene'));
-        if (cancelled || !stage) return;
+        if (mine !== generation || !stage) return;
         scene = module.createScene({
           host: stage,
           layout,
           onProject: position,
           onActive: (id) => (activeId = id),
-          onContextLost: () => fallback('context-lost'),
+          onContextLost: () => fail('context-lost'),
         });
       } catch (error) {
-        if (!cancelled) fallback(error instanceof Error && /webgl|context/i.test(error.message) ? 'no-webgl' : 'error');
+        if (mine === generation) fail(error instanceof Error && /webgl|context/i.test(error.message) ? 'no-webgl' : 'error');
         return;
       }
       mode = '3d';
@@ -180,39 +208,52 @@
       const visibility = new IntersectionObserver((entries) => {
         for (const entry of entries) scene?.setVisible(entry.isIntersecting);
       });
-      visibility.observe(root);
-      cleanups.push(() => visibility.disconnect());
-
+      visibility.observe(card!);
       window.addEventListener('keydown', onEscape);
-      cleanups.push(() => window.removeEventListener('keydown', onEscape));
-
-      const motion = matchMedia('(prefers-reduced-motion: reduce)');
-      const onMotion = () => motion.matches && fallback('reduced-motion');
-      motion.addEventListener('change', onMotion);
-      cleanups.push(() => motion.removeEventListener('change', onMotion));
+      cleanups.push(() => {
+        visibility.disconnect();
+        window.removeEventListener('keydown', onEscape);
+      });
     }
 
-    // The flat bars need no download, so those cases are decided at once. Otherwise three.js is fetched only when
-    // the card comes within 400px of the screen.
-    let near: IntersectionObserver | null = null;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) fallback('reduced-motion');
-    else if (root.getBoundingClientRect().width < 560) fallback('narrow');
-    else {
-      near = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          near?.disconnect();
-          start();
-        },
-        { rootMargin: '400px 0px' }
-      );
-      near.observe(root);
+    /** Pick flat or 3D for the current screen. The flat bars need no download, so they are decided at once. */
+    function choose() {
+      const why = flatReason({
+        reducedMotion: motion.matches,
+        width: card!.getBoundingClientRect().width,
+        sidewaysPhone: sideways.matches
+      });
+      if (why) {
+        tearDown();
+        fallback(why);
+      } else if (state === 'idle' && !broken) {
+        state = 'wanted';
+        const mine = generation;
+        // three.js is fetched only when the card comes within 400px of the screen.
+        const near = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            near.disconnect();
+            start(mine);
+          },
+          { rootMargin: '400px 0px' }
+        );
+        near.observe(card!);
+        cleanups.push(() => near.disconnect());
+      }
     }
+
+    const sizes = new ResizeObserver(choose);
+    sizes.observe(card);
+    motion.addEventListener('change', choose);
+    sideways.addEventListener('change', choose);
+    choose();
 
     return () => {
-      cancelled = true;
-      near?.disconnect();
-      for (const cleanup of cleanups) cleanup();
+      sizes.disconnect();
+      motion.removeEventListener('change', choose);
+      sideways.removeEventListener('change', choose);
+      tearDown();
       scene?.dispose();
       scene = null;
     };
@@ -400,7 +441,7 @@
     pointer-events: none;
   }
   .ls-id {
-    translate: -50% 5px;
+    translate: -50% 0.3125rem;
     padding: 0.3125rem 0.25rem;
     border-radius: 0.25rem;
     cursor: pointer;
@@ -419,7 +460,7 @@
     outline-offset: 1px;
   }
   .ls-val {
-    translate: -50% calc(-100% - 5px);
+    translate: -50% calc(-100% - 0.75rem);
     color: var(--mira-muted);
     font-weight: 400;
     /* A halo in the card colour keeps the number legible where it crosses a reference line. */
@@ -437,16 +478,17 @@
     visibility: hidden;
   }
   .ls-val.al-end {
-    translate: calc(-100% + 0.5rem) calc(-100% - 5px);
+    translate: calc(-100% + 0.5rem) calc(-100% - 0.75rem);
   }
   .ls-val.al-start {
-    translate: -0.5rem calc(-100% - 5px);
+    translate: -0.5rem calc(-100% - 0.75rem);
   }
   .ls-val.none {
     font-family: var(--mira-font-sans);
   }
   .ls-axis {
-    translate: 0 calc(-100% - 2px);
+    /* Left of its anchor, so the tick does not run into the value above the first column. */
+    translate: calc(-100% - 0.375rem) calc(-100% - 0.125rem);
   }
   .ls-zone {
     translate: -50% 0;
@@ -474,15 +516,15 @@
     background: var(--mira-raised);
     box-shadow: var(--mira-shadow-raised);
     transform: translate3d(var(--x, -999px), var(--y, -999px), 0);
-    translate: -50% calc(-100% - 14px);
+    translate: -50% calc(-100% - 0.875rem);
     pointer-events: none;
     line-height: 1.4;
   }
   .ls-tip:global([data-side='left']) {
-    translate: calc(-100% - 22px) -50%;
+    translate: calc(-100% - 1.375rem) -50%;
   }
   .ls-tip:global([data-side='right']) {
-    translate: 22px -50%;
+    translate: 1.375rem -50%;
   }
   .ls-tip p {
     margin: 0;

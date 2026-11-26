@@ -14,9 +14,11 @@
 
 <style>
   .wave {
-    --tile: 240px;
+    /* The mask tile is 6:1, like the 240 x 40 drawing it comes from. */
+    --wave-height: 2.5rem;
+    --tile: calc(var(--wave-height) * 6);
     position: relative;
-    height: 40px;
+    height: var(--wave-height);
     overflow: hidden;
     /* Overlap the next band by a pixel so no hairline shows between them at fractional zoom levels. */
     margin-bottom: -1px;
@@ -30,9 +32,9 @@
     width: calc(100% + var(--tile));
     background: var(--wave-fill);
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='40' viewBox='0 0 240 40'%3E%3Cpath d='M0 22C40 6 80 6 120 22S200 38 240 22V40H0Z'/%3E%3C/svg%3E")
-      repeat-x 0 100% / var(--tile) 40px;
+      repeat-x 0 100% / var(--tile) var(--wave-height);
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='40' viewBox='0 0 240 40'%3E%3Cpath d='M0 22C40 6 80 6 120 22S200 38 240 22V40H0Z'/%3E%3C/svg%3E")
-      repeat-x 0 100% / var(--tile) 40px;
+      repeat-x 0 100% / var(--tile) var(--wave-height);
     will-change: transform;
   }
   .wave-front {
@@ -40,7 +42,7 @@
   }
   .wave-back {
     opacity: 0.38;
-    top: -7px;
+    top: -0.4375rem;
     animation: wave-drift-back 17s linear infinite;
   }
   @keyframes wave-drift {
@@ -58,14 +60,7 @@
   }
   @media (max-width: 40rem) {
     .wave {
-      height: 28px;
-    }
-    .wave-layer {
-      mask-size: 168px 28px;
-      -webkit-mask-size: 168px 28px;
-    }
-    .wave {
-      --tile: 168px;
+      --wave-height: 1.75rem;
     }
   }
   @media (prefers-reduced-motion: reduce) {

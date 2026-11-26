@@ -123,7 +123,9 @@ Each indexable localized page renders `<Seo lang path title description />` once
 
 ## Download counter
 
-`DownloadsStat` (Home "Try it" and the links list of the Package page) shows the Hugging Face download count. The static HTML contains `FALLBACK_DOWNLOADS` (10176); in the browser `hf-downloads.ts` asks `https://huggingface.co/api/models/Jeremy341/MIRA-AI?expand[]=downloads&expand[]=downloadsAllTime` (5 s timeout) and shows `live`, `cached` (last good value in `localStorage`, every access in try/catch) or `fallback` ("built-in value"); the 30-day figure appears only for a live answer. This browser request to huggingface.co is deliberate (owner decision): no consent banner. The label says it counts file fetches, not people, and not PyPI installs. Update the fallback in `src/lib/site.ts`.
+`DownloadsStat` (the large band under the home hero, with a small copy of the number in the hero, and the links list of the Package page) shows the Hugging Face download count. The static HTML contains `FALLBACK_DOWNLOADS` (10323); in the browser `hf-downloads.ts` asks `https://huggingface.co/api/models/Jeremy341/MIRA-AI?expand[]=downloads&expand[]=downloadsAllTime` (5 s timeout) and shows `live`, `cached` (last good value in `localStorage`, every access in try/catch) or `fallback` ("built-in value"); the 30-day figure appears only for a live answer. The home page asks again every five minutes while the tab is visible (`repeat-while-visible.ts`); a failed refresh keeps the number already on screen. This browser request to huggingface.co is deliberate (owner decision): no consent banner. The label says it counts file fetches, not people, and not PyPI installs. Update the fallback in `src/lib/site.ts`.
+
+The hero logo is drawn in 3D by `src/lib/hero3d/` (`outline.ts` turns the logo's strokes into outlines, `pose.ts` moves the pieces, `scene.ts` is the three.js part). `HeroMark.svelte` loads it after the first paint. The flat SVG stays for reduced motion, data saver, missing or software-only WebGL and a lost GPU context.
 
 ## Demo video
 

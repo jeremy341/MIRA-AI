@@ -54,8 +54,8 @@
 
 <svg
   viewBox="0 0 24 24"
-  width={size}
-  height={size}
+  width={`${size / 16}rem`}
+  height={`${size / 16}rem`}
   fill="none"
   stroke="currentColor"
   stroke-width="1.7"

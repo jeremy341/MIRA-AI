@@ -53,7 +53,7 @@
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
         if (hit) active = hit.target.id;
       },
-      { rootMargin: '-96px 0px -65% 0px', threshold: 0 }
+      { rootMargin: `-${6 * parseFloat(getComputedStyle(document.documentElement).fontSize)}px 0px -65% 0px`, threshold: 0 }
     );
     targets.forEach((target) => observer.observe(target));
     return () => observer.disconnect();

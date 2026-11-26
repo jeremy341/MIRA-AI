@@ -227,6 +227,26 @@ export const en = {
       experiments: "documented experiments",
       classes: "waste classes",
     },
+    downloads: {
+      title: "Model downloads on Hugging Face",
+      allTime: "downloads, all time",
+      last30: "{n} in the last 30 days",
+      pill: "{n} model downloads on Hugging Face",
+      cta: "See the models on Hugging Face",
+      honest:
+        "This counts file fetches from the model repository on Hugging Face, not unique people. PyPI installs are not included.",
+      status: {
+        checking: "checking",
+        live: "live",
+        cached: "cached",
+        fallback: "built-in value",
+        checkingLong: "Checking Hugging Face for the current count. Showing the last known value.",
+        liveLong: "Live count, fetched from Hugging Face during this visit.",
+        cachedLong: "Cached count. Hugging Face could not be reached, so this is the last known value.",
+        fallbackLong:
+          "Built-in count. Hugging Face could not be reached and no earlier value was stored, so this is the number written into the site.",
+      },
+    },
     tryit: {
       title: "Try it",
       p1: "The package already contains the weights of EXP-014, EXP-018 and EXP-019. Nothing else has to be downloaded.",
@@ -244,22 +264,6 @@ export const en = {
         unsupported: "Your browser cannot play this video.",
         playLabel: "Play video",
         privacyNote: "The video loads from YouTube (youtube-nocookie.com) only when you press play.",
-      },
-      downloadsTitle: "Hugging Face downloads",
-      downloadsAllTime: "all time",
-      downloadsLast30: "{n} in the last 30 days",
-      downloadsHonest:
-        "This counts file fetches from the model repository on Hugging Face, not unique people. PyPI installs are not included.",
-      status: {
-        checking: "checking",
-        live: "live",
-        cached: "cached",
-        fallback: "built-in value",
-        checkingLong: "Checking Hugging Face for the current count. Showing the last known value.",
-        liveLong: "Live count, fetched from Hugging Face just now.",
-        cachedLong: "Cached count. Hugging Face could not be reached, so this is the last known value.",
-        fallbackLong:
-          "Built-in count. Hugging Face could not be reached and no earlier value was stored, so this is the number written into the site.",
       },
     },
     status: {

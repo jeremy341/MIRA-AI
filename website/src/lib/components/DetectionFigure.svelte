@@ -107,7 +107,7 @@
               style:animation-delay="{i * 60}ms"
             >
               <span
-                class="absolute top-0 left-0 max-w-full overflow-hidden px-1.5 py-[3px] font-mono text-xs leading-none font-medium text-ellipsis whitespace-nowrap"
+                class="absolute top-0 left-0 max-w-full overflow-hidden px-1.5 py-[0.1875rem] font-mono text-xs leading-none font-medium text-ellipsis whitespace-nowrap"
                 style:background-color={color}
                 style:color={tagTextColor(d.cls)}
                 style:outline="1px solid {classBorderVar(d.cls)}"

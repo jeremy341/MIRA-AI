@@ -135,7 +135,7 @@
     onkeydown={onKeydown}
     class="h-10 w-full rounded-lg border border-rule bg-surface pr-14 pl-9 text-base text-ink shadow-[var(--shadow-raised)] transition-colors placeholder:text-muted-foreground focus-visible:border-accent lg:text-[0.9375rem]"
   />
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
+  <svg viewBox="0 0 24 24" width="1rem" height="1rem" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>
   {#if !query}
     <kbd
       aria-hidden="true"
