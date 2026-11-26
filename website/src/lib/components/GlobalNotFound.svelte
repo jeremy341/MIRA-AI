@@ -13,14 +13,15 @@
   <meta name="robots" content="noindex" />
 </svelte:head>
 
-<header class="border-b border-rule">
-  <Canvas class="flex items-center py-1.5 sm:py-3">
+<header class="on-brand">
+  <Canvas class="flex items-center py-3">
     <a
       href="/"
       aria-label="MIRA"
-      class="inline-flex min-h-11 items-center font-serif text-[1.625rem] leading-none font-semibold tracking-[0.04em] text-ink"
+      class="inline-flex min-h-11 items-center gap-2.5 text-[1.625rem] leading-none font-extrabold"
     >
-      <span class="marker">MIRA</span>
+      <img src="/mira.svg" alt="" width="36" height="36" class="size-9" />
+      <span>MIRA</span>
     </a>
   </Canvas>
 </header>

@@ -49,7 +49,7 @@
             aria-current={current ? 'location' : undefined}
             class="block rounded-lg px-2.5 py-1.5 text-[0.875rem] leading-[1.35] transition-colors duration-(--dur-fast) ease-out {item.level === 3
               ? 'ml-3'
-              : ''} {current ? 'bg-sunken font-semibold text-ink' : 'text-ink-soft hover:text-ink'}"
+              : ''} {current ? 'bg-tint font-semibold text-brand-ink' : 'text-ink-soft hover:text-brand-ink'}"
           >
             {item.title}
           </a>

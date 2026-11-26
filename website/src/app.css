@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 /*
-  MIRA design tokens, adapted from the Hack Club Orchard UI system.
+  MIRA design tokens.
 
-  Two colours: near-black ink and Orchard's blue accent (#5173c5, hover #4565b6,
-  strong/text #395cb8, tint #eef0f5). The old highlighter yellow is gone. The
-  bin colours below are data colours only: they appear on detections, chips and
-  charts, never as UI chrome.
+  The layout idea comes from two sites we studied: one flat, full-width brand colour with wave edges between
+  bands (as on orchard.hackclub.com), and calm white sections with soft tinted panels (as on Hindsight).
+  All CSS and artwork here is our own.
 
-  Light theme only. Surfaces: app #f5f5f5, surface #fefefe, raised #ffffff,
-  sunken #ececec. Text: #1f1f1f, soft #535253, faint #7c7c7c. Rules #e3e3e3.
+  One brand colour, MIRA blue #4565b6 (white text 5.5:1). Page white, pale blue tint for alternating bands.
+  The bin colours below are data colours only: they appear on detections, chips and charts, never as UI chrome.
+  Inside `.on-brand` the text tokens flip to white, so shared components work on both grounds; `.on-light`
+  flips them back for a white card that sits on a blue band.
 
-  Radii are Orchard's scale (control 10px, card 14px, panel 18px, widget 22px,
-  sheet 28px). Buttons are 12px. Motion is opacity and transform only, 140/220ms.
+  Light theme only. Radii: 8px controls, 16px cards, 24px large panels. Motion is opacity and transform only.
 */
 
 @theme inline {
@@ -47,6 +47,16 @@
   /* Compatibility token for hover backgrounds formerly painted with the marker. */
   --color-marker: var(--accent-subtle);
 
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-ink: var(--brand-ink);
+  --color-tint: var(--tint);
+  --color-tint-strong: var(--tint-strong);
+  --color-on-brand-soft: var(--on-brand-soft);
+  --color-night: var(--night);
+  --color-warn: var(--warn);
+  --color-warn-rule: var(--warn-rule);
+
   --color-class-glass: var(--class-glass);
   --color-class-paper: var(--class-paper);
   --color-class-plastic: var(--class-plastic);
@@ -57,9 +67,10 @@
 
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.125rem;
-  --radius-2xl: 1.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
 
   --font-weight-normal: 450;
   --font-weight-medium: 550;
@@ -123,23 +134,35 @@
 
   --z-skip: 100;
 
-  /* Orchard neutrals */
-  --app: #f5f5f5;
-  --surface: #fefefe;
+  /* Neutrals, slightly blue so they sit with the brand colour */
+  --app: #ffffff;
+  --surface: #ffffff;
   --raised: #ffffff;
-  --sunken: #ececec;
-  --hover: #e5e5e5;
-  --rule: #e3e3e3;
-  --rule-strong: #b7b7b7;
-  --ink: #1f1f1f;
-  --ink-soft: #535253;
-  --ink-faint: #7c7c7c;
+  --sunken: #f3f5fb;
+  --hover: #e8edf9;
+  --rule: #e2e7f3;
+  --rule-strong: #b3bdd6;
+  --ink: #141824;
+  --ink-soft: #475069;
+  --ink-faint: #626b85;
 
-  /* Orchard blue accent */
-  --accent: #5173c5;
-  --accent-hover: #4565b6;
-  --accent-strong: #395cb8;
-  --accent-subtle: #eef0f5;
+  /* Brand */
+  --brand: #4565b6;
+  --brand-deep: #28428a;
+  --brand-ink: #1c2f66;
+  --tint: #eef2fd;
+  --tint-strong: #dae3fb;
+  --on-brand-soft: #e9eeff;
+  --night: #111522;
+  /* The one warning colour: caveat cards. */
+  --warn: #fff8e1;
+  --warn-rule: #ecd48a;
+
+  /* Accent: the brand blue, with darker steps for text and hover */
+  --accent: #4565b6;
+  --accent-hover: #3a579f;
+  --accent-strong: #324f9c;
+  --accent-subtle: #eef2fd;
   --on-accent: #ffffff;
   --destructive: #b1282b;
 
@@ -152,16 +175,10 @@
   --class-trash: #3a3a3a;
   --class-on: #161616;
 
-  /* Orchard elevations */
-  --shadow-raised: 0 0 0 1px var(--rule), 0 1px 2px rgb(0 0 0 / 4%);
-  --shadow-floating:
-    0 0 0 1px rgb(31 31 31 / 8%),
-    0 4px 12px rgb(0 0 0 / 6%),
-    0 12px 32px rgb(0 0 0 / 8%);
-  --shadow-overlay:
-    0 0 0 1px rgb(31 31 31 / 8%),
-    0 12px 24px rgb(0 0 0 / 10%),
-    0 32px 64px rgb(0 0 0 / 14%);
+  /* Elevations: a hairline plus a soft, brand-tinted drop */
+  --shadow-raised: 0 0 0 1px var(--rule), 0 14px 32px -24px rgb(28 47 102 / 35%);
+  --shadow-floating: 0 0 0 1px rgb(28 47 102 / 8%), 0 20px 44px -22px rgb(28 47 102 / 45%);
+  --shadow-overlay: 0 0 0 1px rgb(28 47 102 / 10%), 0 36px 70px -28px rgb(10 18 48 / 60%);
 }
 
 @layer base {
@@ -228,9 +245,9 @@
 }
 
 @layer components {
-  /* Emphasis in dictionary strings: a black stroke, not a highlighter. */
+  /* Emphasis in dictionary strings: a soft brand stroke. */
   .marker {
-    box-shadow: inset 0 -0.18em 0 var(--ink);
+    box-shadow: inset 0 -0.18em 0 var(--tint-strong);
     padding: 0 0.08em;
     margin: 0 -0.08em;
     -webkit-box-decoration-break: clone;
@@ -268,51 +285,139 @@
     transform: translateY(0);
   }
 
-  /* Orchard buttons: 12px radius, 550 weight, a small press response.
-     Primary is ink; secondary is blue on a blue tint. */
+  /* Buttons: 8px radius, a small press response. */
   .btn {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    min-height: 2.5rem;
-    padding: 0 1.125rem;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.25rem;
     border: 1px solid transparent;
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     font-size: 0.9375rem;
-    font-weight: 550;
+    font-weight: 600;
     white-space: nowrap;
     user-select: none;
+    text-decoration: none;
     transition:
       background-color var(--dur-fast) ease-out,
+      color var(--dur-fast) ease-out,
       transform var(--dur-fast) var(--ease-out);
   }
   .btn:active {
     transform: scale(0.97);
   }
   .btn-lg {
-    min-height: 3rem;
-    padding: 0 1.5rem;
-    font-size: 1rem;
+    min-height: 3.25rem;
+    padding: 0 1.75rem;
+    font-size: 1.0625rem;
+  }
+  /* On the narrowest phones a long label (often German) may wrap instead of pushing the page sideways. */
+  @media (max-width: 24rem) {
+    .btn {
+      flex-shrink: 1;
+      max-width: 100%;
+      padding-block: 0.5rem;
+      text-align: center;
+      white-space: normal;
+    }
   }
   .btn-primary {
-    background: var(--ink);
-    color: var(--surface);
+    background: var(--brand);
+    color: #ffffff;
   }
   .btn-primary:hover {
-    background: #000000;
+    background: var(--accent-hover);
   }
   .btn-secondary {
     background: var(--accent-subtle);
-    color: var(--accent-strong);
+    color: #324f9c;
   }
   .btn-secondary:hover {
-    background: #dfe6f4;
+    background: #dfe7fb;
+  }
+  /* For blue grounds: a white button, and a quiet outlined one. */
+  .btn-light {
+    background: #ffffff;
+    color: #324f9c;
+  }
+  .btn-light:hover {
+    background: #e9eeff;
+  }
+  .btn-quiet {
+    background: rgb(255 255 255 / 10%);
+    border-color: rgb(255 255 255 / 45%);
+    color: #ffffff;
+  }
+  .btn-quiet:hover {
+    background: rgb(255 255 255 / 20%);
+  }
+
+  /* Cards and section type, used by every band. */
+  .card {
+    border-radius: 1rem;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-raised);
+  }
+  .section-title {
+    font-size: clamp(1.875rem, 1.4rem + 1.9vw, 2.875rem);
+    font-weight: 600;
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+  }
+  .section-lead {
+    margin-top: 0.875rem;
+    font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .shell {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 5vw, 3.5rem);
+  }
+
+  .on-brand {
+    --ink: #ffffff;
+    --ink-soft: #e9eeff;
+    --ink-faint: #e0e7fd;
+    --accent-strong: #ffffff;
+    --accent-subtle: rgb(255 255 255 / 14%);
+    --rule: rgb(255 255 255 / 24%);
+    --rule-strong: rgb(255 255 255 / 55%);
+    background-color: var(--brand);
+    color: #ffffff;
+  }
+  .on-brand :focus-visible {
+    outline-color: #ffffff;
+  }
+  .on-light {
+    --ink: #141824;
+    --ink-soft: #475069;
+    --ink-faint: #626b85;
+    --accent-strong: #324f9c;
+    --accent-subtle: #eef2fd;
+    --rule: #e2e7f3;
+    --rule-strong: #b3bdd6;
+    color: var(--ink);
+  }
+  .on-brand .on-light :focus-visible {
+    outline-color: var(--brand);
   }
 
   .detect-box {
     animation: fade-in var(--dur-base) ease-out both;
   }
+}
+
+/* Inline code in running text on a blue ground. Unlayered, so it wins over the pale utility background. */
+.on-brand p > code:not(.on-light *) {
+  background: rgb(255 255 255 / 16%);
+  color: #ffffff;
 }
 
 @layer utilities {
@@ -350,13 +455,13 @@
 
 /*
   The experiment landscape (home page) reads its colours from these names. They point at the site tokens, so the
-  chart follows the site's palette. The two stage greys are data colours: classifiers lighter, detectors darker.
+  chart follows the site's palette. The two stage slates are data colours: classifiers lighter, detectors darker.
 */
 :root {
   --mira-accent: var(--accent);
   --mira-accent-hover: var(--accent-hover);
-  --mira-stage-a: #8a8a8a;
-  --mira-stage-b: #4d4d4d;
+  --mira-stage-a: #7e89a8;
+  --mira-stage-b: #333c58;
   --mira-border: var(--rule);
   --mira-border-strong: var(--rule-strong);
   --mira-text: var(--ink);

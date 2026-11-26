@@ -1,15 +1,15 @@
 <script lang="ts">
   /**
-   * Experiment landscape (Svelte island, prototype): the documented experiments as a 3D bar chart.
+   * Experiment landscape: the documented experiments as a 3D bar chart.
    *
-   * Isolated on purpose: remove the <Landscape> section from the Home page (or set SHOW_LANDSCAPE to false in
-   * src/content-data/home/data.ts) and nothing else changes. three.js is imported dynamically, and only when the
-   * card is near the viewport (client:visible), the viewer does not prefer reduced motion, the card is wide enough
+   * Isolated on purpose: remove the <Landscape> section from the Home page and nothing else changes. three.js is
+   * imported dynamically, and only when the
+   * card is near the viewport (an IntersectionObserver with a 400px margin), the viewer does not prefer reduced motion, the card is wide enough
    * and WebGL works. In every other case this component renders the same data as flat HTML bars (also the server
    * output, so it works without JavaScript). The choice never depends on the page language.
    *
    * Props
-   *   rows    LandscapeRow[] from src/content-data/home/landscape.ts (the single source also used by the table)
+   *   rows    LandscapeRow[] from $lib/landscape-data (the single source also used by the table)
    *   lang    "en" | "de"
    *   labels  texts of the chart (see Labels below)
    */
@@ -192,10 +192,26 @@
       cleanups.push(() => motion.removeEventListener('change', onMotion));
     }
 
-    start();
+    // The flat bars need no download, so those cases are decided at once. Otherwise three.js is fetched only when
+    // the card comes within 400px of the screen.
+    let near: IntersectionObserver | null = null;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) fallback('reduced-motion');
+    else if (root.getBoundingClientRect().width < 560) fallback('narrow');
+    else {
+      near = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          near?.disconnect();
+          start();
+        },
+        { rootMargin: '400px 0px' }
+      );
+      near.observe(root);
+    }
 
     return () => {
       cancelled = true;
+      near?.disconnect();
       for (const cleanup of cleanups) cleanup();
       scene?.dispose();
       scene = null;

@@ -191,6 +191,15 @@
     }
   }
 
+  :global(.research-article [role='note']) {
+    float: none;
+    width: auto;
+    margin: 1.25rem 0;
+    padding: 0 0 0 0.75rem;
+    border-top: 0;
+    border-left: 2px solid var(--brand);
+  }
+
   :global(html:has(#research-menu[open])) {
     overflow: hidden;
   }

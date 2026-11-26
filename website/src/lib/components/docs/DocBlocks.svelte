@@ -66,7 +66,7 @@
       <div
         role="note"
         class="my-6 rounded-xl border px-5 py-4 {block.tone === 'warning'
-          ? 'border-[#ecd48a] bg-[#fff8e1]'
+          ? 'border-warn-rule bg-warn'
           : 'border-accent/25 bg-accent-soft'}"
       >
         <p class="text-[0.75rem] leading-5 font-semibold tracking-[0.08em] text-ink-soft uppercase">
@@ -92,7 +92,7 @@
           <table class="w-full min-w-[32rem] border-collapse text-left text-[0.9375rem]">
             <caption class="sr-only">{block.caption}</caption>
             <thead>
-              <tr class="border-b border-rule bg-sunken/50">
+              <tr class="border-b border-rule bg-tint">
                 {#each block.head as cell}
                   <th scope="col" class="px-4 py-2.5 text-[0.8125rem] font-semibold whitespace-nowrap text-ink">
                     {cell}
@@ -139,7 +139,7 @@
     {:else if block.type === 'flow'}
       <ol aria-label={block.label} class="my-8 grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
         {#each block.steps as step, stepIndex (step.title)}
-          <li class="min-w-0 rounded-xl border border-rule bg-surface p-4 shadow-[var(--shadow-raised)]">
+          <li class="min-w-0 rounded-2xl bg-tint p-4">
             <p class="tabular text-[0.8125rem] text-muted-foreground">
               {String(stepIndex + 1).padStart(2, '0')}{#if stepIndex < block.steps.length - 1}<span aria-hidden="true" class="ml-2">&rarr;</span>{/if}
             </p>

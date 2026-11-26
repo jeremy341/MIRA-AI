@@ -5,9 +5,9 @@
   import Hero from '$lib/components/home/Hero.svelte';
   import Landscape from '$lib/components/home/Landscape.svelte';
   import Problem from '$lib/components/home/Problem.svelte';
-  import ResultStrip from '$lib/components/home/ResultStrip.svelte';
   import Status from '$lib/components/home/Status.svelte';
   import TryIt from '$lib/components/home/TryIt.svelte';
+  import WhatItIs from '$lib/components/home/WhatItIs.svelte';
 
   let { data } = $props();
 
@@ -19,7 +19,7 @@
 <Seo {lang} path="/" title={dict.meta.title} description={dict.meta.description} />
 
 <Hero {dict} />
-<ResultStrip {lang} {dict} />
+<WhatItIs {lang} {dict} />
 <Landscape {lang} {dict} />
 <Problem {dict} />
 <Evidence {lang} {dict} />

@@ -17,7 +17,7 @@
 
 <section {id} aria-labelledby="{id}-title" class="border-t border-rule pb-12 pt-12 sm:pb-16 sm:pt-16 {className}">
   <Canvas>
-    <Heading as="h2" size="heading" id="{id}-title" class="max-w-[30ch] text-ink">{title}</Heading>
+    <Heading as="h2" size="heading" id="{id}-title" class="max-w-[30ch] text-brand-ink">{title}</Heading>
     <div class="mt-6 sm:mt-8">
       {@render children()}
     </div>

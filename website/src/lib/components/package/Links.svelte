@@ -27,7 +27,7 @@
 <Chapter id="links" title={l.title}>
   <div class="max-w-[44rem] min-w-0">
     <h3 class="font-serif text-title text-ink">{l.listTitle}</h3>
-    <ul class="mt-4 border-t border-ink">
+    <ul class="mt-4 border-t border-rule-strong">
       {#each external as link (link.key)}
         <li class="border-b border-rule py-3 text-[0.9375rem] leading-snug">
           <ExtLink href={link.href} {hint} class="font-medium">{link.name}</ExtLink>

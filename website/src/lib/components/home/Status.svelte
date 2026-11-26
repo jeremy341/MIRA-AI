@@ -12,6 +12,7 @@
   } from '$lib/site';
   import ExtLink from '../ExtLink.svelte';
   import Rich from '../Rich.svelte';
+  import RuleList from '../RuleList.svelte';
   import HomeSection from './HomeSection.svelte';
 
   let { dict }: { dict: Dictionary } = $props();
@@ -25,50 +26,40 @@
     { href: DATASET_ORIGINS_URL, name: t.links.datasets.name, text: t.links.datasets.text },
     { href: EXPERIMENT_LOG_URL, name: t.links.log.name, text: t.links.log.text }
   ]);
-
-  const card = 'rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7';
 </script>
 
-{#snippet bullets(items: readonly string[])}
-  <ul class="space-y-2.5 text-[0.9375rem] leading-snug text-ink-soft marker:text-ink">
-    {#each items as item (item)}
-      <li class="ml-5 list-disc pl-1"><Rich text={item} /></li>
-    {/each}
-  </ul>
-{/snippet}
-
 <HomeSection id="status" title={t.title}>
-  <div class="grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2">
-    <div class={card}>
-      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.worksTitle}</h3>
-      <div class="mt-4">{@render bullets(t.works)}</div>
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-10 md:grid-cols-2 lg:gap-16">
+    <div class="min-w-0">
+      <h3 class="text-[1.375rem] font-semibold text-brand-ink">{t.worksTitle}</h3>
+      <RuleList items={t.works} done />
     </div>
-    <div class={card}>
-      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.openTitle}</h3>
-      <div class="mt-4">{@render bullets(t.open)}</div>
+    <div class="min-w-0">
+      <h3 class="text-[1.375rem] font-semibold text-brand-ink">{t.openTitle}</h3>
+      <RuleList items={t.open} done={false} />
     </div>
   </div>
 
-  <p class="mt-3 rounded-2xl border border-accent/25 bg-accent-soft px-5 py-4 text-[0.9375rem] leading-[1.6] text-ink/85 sm:px-7">
+  <p class="mt-8 rounded-2xl bg-tint px-5 py-4 text-[0.9375rem] leading-[1.6] text-brand-ink sm:px-7">
     <Rich text={t.planned} />
   </p>
 
-  <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2">
-    <div class={card}>
-      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.whoTitle}</h3>
-      <div class="mt-3 space-y-3 text-[0.9375rem] leading-[1.6] text-ink-soft">
+  <div class="mt-16 grid grid-cols-[minmax(0,1fr)] gap-10 sm:mt-24 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+    <div class="min-w-0">
+      <h3 class="section-title text-ink">{t.whoTitle}</h3>
+      <div class="mt-5 space-y-3 text-[1rem] leading-[1.65] text-ink-soft">
         <p><Rich text={t.who} /></p>
         <p><Rich text={t.transparency} /></p>
         <p><ExtLink href={LICENSE_URL} {hint}>{t.licence}</ExtLink></p>
       </div>
     </div>
-    <div class={card}>
-      <h3 class="text-[1.0625rem] font-semibold text-ink">{t.linksTitle}</h3>
-      <ul class="mt-3 divide-y divide-rule">
+    <div class="min-w-0">
+      <h3 class="text-[1.375rem] font-semibold text-brand-ink">{t.linksTitle}</h3>
+      <ul class="mt-4 divide-y divide-rule border-y border-rule">
         {#each links as link (link.href)}
-          <li class="py-2.5 text-[0.9375rem] leading-snug first:pt-0 last:pb-0">
-            <ExtLink href={link.href} {hint} class="font-medium">{link.name}</ExtLink>
-            <span class="block text-ink-soft">{link.text}</span>
+          <li class="py-4 leading-snug">
+            <ExtLink href={link.href} {hint} class="text-[1.0625rem] font-semibold">{link.name}</ExtLink>
+            <span class="mt-1 block text-[0.9375rem] text-ink-soft">{link.text}</span>
           </li>
         {/each}
       </ul>

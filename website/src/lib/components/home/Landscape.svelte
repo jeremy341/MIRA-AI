@@ -3,6 +3,7 @@
   import type { Locale } from '$i18n/config';
   import { HIGHLIGHT_IDS, landscapeRows } from '$lib/landscape-data';
   import ExperimentLandscape from './ExperimentLandscape.svelte';
+  import Wave from '../Wave.svelte';
   import HomeSection from './HomeSection.svelte';
 
   /**
@@ -30,21 +31,26 @@
   });
 </script>
 
-<HomeSection id="landscape" title={l.title} lede={l.lede}>
-  <p class="mb-5 max-w-[68ch] rounded-xl border border-accent/25 bg-accent-soft px-4 py-3 text-[0.9375rem] leading-[1.55] text-ink/85">
+<!-- Waves lead into and out of the blue band. -->
+<div class="bg-app">
+  <Wave fill="var(--brand)" />
+</div>
+
+<HomeSection id="landscape" title={l.title} lede={l.lede} tone="brand" class="!pt-10">
+  <p class="mx-auto mb-6 max-w-[68ch] rounded-xl border border-white/25 bg-brand-deep px-5 py-3.5 text-center text-[0.9375rem] leading-[1.55]">
     {l.note}
   </p>
 
-  <figure class="rounded-2xl border border-rule bg-surface p-4 shadow-[var(--shadow-raised)] sm:p-6">
+  <figure class="card on-light !rounded-3xl p-4 sm:p-8">
     <ul aria-label={l.legendLabel} class="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-[0.8125rem] text-ink-soft">
       <li class="flex items-center gap-2">
         <span class="size-3 rounded-sm bg-accent" aria-hidden="true"></span>{HIGHLIGHT_IDS.join(', ')}: {l.highlighted}
       </li>
       <li class="flex items-center gap-2">
-        <span class="size-3 rounded-sm bg-[#8a8a8a]" aria-hidden="true"></span>{l.stageA} ({l.metricA})
+        <span class="size-3 rounded-sm bg-(--mira-stage-a)" aria-hidden="true"></span>{l.stageA} ({l.metricA})
       </li>
       <li class="flex items-center gap-2">
-        <span class="size-3 rounded-sm bg-[#4d4d4d]" aria-hidden="true"></span>{l.stageB} ({l.metricB})
+        <span class="size-3 rounded-sm bg-(--mira-stage-b)" aria-hidden="true"></span>{l.stageB} ({l.metricB})
       </li>
       <li class="flex items-center gap-2">
         <span class="h-2 w-3 rounded-sm border border-rule-strong" aria-hidden="true"></span>{l.noScore}
@@ -58,7 +64,7 @@
     <figcaption class="mt-4 text-[0.875rem] leading-snug text-ink-soft">{l.caption}</figcaption>
   </figure>
 
-  <details class="mt-4 rounded-xl border border-rule bg-surface px-4 py-3 shadow-[var(--shadow-raised)]">
+  <details class="card on-light mt-4 px-5 py-3.5">
     <summary class="cursor-pointer text-[0.9375rem] font-medium text-ink">{l.tableSummary}</summary>
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div role="region" aria-label={l.tableCaption} tabindex="0" class="mt-3 overflow-x-auto">
@@ -91,3 +97,7 @@
     </div>
   </details>
 </HomeSection>
+
+<div class="on-brand">
+  <Wave fill="var(--app)" />
+</div>

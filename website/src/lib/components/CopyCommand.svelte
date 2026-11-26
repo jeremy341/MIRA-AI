@@ -57,6 +57,7 @@
     prompt = '$',
     label,
     labels = DEFAULT_LABELS,
+    tone = 'light',
     class: className = ''
   }: {
     /** The exact text that is copied, e.g. `pip install mira-ai`. */
@@ -66,8 +67,18 @@
     /** Names the copy button for assistive tech, e.g. "Copy install command". Defaults to `labels.labelFor`. */
     label?: string;
     labels?: CopyLabels;
+    /** light: a white field. deep: for blue grounds. night: inside a dark terminal. terminal: a dark box by itself. */
+    tone?: 'light' | 'deep' | 'night' | 'terminal';
     class?: string;
   } = $props();
+
+  const TONES = {
+    light: 'on-light border-rule bg-surface shadow-[var(--shadow-raised)]',
+    deep: 'border-white/16 bg-brand-deep text-white',
+    night: 'border-white/12 bg-white/6 text-white',
+    terminal: 'border-transparent bg-night py-1.5 text-white shadow-[var(--shadow-floating)]'
+  } as const;
+  const dark = $derived(tone !== 'light');
 
   let state = $state<'idle' | 'copied' | 'failed'>('idle');
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -89,17 +100,17 @@
 </script>
 
 <div
-  class="flex max-w-full items-stretch overflow-hidden rounded-lg border border-rule bg-surface font-mono text-[0.9375rem] leading-6 shadow-[var(--shadow-raised)] {className}"
+  class="flex max-w-full items-stretch overflow-hidden rounded-lg border font-mono text-[0.875rem] leading-6 {TONES[tone]} {className}"
 >
   <code class="flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 break-words whitespace-pre-wrap">
-    {#if prompt}<span aria-hidden="true" class="text-muted-foreground select-none">{prompt}</span>{/if}
+    {#if prompt}<span aria-hidden="true" class="select-none {dark ? 'text-white/70' : 'text-muted-foreground'}">{prompt}</span>{/if}
     <span>{command}</span>
   </code>
   <button
     type="button"
     onclick={copy}
     aria-label={label ?? fmt(labels.labelFor, { command })}
-    class="flex min-h-11 min-w-[5.5rem] shrink-0 items-center justify-center px-3 font-sans text-[0.875rem] font-medium underline underline-offset-[0.25em] transition-colors duration-(--dur-fast) ease-out hover:bg-marker"
+    class="flex min-h-11 min-w-[5.5rem] shrink-0 items-center justify-center px-3 font-sans text-[0.875rem] font-medium underline underline-offset-[0.25em] transition-colors duration-(--dur-fast) ease-out {dark ? 'hover:bg-white/12' : 'hover:bg-marker'}"
   >
     <span aria-hidden="true">{state === 'copied' ? labels.copied : state === 'failed' ? labels.failed : labels.copy}</span>
   </button>

@@ -27,6 +27,7 @@
       command={QUICKSTART_COMMANDS[3]}
       label={liveStep.copyLabel}
       labels={dict.common.copy}
+      tone="terminal"
       class="mt-3"
     />
     <p class="mt-3 text-[0.9375rem] leading-snug text-ink-soft">

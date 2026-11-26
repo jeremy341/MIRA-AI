@@ -68,7 +68,7 @@
           aria-pressed={filter === f}
           onclick={() => (filter = f)}
           class="-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-0.5 sm:min-h-10 {filter === f
-            ? 'border-ink font-semibold text-ink'
+            ? 'border-brand font-semibold text-brand-ink'
             : 'border-transparent text-ink-soft hover:border-rule hover:text-ink'}"
         >
           {labels.filters[f]}
@@ -114,7 +114,7 @@
               {:else}
                 <span
                   class="inline-block font-sans text-[0.8125rem] {r.planned
-                    ? 'border border-dashed border-ink px-1.5 py-0.5 text-ink'
+                    ? 'rounded border border-dashed border-brand px-1.5 py-0.5 text-brand-ink'
                     : 'text-muted-foreground'}">{r.scoreNote}</span
                 >
               {/if}

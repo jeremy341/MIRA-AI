@@ -32,8 +32,9 @@
 
 <Seo {lang} path="/package" title={meta.title} description={meta.description} />
 
+<PackageHeader {lang} {dict} {t} />
+
 <ResearchShell {lang} {sections} label={meta.title}>
-  <PackageHeader {lang} {dict} {t} />
   <Quickstart {lang} {dict} {t} />
   <Install {dict} {t} />
   <Judged {lang} {dict} {t} />

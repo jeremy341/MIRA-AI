@@ -106,7 +106,7 @@
                 <td class={NUM}>
                   {#if c.id === 'plastic'}
                     <span
-                      class="mr-2 border border-ink px-1 py-px align-middle font-sans text-[0.6875rem] font-medium tracking-[0.04em] uppercase"
+                      class="mr-2 rounded border border-brand text-brand-ink px-1 py-px align-middle font-sans text-[0.6875rem] font-medium tracking-[0.04em] uppercase"
                       >{r.classWeakMark}</span
                     >
                     <span class="font-semibold text-ink">{pct(row.recall)}</span>

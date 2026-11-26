@@ -22,7 +22,7 @@
 {#if standalone}
   <section {id} aria-labelledby="{id}-title" class="pb-8 {className}">
     <Heading as="h1" size="display" id="{id}-title" class="max-w-[30ch] text-ink">
-      <span class="mr-3 font-mono text-[0.55em] font-normal text-muted-foreground sm:mr-4">{n}</span>{title}
+      <span class="mr-3 inline-flex size-11 items-center justify-center rounded-xl bg-brand align-middle font-mono text-[1.125rem] font-normal tracking-normal text-white">{n}</span>{title}
     </Heading>
     <div class="mt-6 sm:mt-8">
       {@render children()}

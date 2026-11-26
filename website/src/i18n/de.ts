@@ -99,9 +99,23 @@ export const de: Dictionary = {
       copyLabel: "Installationsbefehl kopieren",
       tryCta: "Jetzt starten",
       resultsCta: "Ergebnisse ansehen",
+      scrollCue: "Nach unten scrollen",
       benchmark:
         "EXP-019 auf {count} TrashNet-Validierungsbildern unter Tischbedingungen. Keine Aussage über die Genauigkeit im Praxiseinsatz.",
       benchmarkLink: "Benchmark und seine Grenzen",
+    },
+    what: {
+      title: "Was ist MIRA?",
+      lede: "Ein quelloffener Detektor für Abfall in Kamerabildern. Er bekommt ein Foto oder ein Webcam-Bild und zeichnet einen Rahmen um die Objekte, die er findet.",
+      stepsLabel: "So läuft eine Erkennung ab",
+      steps: [
+        {
+          title: "Ein Bild als Eingabe",
+          text: "Ein Foto oder ein Webcam-Bild.",
+        },
+        { title: "MIRA sucht Objekte", text: "EXP-019 zeichnet einen Rahmen um jeden Fund und nennt eine von fünf Klassen." },
+        { title: "Das Ergebnis", text: "Für jedes Objekt eine Klasse, ein Konfidenzwert und die Lage des Rahmens." },
+      ],
     },
     problem: {
       title: "Das Problem und was ich versucht habe",
@@ -129,7 +143,7 @@ export const de: Dictionary = {
         "mAP50 von EXP-014, EXP-018 und EXP-019, jeweils auf dem eigenen Validierungsdatensatz (Fotos, die nicht zum Training gehören und nur zur Bewertung dienen).",
       chartAria: "Balkendiagramm der mAP50: EXP-014 60,7 %, EXP-018 90,6 %, EXP-019 90,58 %.",
       chartRows: [
-        { id: "EXP-014", note: "zusammengeführte Quellen" },
+        { id: "EXP-014", note: "zusammen\u00adgeführte Quellen" },
         { id: "EXP-018", note: "bereinigt und ausbalanciert" },
         { id: "EXP-019", note: "Wiederholung von EXP-018" },
       ],

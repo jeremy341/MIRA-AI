@@ -3,39 +3,42 @@
   import { localePath, stripLocale, type Locale } from '$i18n/config';
   import type { Dictionary } from '$i18n';
   import { GITHUB_URL, NAV_ITEMS } from '$lib/site';
-  import Canvas from './Canvas.svelte';
   import LanguageSwitch from './LanguageSwitch.svelte';
+  import PillNav from './PillNav.svelte';
 
   /**
-   * Top bar: wordmark, three page links, GitHub, language switch. It scrolls away with the page (no sticky bar
-   * covering the figures). Below sm the links drop onto their own row so nothing is hidden behind a menu button.
+   * Top bar on the brand colour, so it runs straight into the blue band at the top of each page. It scrolls away with
+   * the page and the floating pill takes over. Below md the links drop onto their own row, so nothing hides behind a
+   * menu button.
    */
   let { lang, dict }: { lang: Locale; dict: Dictionary } = $props();
 
   const pathname = $derived(stripLocale(page.url.pathname));
   const navLinkClass =
-    'inline-flex min-h-11 items-center px-0.5 text-[0.9375rem] text-ink-soft transition-colors duration-(--dur-fast) hover:bg-marker hover:text-ink sm:min-h-10';
-  const wordmarkClass = 'inline-flex min-h-11 items-center gap-2.5 font-serif text-[1.75rem] leading-none font-semibold tracking-[0.04em] text-ink sm:text-[2rem]';
+    'inline-flex min-h-11 items-center rounded-lg px-3 text-[0.9375rem] font-medium transition-colors duration-(--dur-fast) hover:bg-white/12';
 </script>
 
-<header class="border-b border-rule">
-  <Canvas class="flex flex-wrap items-center justify-between gap-x-8 gap-y-0 py-1.5 sm:py-3">
+<header class="on-brand">
+  <div class="shell !max-w-[90rem] flex flex-wrap items-center gap-x-4 py-3 md:py-4">
     <a
       href={localePath(lang, '/')}
       aria-label={dict.header.homeLabel}
-      class={wordmarkClass}
+      class="inline-flex min-h-11 items-center gap-2.5 rounded-lg text-[1.625rem] leading-none font-extrabold tracking-[-0.01em]"
     >
-      <img src="/mira.svg" alt="" width="32" height="32" class="size-7 sm:size-8" />
+      <img src="/mira.svg" alt="" width="36" height="36" class="size-9" />
       <span>MIRA</span>
     </a>
 
-    <nav aria-label={dict.nav.label} class="order-last flex w-full flex-wrap items-center gap-x-6 sm:order-none sm:w-auto sm:flex-1 sm:gap-x-9">
+    <nav
+      aria-label={dict.nav.label}
+      class="order-last -mx-3 flex w-[calc(100%+1.5rem)] flex-wrap items-center md:order-none md:mx-0 md:ml-8 md:w-auto md:gap-x-1"
+    >
       {#each NAV_ITEMS as item (item.key)}
         {@const active = pathname === item.href || pathname.startsWith(`${item.href}/`)}
         <a
           href={localePath(lang, item.href)}
           aria-current={active ? 'page' : undefined}
-          class="{navLinkClass} {active ? 'font-semibold text-ink underline decoration-2 underline-offset-[6px]' : ''}"
+          class="{navLinkClass} {active ? 'bg-white/16' : ''}"
         >
           {dict.nav[item.key]}
         </a>
@@ -45,11 +48,16 @@
       </a>
     </nav>
 
-    <LanguageSwitch
-      {lang}
-      label={dict.common.languageLabel}
-      names={dict.common.languageNames}
-      switchTo={dict.common.switchTo}
-    />
-  </Canvas>
+    <div class="ml-auto flex items-center gap-3">
+      <LanguageSwitch
+        {lang}
+        label={dict.common.languageLabel}
+        names={dict.common.languageNames}
+        switchTo={dict.common.switchTo}
+      />
+      <a href={localePath(lang, '/docs')} class="btn btn-light max-sm:hidden">{dict.home.hero.tryCta}</a>
+    </div>
+  </div>
 </header>
+
+<PillNav {lang} {dict} />

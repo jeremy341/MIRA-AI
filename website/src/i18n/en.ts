@@ -103,8 +103,25 @@ export const en = {
       copyLabel: "Copy install command",
       tryCta: "Get started",
       resultsCta: "See the results",
+      scrollCue: "Scroll to learn more",
       benchmark: "EXP-019 on {count} TrashNet tabletop validation images. Not real-world sorting accuracy.",
       benchmarkLink: "Read the benchmark and its limits",
+    },
+    what: {
+      title: "What is MIRA?",
+      lede: "An open-source detector for waste in camera images. Give it a photo or a webcam feed, and it draws a box around the objects it finds.",
+      stepsLabel: "How a detection works",
+      steps: [
+        {
+          title: "Give it a picture",
+          text: "A photo or a webcam frame.",
+        },
+        {
+          title: "MIRA looks for objects",
+          text: "EXP-019 draws a box around what it finds and names one of five classes.",
+        },
+        { title: "You get the result", text: "A class, a confidence score and the box position for each object." },
+      ],
     },
     problem: {
       title: "The problem, and what I tried",

@@ -33,11 +33,11 @@
     }));
   });
 
-  const card = 'rounded-2xl border border-rule bg-surface p-5 shadow-[var(--shadow-raised)] sm:p-7';
+  const card = 'card p-5 sm:p-8';
 </script>
 
-<HomeSection id="evidence" title={t.title} lede={t.subtitle}>
-  <div class="grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+<HomeSection id="evidence" title={t.title} lede={t.subtitle} tone="tint">
+  <div class="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
     <div class={card}>
       <p class="max-w-[60ch] text-[1rem] leading-[1.65] text-ink-soft"><Rich text={t.p1} /></p>
       <div class="mt-6 grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
@@ -94,12 +94,12 @@
     </div>
   </div>
 
-  <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 md:grid-cols-2">
-    <div class="rounded-2xl border border-accent/25 bg-accent-soft p-5 sm:p-7">
+  <div class="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2">
+    <div class="card p-5 sm:p-8">
       <p class="text-[1.0625rem] leading-[1.55] font-semibold text-ink"><Rich text={t.plastic} {lang} /></p>
       <p class="mt-3 text-[0.875rem] leading-[1.5] text-ink/80"><Rich text={t.plasticNote} /></p>
     </div>
-    <div class="rounded-2xl border border-[#ecd48a] bg-[#fff8e1] p-5 sm:p-7">
+    <div class="rounded-2xl border border-warn-rule bg-warn p-5 sm:p-8">
       <h3 class="text-[1.0625rem] font-semibold text-ink">{t.caveatTitle}</h3>
       <p class="mt-2 text-[0.9375rem] leading-[1.6] text-ink/80"><Rich text={t.caveat} /></p>
     </div>
