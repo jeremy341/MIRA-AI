@@ -27,10 +27,10 @@ export const LICENSE_URL = `${GITHUB_URL}/blob/main/LICENSE`;
 export const PYPI_LATEST_VERSION = "1.1.0";
 
 /**
- * Last known Hugging Face download count (10,176, read from the Hugging Face API on 2026-11-23).
+ * Last known Hugging Face download count (10,323, read from the Hugging Face API on 2026-11-26).
  * Server-rendered until a live or cached value replaces it.
  */
-export const FALLBACK_DOWNLOADS = 10176;
+export const FALLBACK_DOWNLOADS = 10323;
 
 export const INSTALL_COMMAND = "pip install mira-ai";
 

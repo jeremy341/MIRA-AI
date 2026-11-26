@@ -17,7 +17,6 @@
   import { hasDemoVideo } from '$lib/demo-video';
   import CopyCommand from '../CopyCommand.svelte';
   import DemoVideo from '../DemoVideo.svelte';
-  import DownloadsStat from '../DownloadsStat.svelte';
   import Rich from '../Rich.svelte';
   import HomeSection from './HomeSection.svelte';
 
@@ -25,24 +24,6 @@
 
   const t = $derived(dict.home.tryit);
   const withVideo = hasDemoVideo(DEMO_VIDEO);
-  const downloadsLabels = $derived({
-    title: t.downloadsTitle,
-    allTime: t.downloadsAllTime,
-    last30: t.downloadsLast30,
-    honest: t.downloadsHonest,
-    status: {
-      checking: t.status.checking,
-      live: t.status.live,
-      cached: t.status.cached,
-      fallback: t.status.fallback
-    },
-    statusLong: {
-      checking: t.status.checkingLong,
-      live: t.status.liveLong,
-      cached: t.status.cachedLong,
-      fallback: t.status.fallbackLong
-    }
-  });
 </script>
 
 <HomeSection id="try" title={t.title} tone="tint" align="start">
@@ -69,10 +50,6 @@
         <Rich text={t.defaultNote} />
       </p>
       <a href={localePath(lang, '/docs')} class="btn btn-primary mt-7">{dict.nav.docs}</a>
-      <div class="card mt-8 p-5 sm:p-6">
-        <h3 class="text-[1.0625rem] font-bold text-ink">{t.downloadsTitle}</h3>
-        <DownloadsStat {lang} labels={downloadsLabels} />
-      </div>
     </div>
 
     {#if withVideo}

@@ -4,8 +4,8 @@
    *
    * Isolated on purpose: remove the <Landscape> section from the Home page and nothing else changes. three.js is
    * imported dynamically, and only when the
-   * card is near the viewport (an IntersectionObserver with a 400px margin), the viewer does not prefer reduced motion, the card is wide enough
-   * and WebGL works. In every other case this component renders the same data as flat HTML bars (also the server
+   * card is near the viewport (an IntersectionObserver with a 400px margin), the viewer does not prefer reduced motion, the card is wide enough,
+   * the device is not a phone held sideways, and WebGL works. This is checked again whenever the card or the screen changes. In every other case this component renders the same data as flat HTML bars (also the server
    * output, so it works without JavaScript). The choice never depends on the page language.
    *
    * Props
@@ -17,6 +17,7 @@
   import type { LandscapeRow } from '$lib/landscape-data';
   import type { Locale } from '$i18n/config';
   import { layoutRows } from '$lib/landscape/layout';
+  import { flatReason, SIDEWAYS_PHONE_QUERY } from '$lib/landscape/mode';
   import type { Point, SceneHandle } from '$lib/landscape/scene';
 
   type Labels = {
@@ -145,33 +146,50 @@
   }
 
   onMount(() => {
-    if (!root) return;
-    let cancelled = false;
-    const cleanups: Array<() => void> = [];
+    const card = root;
+    if (!card) return;
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const sideways = matchMedia(SIDEWAYS_PHONE_QUERY);
 
-    async function start() {
-      if (!root) return;
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return fallback('reduced-motion');
-      if (root.getBoundingClientRect().width < 560) return fallback('narrow');
+    /** 'idle': flat bars, free to try 3D. 'wanted': waiting for the card to come near, loading it, or showing it. */
+    let state: 'idle' | 'wanted' = 'idle';
+    /** Set when 3D failed. A later size change must not try it again. */
+    let broken = false;
+    /** Goes up whenever 3D is torn down, so that a load still in flight knows it is too late. */
+    let generation = 0;
+    let cleanups: Array<() => void> = [];
 
+    function tearDown() {
+      generation += 1;
+      for (const cleanup of cleanups.splice(0)) cleanup();
+      state = 'idle';
+    }
+
+    function fail(why: string) {
+      broken = true;
+      tearDown();
+      fallback(why);
+    }
+
+    async function start(mine: number) {
       mounted3d = true;
       await tick();
-      if (cancelled || !stage) return;
+      if (mine !== generation || !stage) return;
       try {
         // A failed chunk request is retried once, so a network blip does not decide the mode. WebGL support is
         // tested by creating the renderer itself (it throws when there is no context): there is no probe canvas
         // whose context could compete with the real one.
         const module = await import('$lib/landscape/scene').catch(() => import('$lib/landscape/scene'));
-        if (cancelled || !stage) return;
+        if (mine !== generation || !stage) return;
         scene = module.createScene({
           host: stage,
           layout,
           onProject: position,
           onActive: (id) => (activeId = id),
-          onContextLost: () => fallback('context-lost'),
+          onContextLost: () => fail('context-lost'),
         });
       } catch (error) {
-        if (!cancelled) fallback(error instanceof Error && /webgl|context/i.test(error.message) ? 'no-webgl' : 'error');
+        if (mine === generation) fail(error instanceof Error && /webgl|context/i.test(error.message) ? 'no-webgl' : 'error');
         return;
       }
       mode = '3d';
@@ -180,39 +198,52 @@
       const visibility = new IntersectionObserver((entries) => {
         for (const entry of entries) scene?.setVisible(entry.isIntersecting);
       });
-      visibility.observe(root);
-      cleanups.push(() => visibility.disconnect());
-
+      visibility.observe(card!);
       window.addEventListener('keydown', onEscape);
-      cleanups.push(() => window.removeEventListener('keydown', onEscape));
-
-      const motion = matchMedia('(prefers-reduced-motion: reduce)');
-      const onMotion = () => motion.matches && fallback('reduced-motion');
-      motion.addEventListener('change', onMotion);
-      cleanups.push(() => motion.removeEventListener('change', onMotion));
+      cleanups.push(() => {
+        visibility.disconnect();
+        window.removeEventListener('keydown', onEscape);
+      });
     }
 
-    // The flat bars need no download, so those cases are decided at once. Otherwise three.js is fetched only when
-    // the card comes within 400px of the screen.
-    let near: IntersectionObserver | null = null;
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) fallback('reduced-motion');
-    else if (root.getBoundingClientRect().width < 560) fallback('narrow');
-    else {
-      near = new IntersectionObserver(
-        (entries) => {
-          if (!entries.some((entry) => entry.isIntersecting)) return;
-          near?.disconnect();
-          start();
-        },
-        { rootMargin: '400px 0px' }
-      );
-      near.observe(root);
+    /** Pick flat or 3D for the current screen. The flat bars need no download, so they are decided at once. */
+    function choose() {
+      const why = flatReason({
+        reducedMotion: motion.matches,
+        width: card!.getBoundingClientRect().width,
+        sidewaysPhone: sideways.matches
+      });
+      if (why) {
+        tearDown();
+        fallback(why);
+      } else if (state === 'idle' && !broken) {
+        state = 'wanted';
+        const mine = generation;
+        // three.js is fetched only when the card comes within 400px of the screen.
+        const near = new IntersectionObserver(
+          (entries) => {
+            if (!entries.some((entry) => entry.isIntersecting)) return;
+            near.disconnect();
+            start(mine);
+          },
+          { rootMargin: '400px 0px' }
+        );
+        near.observe(card!);
+        cleanups.push(() => near.disconnect());
+      }
     }
+
+    const sizes = new ResizeObserver(choose);
+    sizes.observe(card);
+    motion.addEventListener('change', choose);
+    sideways.addEventListener('change', choose);
+    choose();
 
     return () => {
-      cancelled = true;
-      near?.disconnect();
-      for (const cleanup of cleanups) cleanup();
+      sizes.disconnect();
+      motion.removeEventListener('change', choose);
+      sideways.removeEventListener('change', choose);
+      tearDown();
       scene?.dispose();
       scene = null;
     };
