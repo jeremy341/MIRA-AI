@@ -33,7 +33,7 @@
     <div class="contents">
       <div class="flex flex-col justify-center py-2.5">
         <span class="font-mono text-[0.8125rem] font-medium text-ink sm:text-[0.875rem]">{row.id}</span>
-        <span class="text-[0.75rem] leading-tight text-muted-foreground sm:text-[0.8125rem]">{row.note}</span>
+        <span class="text-[0.75rem] leading-tight hyphens-auto [overflow-wrap:anywhere] text-muted-foreground sm:text-[0.8125rem]">{row.note}</span>
       </div>
       <div class="relative flex items-center py-2.5">
         <div aria-hidden="true" class="pointer-events-none absolute inset-x-0 inset-y-0">
@@ -53,7 +53,7 @@
     </div>
   {/each}
   <div></div>
-  <div aria-hidden="true" class="relative mt-1 h-5 border-t border-ink font-mono text-[0.75rem] text-muted-foreground">
+  <div aria-hidden="true" class="relative mt-1 h-5 border-t border-rule-strong font-mono text-[0.75rem] text-muted-foreground">
     {#each TICKS as t (t)}
       <span
         class="absolute top-1 {t === 0 ? 'left-0' : t === 100 ? 'right-0' : '-translate-x-1/2'}"

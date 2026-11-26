@@ -128,7 +128,7 @@ export const de: ResearchDictionary = {
     p1: "Auf dem bereinigten Datensatz erreichte YOLO11n in EXP-018 {exp018} mAP50 und bei der Wiederholung als EXP-019 {exp019}. Die frühere Basis mit zusammengeführten Daten, EXP-014, kam auf {exp014}.",
     chartAria: "Balkendiagramm der mAP50: EXP-014 {exp014}, EXP-018 {exp018}, EXP-019 {exp019}.",
     chartRows: [
-      { id: "EXP-014", note: "zusammengeführte Quellen" },
+      { id: "EXP-014", note: "zusammen\u00adgeführte Quellen" },
       { id: "EXP-018", note: "bereinigt und ausbalanciert" },
       { id: "EXP-019", note: "Wiederholung von EXP-018" },
     ],

@@ -143,7 +143,7 @@ export const de: Dictionary = {
         "mAP50 von EXP-014, EXP-018 und EXP-019, jeweils auf dem eigenen Validierungsdatensatz (Fotos, die nicht zum Training gehören und nur zur Bewertung dienen).",
       chartAria: "Balkendiagramm der mAP50: EXP-014 60,7 %, EXP-018 90,6 %, EXP-019 90,58 %.",
       chartRows: [
-        { id: "EXP-014", note: "zusammengeführte Quellen" },
+        { id: "EXP-014", note: "zusammen\u00adgeführte Quellen" },
         { id: "EXP-018", note: "bereinigt und ausbalanciert" },
         { id: "EXP-019", note: "Wiederholung von EXP-018" },
       ],

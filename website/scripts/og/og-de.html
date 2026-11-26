@@ -3,15 +3,17 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0}
-html,body{width:1200px;height:630px;background:#f5f5f5;color:#1f1f1f;overflow:hidden}
-body{padding:68px 80px;display:flex;flex-direction:column;justify-content:space-between;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+html,body{width:1200px;height:630px;background:#4565b6;color:#fff;overflow:hidden}
+body{position:relative;padding:76px 80px 0;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
 .brand{display:flex;align-items:center;gap:36px}
 .brand svg{width:168px;height:168px;flex-shrink:0}
-.word{font-weight:800;font-size:168px;letter-spacing:.03em;line-height:1}
-.tag{margin-top:40px;font-weight:500;font-size:54px;line-height:1.2;color:#535253;max-width:980px}
-.foot{display:flex;justify-content:space-between;align-items:baseline;border-top:3px solid #1f1f1f;padding-top:22px;font-size:28px;color:#535253}
-.foot b{font-family:'Space Mono',ui-monospace,monospace;font-weight:700;font-size:26px;color:#1f1f1f}
+.word{font-weight:800;font-size:168px;letter-spacing:-.035em;line-height:1}
+.tag{margin-top:40px;font-weight:500;font-size:54px;line-height:1.2;color:#e9eeff;max-width:980px}
+.wave{position:absolute;left:0;bottom:104px;width:1200px;height:40px;display:block}
+.foot{position:absolute;left:0;right:0;bottom:0;height:105px;display:flex;justify-content:space-between;align-items:center;padding:0 80px;background:#fff;font-size:28px;color:#1c2f66}
+.foot b{font-family:'Space Mono',ui-monospace,monospace;font-weight:700;font-size:26px}
 </style></head><body>
 <div><div class="brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#1f1f1f"/><path d="M6.5 11.5v-3a2 2 0 0 1 2-2h3M20.5 6.5h3a2 2 0 0 1 2 2v3M25.5 20.5v3a2 2 0 0 1-2 2h-3M11.5 25.5h-3a2 2 0 0 1-2-2v-3" fill="none" stroke="#fefefe" stroke-opacity=".45" stroke-width="1.8" stroke-linecap="round"/><path d="M10.5 20.5v-9l5.5 6.2 5.5-6.2v9" fill="none" stroke="#fefefe" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="22.4" r="1.9" fill="#7b9be6"/></svg><span class="word">MIRA</span></div><p class="tag">Ein Müll-Detektor, mit seinen Zahlen und seinen Grenzen</p></div>
+<svg class="wave" viewBox="0 0 1200 40" aria-hidden="true"><path fill="#fff" d="M0 22c40-16 80-16 120 0s80 16 120 0c40-16 80-16 120 0s80 16 120 0c40-16 80-16 120 0s80 16 120 0c40-16 80-16 120 0s80 16 120 0c40-16 80-16 120 0s80 16 120 0V40H0Z"/></svg>
 <div class="foot"><span>Machine Intelligence for Recycling Automation</span><b>Jugend forscht 2027</b></div>
 </body></html>
