@@ -24,8 +24,15 @@
   <div class="mt-8 grid gap-10 md:grid-cols-2 md:gap-12">
     {#each blocks as block (block.key)}
       <div class="min-w-0">
-        <Heading as="h3" size="title" class="text-ink">{block.label}</Heading>
-        <CopyCommand command={block.command} prompt="" label={block.copyLabel} labels={dict.common.copy} class="mt-3" />
+        <Heading as="h3" size="title" class="text-brand-ink">{block.label}</Heading>
+        <CopyCommand
+          command={block.command}
+          prompt=""
+          label={block.copyLabel}
+          labels={dict.common.copy}
+          tone="terminal"
+          class="mt-3"
+        />
         <p class="mt-2 max-w-[46ch] text-micro text-muted-foreground">{block.note}</p>
       </div>
     {/each}

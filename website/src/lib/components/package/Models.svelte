@@ -41,6 +41,7 @@
   </div>
 
   <figure class="mt-8 min-w-0">
+    <div class="card px-5 pt-2 pb-3 sm:px-6">
     <ScrollRegion label={m.tableLabel}>
       <table class="w-full min-w-[42rem] border-collapse text-left text-[0.9375rem]">
         <caption class="sr-only">{m.caption}</caption>
@@ -86,6 +87,7 @@
         {/each}
       </table>
     </ScrollRegion>
+    </div>
     <FigureCaption n={1} label={dict.common.table}>{m.caption}</FigureCaption>
   </figure>
 </Chapter>

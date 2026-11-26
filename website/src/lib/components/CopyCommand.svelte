@@ -67,15 +67,16 @@
     /** Names the copy button for assistive tech, e.g. "Copy install command". Defaults to `labels.labelFor`. */
     label?: string;
     labels?: CopyLabels;
-    /** light: a white field. deep: for blue grounds. night: inside a dark terminal. */
-    tone?: 'light' | 'deep' | 'night';
+    /** light: a white field. deep: for blue grounds. night: inside a dark terminal. terminal: a dark box by itself. */
+    tone?: 'light' | 'deep' | 'night' | 'terminal';
     class?: string;
   } = $props();
 
   const TONES = {
     light: 'on-light border-rule bg-surface shadow-[var(--shadow-raised)]',
     deep: 'border-white/16 bg-brand-deep text-white',
-    night: 'border-white/12 bg-white/6 text-white'
+    night: 'border-white/12 bg-white/6 text-white',
+    terminal: 'border-transparent bg-night py-1.5 text-white shadow-[var(--shadow-floating)]'
   } as const;
   const dark = $derived(tone !== 'light');
 

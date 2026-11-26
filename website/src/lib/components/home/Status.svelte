@@ -12,6 +12,7 @@
   } from '$lib/site';
   import ExtLink from '../ExtLink.svelte';
   import Rich from '../Rich.svelte';
+  import RuleList from '../RuleList.svelte';
   import HomeSection from './HomeSection.svelte';
 
   let { dict }: { dict: Dictionary } = $props();
@@ -27,29 +28,15 @@
   ]);
 </script>
 
-{#snippet rows(items: readonly string[], done: boolean)}
-  <ul class="mt-4 divide-y divide-rule border-y border-rule">
-    {#each items as item (item)}
-      <li class="flex gap-3.5 py-3.5 text-[0.9375rem] leading-[1.55] text-ink-soft">
-        <span
-          aria-hidden="true"
-          class="mt-[0.3rem] size-3 shrink-0 rounded-full {done ? 'bg-brand' : 'border-2 border-rule-strong'}"
-        ></span>
-        <span class="min-w-0"><Rich text={item} /></span>
-      </li>
-    {/each}
-  </ul>
-{/snippet}
-
 <HomeSection id="status" title={t.title}>
   <div class="grid grid-cols-[minmax(0,1fr)] gap-10 md:grid-cols-2 lg:gap-16">
     <div class="min-w-0">
       <h3 class="text-[1.375rem] font-semibold text-brand-ink">{t.worksTitle}</h3>
-      {@render rows(t.works, true)}
+      <RuleList items={t.works} done />
     </div>
     <div class="min-w-0">
       <h3 class="text-[1.375rem] font-semibold text-brand-ink">{t.openTitle}</h3>
-      {@render rows(t.open, false)}
+      <RuleList items={t.open} done={false} />
     </div>
   </div>
 
